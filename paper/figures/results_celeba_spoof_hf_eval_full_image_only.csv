@@ -1,0 +1,2 @@
+dataset,protocol,method,APCER_max,BPCER,ACER,EER,AUC,N
+celeba_spoof_hf,eval_full,image_only,30.63%,30.66%,30.65%,30.59%,0.7262,2611

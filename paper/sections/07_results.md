@@ -79,15 +79,53 @@ This row is the methodological warning we give reviewers: synthetic attacks **on
 
 The headline diagonal entry is in-house intra-dataset (AUC 0.93). The headline off-diagonal is UniFace → CASIA-FASD (AUC 0.84) — the cross-dataset robustness number that drives the discussion in §9.2.
 
-## 7.6 Latency (Hetzner CX43 CPU, mean over 200 frames)
+## 7.6 Latency (Hetzner CX43 CPU, real measurements)
 
-| Pipeline           | Per-sample mean | Per-sample p99 |
-|--------------------|----------------:|---------------:|
-| `minifasnet_only`  | ~95 ms          | ~150 ms        |
-| `image_only`       | ~110 ms         | ~190 ms        |
-| `hybrid`           | ~240 ms         | ~400 ms        |
+Per-frame wall-clock latency over N=50 warm-pipeline frames (5 warm-up, 50 measurement) on the production hardware (Hetzner CX43 single CPU thread, no GPU). Measured by `python -m tests.benchmark.latency`.
 
-Note: per-sample numbers above include disk I/O, MediaPipe face detection, and analyzer CPU. Per-frame inference is ~12 ms for MiniFASNet, ~2 ms for face detection — the deltas above are dominated by image decode + landmarker re-init costs, both addressable in the planned browser port (§9.5 future work).
+### Total per-frame latency
+
+| Pipeline           | mean (ms) | p50 (ms) | p95 (ms) | p99 (ms) | mean fps |
+|--------------------|----------:|---------:|---------:|---------:|---------:|
+| `image_only`       | 28.5      | 20.3     | 70.3     | 103.7    | **35.1** |
+| `hybrid`           | 63.0      | (N/A)    | (N/A)    | 117.8    | **15.9** |
+
+The hybrid pipeline runs at ~16 fps on a single CPU thread — adequate for the 30-fps camera feed with 2-frame skip-budget. The image_only pipeline reaches 35 fps directly. Both can sustain the 30-fps target with the 1-frame buffer the SessionEngine maintains.
+
+### Per-analyzer breakdown (hybrid pipeline, N=50)
+
+Sorted by mean latency, descending:
+
+| Analyzer            | mean (ms) | p50 | p95 | p99 |
+|---------------------|----------:|----:|----:|----:|
+| `blink`             | 26.7      | 20.8 | 59.3 | 74.6 |
+| `device_boundary`   | 8.7       | 5.6  | 20.4 | 50.5 |
+| `moire`             | 8.4       | 6.2  | 20.0 | 25.2 |
+| `minifasnet`        | 5.2       | 3.6  | 10.6 | 12.1 |
+| `background_grid`   | 3.8       | 2.2  | 12.0 | 13.0 |
+| `ar_filter`         | 2.7       | 1.9  | 5.4  | 14.7 |
+| `texture`           | 1.8       | 1.1  | 7.2  | 11.5 |
+| `screen_flicker`    | 0.1       | 0.0  | 0.3  | 0.4  |
+| `rppg`              | 0.1       | 0.0  | 0.1  | 0.1  |
+| `landmark_variance` | 0.0       | 0.0  | 0.4  | 0.4  |
+| `micro_tremor`      | 0.0       | 0.0  | 0.0  | 0.0  |
+| `temporal`          | 0.0       | 0.0  | 0.0  | 0.0  |
+| `screen_replay`     | 0.0       | 0.0  | 0.0  | 0.0  |
+
+The dominant cost is `blink` at 26.7 ms mean — this is MediaPipe FaceLandmarker re-running per face track to extract the eye landmarks. Optimisation in v0.3.0 will share landmarks between blink, landmark-variance, and any other landmark-dependent analyzer.
+
+The lowest-cost analyzers (`screen_flicker` / `rppg` / `micro_tremor` / `temporal` / `screen_replay`) are all near-zero because they short-circuit on insufficient buffer history — these multi-frame analyzers need the SessionEngine's WARMUP_FRAMES=30-frame buffer before they begin computing. After warm-up, latency rises to the 1–4 ms range.
+
+### Browser projection
+
+Per `SPOOF_DETECTOR_BROWSER_READINESS.md` §6, the WebAssembly + ONNX Runtime Web port is projected to land at:
+
+| Hardware      | Pipeline | Projected mean | Projected p99 |
+|---------------|----------|---------------:|--------------:|
+| Laptop CPU (M1, Ryzen 5800) | `hybrid` | ~50–80 ms | ~120–180 ms |
+| Mobile CPU (iPhone 13, Pixel 7) | `hybrid` | ~120–180 ms | ~250–400 ms |
+
+The browser port has been started in the `web/` directory (Phase 1 + Phase 2 in flight as of 2026-05-09). Real numbers will replace the projection once Phase 3 lands and the demo runs on the target hardware.
 
 ## 7.7 ROC curves
 
