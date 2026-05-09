@@ -65,6 +65,9 @@ def _load_pipeline(name: str):
     if name == "video_only":
         from tests.benchmark.pipelines.video_only import score_sample
         return score_sample
+    if name == "minifasnet_only":
+        from tests.benchmark.pipelines.minifasnet_only import score_sample
+        return score_sample
     raise SystemExit(f"unknown pipeline: {name}")
 
 
@@ -75,7 +78,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--root", help="Path to dataset root.")
     p.add_argument("--protocol", default="default", help="Protocol name (dataset-specific).")
     p.add_argument("--pipeline", default="hybrid",
-                   choices=["hybrid", "image_only", "video_only"])
+                   choices=["hybrid", "image_only", "video_only", "minifasnet_only"])
     p.add_argument("--out", default="paper/figures",
                    help="Output directory for results.")
     p.add_argument("-v", "--verbose", action="count", default=0)

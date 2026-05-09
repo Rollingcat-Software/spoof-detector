@@ -31,6 +31,7 @@ def score_sample(sample: Sample, *, max_frames: int = 30) -> float:
     pipeline, fuser = build_image_pipeline()
     frames = load_frames(sample, max_frames=max_frames)
 
+    from src.domain.models import SpoofCategory
     per_frame_scores: list[float] = []
     for frame in frames:
         analysis = pipeline.process(frame)
@@ -38,8 +39,9 @@ def score_sample(sample: Sample, *, max_frames: int = 30) -> float:
             continue
         # Take the highest-confidence face (largest crop area as proxy)
         best = max(analysis.classifications.values(), key=lambda c: c.confidence or 0.0)
-        # `p_real` is the bona-fide probability per multi_class_fuser convention.
-        per_frame_scores.append(float(best.p_real))
+        # P(REAL) — bona-fide probability — taken from the multi-class distribution.
+        p_real = float(best.probabilities.get(SpoofCategory.REAL, 0.0))
+        per_frame_scores.append(p_real)
 
     if not per_frame_scores:
         return 0.5  # uncertain — no face detected

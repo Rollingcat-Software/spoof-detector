@@ -1,0 +1,72 @@
+{
+  "dataset": "in_house",
+  "protocol": "replay_only",
+  "pipeline_name": "image_only",
+  "n_samples": 8,
+  "elapsed_sec": 2.003777998033911,
+  "metrics": {
+    "threshold": 0.7130687097878933,
+    "apcer_max": 0.0,
+    "apcer_per_type": {
+      "replay": 0.0
+    },
+    "bpcer": 0.0,
+    "acer": 0.0,
+    "hter": 0.0,
+    "eer": 0.0,
+    "eer_threshold": 0.7130687097878933,
+    "auc": 0.875,
+    "n_bonafide": 4,
+    "n_attack": 4
+  },
+  "per_sample": [
+    {
+      "sample_id": "bonafide/afuat_000.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.92969339133554
+    },
+    {
+      "sample_id": "bonafide/afuat_001.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7130687097878933
+    },
+    {
+      "sample_id": "bonafide/ahab_000.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7151489639344903
+    },
+    {
+      "sample_id": "bonafide/ahab_001.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9603758736193839
+    },
+    {
+      "sample_id": "attack_replay/afuat_000.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.4218259938716093
+    },
+    {
+      "sample_id": "attack_replay/afuat_001.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.11972034912338586
+    },
+    {
+      "sample_id": "attack_replay/ahab_000.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06798452693088487
+    },
+    {
+      "sample_id": "attack_replay/ahab_001.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06427073347269645
+    }
+  ]
+}

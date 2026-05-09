@@ -115,8 +115,9 @@ def build_video_pipeline():
         MicroTremorAnalyzer(),
         LandmarkVarianceAnalyzer(),
         TemporalAnalyzer(),
+        ScreenFlickerAnalyzer(),  # actually face-level despite the "frame" name
     ]
-    frame_analyzers = [ScreenFlickerAnalyzer()]
+    frame_analyzers = []
     fuser = MultiClassFuser()
     pipeline = SpoofDetectionPipeline(detector, tracker, face_analyzers, frame_analyzers, fuser)
     return pipeline, fuser
@@ -163,11 +164,11 @@ def build_hybrid_pipeline():
         MicroTremorAnalyzer(),
         LandmarkVarianceAnalyzer(),
         TemporalAnalyzer(),
-    ]
-    frame_analyzers = [
+        # face-level despite their "frame" historical name
         ScreenFlickerAnalyzer(),
         BackgroundGridAnalyzer(),
     ]
+    frame_analyzers: list = []
     fuser = MultiClassFuser()
     pipeline = SpoofDetectionPipeline(detector, tracker, face_analyzers, frame_analyzers, fuser)
     return pipeline, fuser
