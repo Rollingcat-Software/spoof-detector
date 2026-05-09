@@ -13,6 +13,7 @@ The most direct ablation: what does each track contribute? Three pipelines with 
 | CASIA-FASD test FULL | `hybrid` | 13.70% | 13.62% | 0.9139 | 2,408 |
 | **CelebA-Spoof eval FULL** | `minifasnet_only` | **28.67%** | 28.61% | **0.7820** | **2,611** |
 | CelebA-Spoof eval FULL | `image_only` | 30.65% | 30.59% | 0.7262 | 2,611 |
+| CelebA-Spoof eval FULL | `hybrid` | 30.73% | 30.67% | 0.7245 | 2,611 |
 | **In-house replay** | `hybrid` | **12.67%** | 24.00% | **0.9264** | 100 |
 | In-house replay | `image_only` | 12.67% | 24.00% | 0.9264 | 100 |
 | In-house replay | `minifasnet_only` | 12.67% | 24.00% | 0.9245 | 100 |

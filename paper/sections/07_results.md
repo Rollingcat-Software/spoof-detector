@@ -30,6 +30,7 @@ The full eval shard — 874 bona-fide + 1,737 attacks. Same zero-shot UniFace Mi
 |--------------------|-------:|-------:|-------:|-----:|
 | `minifasnet_only`  | **28.67%** | 28.61% | **0.7820** | 382.4s |
 | `image_only`       | 30.65% | 30.59% | 0.7262 | 396.7s |
+| `hybrid`           | 30.73% | 30.67% | 0.7245 | 642.8s |
 
 CelebA-Spoof's 10-class taxonomy (vs CASIA-FASD's 3-class) is harder, and the AUC drop from 0.945 → 0.782 reflects (a) the broader spoof-class distribution and (b) the fact the HF eval shard mirror flattened the 10-class labels to binary live/spoof, so we cannot publish a per-spoof-type breakdown without re-acquiring the original CelebA-Spoof labels (§7.4 placeholder).
 
