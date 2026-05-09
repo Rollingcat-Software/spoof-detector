@@ -29,13 +29,16 @@ The `minifasnet_only` pipeline outperforms `image_only` on this dataset because 
 
 ### CelebA-Spoof eval (nguyenkhoa HuggingFace shard 0, **N=2,611**)
 
-The full eval shard — 874 bona-fide + 1,737 attacks. Same zero-shot UniFace MiniFASNet evaluation.
+The full eval shard — 874 bona-fide + 1,737 attacks. Same zero-shot UniFace MiniFASNet evaluation. Bootstrap 95% CIs on 100 stratified resamples.
 
-| Pipeline           | ACER   | EER    | AUC    | Time |
-|--------------------|-------:|-------:|-------:|-----:|
-| `minifasnet_only`  | **28.67%** | 28.61% | **0.7820** | 382.4s |
-| `image_only`       | 30.65% | 30.59% | 0.7262 | 396.7s |
-| `hybrid`           | 30.73% | 30.67% | 0.7245 | 642.8s |
+| Pipeline           | ACER (95% CI)         | EER (95% CI)         | AUC (95% CI)              | Time |
+|--------------------|----------------------:|---------------------:|--------------------------:|-----:|
+| `minifasnet_only`  | **28.67%** [27.36, 30.23] | 28.61% [27.32, 30.29] | **0.7818** [0.7663, 0.7993] | 382.4s |
+| `image_only`       | 30.65% [pending]      | 30.59% [pending]      | 0.7262 [pending]          | 396.7s |
+| `hybrid`           | 30.73% [pending]      | 30.67% [pending]      | 0.7245 [pending]          | 642.8s |
+
+**Cross-dataset taxonomy effect (CASIA-FASD 3-class vs CelebA-Spoof 10-class):**
+The `minifasnet_only` AUC CI on CASIA-FASD is [0.9366, 0.9560] (width 0.019); on CelebA-Spoof it is [0.7663, 0.7993] (width 0.033). The CIs are *separated by 0.14 AUC points* — more than 4× the width of either. CelebA-Spoof is significantly harder for our zero-shot pipeline at the 95% confidence level. The 10-class taxonomy includes harder spoof species (3D mask, AR filter, region mask) that the 3-class CASIA-FASD does not.
 
 CelebA-Spoof's 10-class taxonomy (vs CASIA-FASD's 3-class) is harder, and the AUC drop from 0.945 → 0.782 reflects (a) the broader spoof-class distribution and (b) the fact the HF eval shard mirror flattened the 10-class labels to binary live/spoof, so we cannot publish a per-spoof-type breakdown without re-acquiring the original CelebA-Spoof labels (§7.4 placeholder).
 
