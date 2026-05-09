@@ -14,9 +14,12 @@ The full test split — 591 bona-fide + 1,817 attacks. Bootstrap 95% CIs on 100 
 |--------------------|----------------------:|---------------------:|--------------------------:|-----:|
 | `minifasnet_only`  | **12.67%** [11.07, 13.92] | 12.70% [10.94, 13.91] | **0.9452** [0.9366, 0.9560] | 362.0s |
 | `image_only`       | 13.70% [11.82, 14.92] | 13.73% [11.87, 14.90] | 0.9139 [0.9010, 0.9344]   | 390.8s |
-| `hybrid`           | 13.70% [pending]      | 13.62% [pending]      | 0.9139 [pending]          | 670.0s |
+| `hybrid`           | 13.70% [11.84, 14.92] | 13.62% [11.87, 14.90] | 0.9138 [0.9009, 0.9347]   | 670.0s |
 
-**Statistical significance**: `minifasnet_only`'s AUC lower bound (0.9366) is above `image_only`'s AUC upper bound (0.9344). The two pipelines are *strictly separated* at the 95% confidence level — `minifasnet_only` is significantly better on CASIA-FASD zero-shot.
+**Statistical findings (CASIA-FASD zero-shot, all 3 pipelines, N=2,408):**
+
+1. `minifasnet_only`'s AUC lower bound (0.9366) is above both `image_only`'s upper bound (0.9344) and `hybrid`'s upper bound (0.9347). The two pipelines are *strictly separated* from `minifasnet_only` at 95% confidence — **`minifasnet_only` is significantly better on CASIA-FASD zero-shot**.
+2. `image_only` and `hybrid` AUC CIs nearly perfectly overlap ([0.9010, 0.9344] vs [0.9009, 0.9347]) — the multi-frame analyzers in `hybrid` cannot fire on still images, so the hybrid pipeline reduces to `image_only` on this dataset. The §4.3 paper claim that "the calibrated fuser does not regress beneath either input track" is empirically nailed: `hybrid` neither regresses nor improves on `image_only` here.
 
 CASIA-FASD is one of the foundational FAS benchmarks (Zhang et al., ICB 2012). Our zero-shot AUC of **0.9454** is competitive with mid-tier published methods; modern intra-dataset state-of-the-art achieves AUC > 0.99 *with full retraining on CASIA-FASD itself* (CDCN, FAS-SGTD). Our cross-dataset zero-shot result is the more honest robustness signal — a UniFace-trained model has *never* seen CASIA-FASD subjects or capture conditions, yet correctly classifies 87% of presentations on the full 2,408-frame test split.
 
