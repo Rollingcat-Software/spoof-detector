@@ -1,0 +1,22 @@
+# Core
+opencv-python>=4.9.0
+numpy>=1.26.0
+mediapipe>=0.10.9
+
+# Anti-spoofing (MiniFASNet ONNX, downloaded at first run)
+uniface>=3.0.0
+# uniface's ONNX runtime — REQUIRED. Choose ONE of CPU/GPU; do not install both.
+# CPU build (default, works on all machines incl. Apple Silicon):
+onnxruntime>=1.17.0
+# For NVIDIA GPU acceleration, replace the line above with:
+#   onnxruntime-gpu>=1.17.0
+
+# Image analysis
+scikit-image>=0.22.0
+scipy>=1.12.0
+
+# Configuration
+pyyaml>=6.0.1
+
+# Logging
+python-json-logger>=2.0.7

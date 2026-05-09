@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg
+
+# Models (downloaded at runtime)
+models/*.onnx
+models/*.tflite
+models/*.pth
+models/*.task
+!models/.gitkeep
+
+# Logs
+logs/*.jsonl
+logs/*.json
+logs/*.log
+!logs/.gitkeep
+
+# Research data (sensitive — may contain face images)
+data/captures/*
+data/annotations/*
+data/protocol/*.jpg
+data/protocol/*.png
+data/ar_dataset/
+data/calibration/
+!data/captures/.gitkeep
+!data/annotations/.gitkeep
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Working notes
+initial-prompt.txt
