@@ -10,11 +10,13 @@ We run the productized pipeline against every EULA-free FAS dataset we acquired 
 
 The full test split — 591 bona-fide + 1,817 attacks. Bootstrap 95% CIs on 100 stratified resamples (sufficient at this N — CI width is already 0.019 on AUC).
 
-| Pipeline           | ACER (95% CI)         | EER    | AUC (95% CI)              | Time |
-|--------------------|----------------------:|-------:|--------------------------:|-----:|
-| `minifasnet_only`  | **12.67%** [11.07, 13.92] | 12.70% | **0.9452** [0.9366, 0.9560] | 362.0s |
-| `image_only`       | 13.70% [pending]      | 13.73% | 0.9140 [pending]          | 390.8s |
-| `hybrid`           | 13.70% [pending]      | 13.62% | 0.9139 [pending]          | 670.0s |
+| Pipeline           | ACER (95% CI)         | EER (95% CI)         | AUC (95% CI)              | Time |
+|--------------------|----------------------:|---------------------:|--------------------------:|-----:|
+| `minifasnet_only`  | **12.67%** [11.07, 13.92] | 12.70% [10.94, 13.91] | **0.9452** [0.9366, 0.9560] | 362.0s |
+| `image_only`       | 13.70% [11.82, 14.92] | 13.73% [11.87, 14.90] | 0.9139 [0.9010, 0.9344]   | 390.8s |
+| `hybrid`           | 13.70% [pending]      | 13.62% [pending]      | 0.9139 [pending]          | 670.0s |
+
+**Statistical significance**: `minifasnet_only`'s AUC lower bound (0.9366) is above `image_only`'s AUC upper bound (0.9344). The two pipelines are *strictly separated* at the 95% confidence level — `minifasnet_only` is significantly better on CASIA-FASD zero-shot.
 
 CASIA-FASD is one of the foundational FAS benchmarks (Zhang et al., ICB 2012). Our zero-shot AUC of **0.9454** is competitive with mid-tier published methods; modern intra-dataset state-of-the-art achieves AUC > 0.99 *with full retraining on CASIA-FASD itself* (CDCN, FAS-SGTD). Our cross-dataset zero-shot result is the more honest robustness signal — a UniFace-trained model has *never* seen CASIA-FASD subjects or capture conditions, yet correctly classifies 87% of presentations on the full 2,408-frame test split.
 
