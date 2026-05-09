@@ -1,0 +1,624 @@
+{
+  "dataset": "in_house",
+  "protocol": "replay_n100",
+  "pipeline_name": "image_only",
+  "n_samples": 100,
+  "elapsed_sec": 13.063129113987088,
+  "metrics": {
+    "threshold": 0.5794698354970289,
+    "apcer_max": 0.09333333333333334,
+    "apcer_per_type": {
+      "replay": 0.09333333333333334
+    },
+    "bpcer": 0.16,
+    "acer": 0.12666666666666668,
+    "hter": 0.12666666666666668,
+    "eer": 0.24,
+    "eer_threshold": 0.5794698354970289,
+    "auc": 0.9264,
+    "n_bonafide": 25,
+    "n_attack": 75
+  },
+  "per_sample": [
+    {
+      "sample_id": "bonafide/a_afuat_000.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.3894056924842915
+    },
+    {
+      "sample_id": "bonafide/a_afuat_001.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.31672553037722745
+    },
+    {
+      "sample_id": "bonafide/a_afuat_002.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9619330133627891
+    },
+    {
+      "sample_id": "bonafide/a_afuat_003.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7105153617163315
+    },
+    {
+      "sample_id": "bonafide/a_afuat_004.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7130687097878933
+    },
+    {
+      "sample_id": "bonafide/a_afuat_005.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.709832167908781
+    },
+    {
+      "sample_id": "bonafide/a_aga_000.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8137424376336799
+    },
+    {
+      "sample_id": "bonafide/a_aga_001.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7112744173541347
+    },
+    {
+      "sample_id": "bonafide/a_aga_002.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.889679987166054
+    },
+    {
+      "sample_id": "bonafide/a_ahab_000.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7151489639344903
+    },
+    {
+      "sample_id": "bonafide/a_ahab_001.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9603758736193839
+    },
+    {
+      "sample_id": "bonafide/b_person_0001_000.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8137424376336799
+    },
+    {
+      "sample_id": "bonafide/b_person_0001_001.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7138020151953245
+    },
+    {
+      "sample_id": "bonafide/b_person_0001_002.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.930671549099782
+    },
+    {
+      "sample_id": "bonafide/b_person_0001_003.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7112744173541347
+    },
+    {
+      "sample_id": "bonafide/b_person_0001_004.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.889679987166054
+    },
+    {
+      "sample_id": "bonafide/b_person_0002_000.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.3894056924842915
+    },
+    {
+      "sample_id": "bonafide/b_person_0002_001.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.31672553037722745
+    },
+    {
+      "sample_id": "bonafide/b_person_0002_002.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9619330133627891
+    },
+    {
+      "sample_id": "bonafide/b_person_0002_003.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7149340868748368
+    },
+    {
+      "sample_id": "bonafide/b_person_0002_004.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7105153617163315
+    },
+    {
+      "sample_id": "bonafide/b_person_0002_005.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7130687097878933
+    },
+    {
+      "sample_id": "bonafide/b_person_0002_006.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.709832167908781
+    },
+    {
+      "sample_id": "bonafide/b_person_0003_000.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9603758736193839
+    },
+    {
+      "sample_id": "bonafide/b_person_0003_001.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7151489639344903
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_000_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06388139410385367
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_000_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06388838402620224
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_000_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.5
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_001_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.5
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_001_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06662144774790628
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_001_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.5
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_002_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.5
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_002_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.5
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_002_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.5
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_003_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.8870015477938711
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_003_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.841033167340611
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_003_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.8045626486800654
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_004_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.17483364978493676
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_004_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.14258264496498613
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_004_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06490366518868208
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_005_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.1343915487555777
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_005_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.6720393993651992
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_005_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.6641245433898888
+    },
+    {
+      "sample_id": "attack_replay/a_aga_000_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.5
+    },
+    {
+      "sample_id": "attack_replay/a_aga_000_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.5
+    },
+    {
+      "sample_id": "attack_replay/a_aga_000_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.5
+    },
+    {
+      "sample_id": "attack_replay/a_aga_001_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06468205989925505
+    },
+    {
+      "sample_id": "attack_replay/a_aga_001_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06502911360618778
+    },
+    {
+      "sample_id": "attack_replay/a_aga_001_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06453914969620518
+    },
+    {
+      "sample_id": "attack_replay/a_aga_002_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06529822329359929
+    },
+    {
+      "sample_id": "attack_replay/a_aga_002_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.07012360074408103
+    },
+    {
+      "sample_id": "attack_replay/a_aga_002_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.0652586305284447
+    },
+    {
+      "sample_id": "attack_replay/a_ahab_000_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.0672713674175528
+    },
+    {
+      "sample_id": "attack_replay/a_ahab_000_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06518122910416108
+    },
+    {
+      "sample_id": "attack_replay/a_ahab_000_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06514862105435433
+    },
+    {
+      "sample_id": "attack_replay/a_ahab_001_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06548342978311807
+    },
+    {
+      "sample_id": "attack_replay/a_ahab_001_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06533045740104296
+    },
+    {
+      "sample_id": "attack_replay/a_ahab_001_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06562819763743576
+    },
+    {
+      "sample_id": "attack_replay/b_person_0001_000_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06355638396446925
+    },
+    {
+      "sample_id": "attack_replay/b_person_0001_000_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.5
+    },
+    {
+      "sample_id": "attack_replay/b_person_0001_000_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.5
+    },
+    {
+      "sample_id": "attack_replay/b_person_0001_001_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06433274037413121
+    },
+    {
+      "sample_id": "attack_replay/b_person_0001_001_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06420670496158344
+    },
+    {
+      "sample_id": "attack_replay/b_person_0001_001_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.21672896517992649
+    },
+    {
+      "sample_id": "attack_replay/b_person_0001_002_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06375147410551965
+    },
+    {
+      "sample_id": "attack_replay/b_person_0001_002_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06411389392627687
+    },
+    {
+      "sample_id": "attack_replay/b_person_0001_002_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06372874722088666
+    },
+    {
+      "sample_id": "attack_replay/b_person_0001_003_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06613766593165217
+    },
+    {
+      "sample_id": "attack_replay/b_person_0001_003_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06425300807178358
+    },
+    {
+      "sample_id": "attack_replay/b_person_0001_003_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06450940959587424
+    },
+    {
+      "sample_id": "attack_replay/b_person_0001_004_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.18879150342686482
+    },
+    {
+      "sample_id": "attack_replay/b_person_0001_004_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.0652561264209958
+    },
+    {
+      "sample_id": "attack_replay/b_person_0001_004_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06440589516783679
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_000_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.5
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_000_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.0650778459893219
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_000_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06337959965426691
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_001_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.1307761399836238
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_001_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06497095714514828
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_001_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.5
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_002_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.5
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_002_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.5
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_002_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.5
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_003_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06527761053779707
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_003_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06461589459266827
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_003_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06458527230971436
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_004_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.6125822669541242
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_004_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.40797900503849915
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_004_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.1326865891782108
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_005_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06483990224440403
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_005_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06498163068888332
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_005_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06493288883608134
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_006_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.0646263061638371
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_006_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.6966980728178392
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_006_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06470022573909198
+    },
+    {
+      "sample_id": "attack_replay/b_person_0003_000_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06523311320432335
+    },
+    {
+      "sample_id": "attack_replay/b_person_0003_000_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06538542565617116
+    },
+    {
+      "sample_id": "attack_replay/b_person_0003_000_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.5
+    },
+    {
+      "sample_id": "attack_replay/b_person_0003_001_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.07756664676119954
+    },
+    {
+      "sample_id": "attack_replay/b_person_0003_001_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.09450573481917524
+    },
+    {
+      "sample_id": "attack_replay/b_person_0003_001_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.07258872585671328
+    }
+  ]
+}

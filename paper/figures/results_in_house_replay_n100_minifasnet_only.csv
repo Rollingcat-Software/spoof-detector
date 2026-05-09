@@ -1,0 +1,2 @@
+dataset,protocol,method,APCER_max,BPCER,ACER,EER,AUC,N
+in_house,replay_n100,minifasnet_only,9.33%,16.00%,12.67%,24.00%,0.9245,100

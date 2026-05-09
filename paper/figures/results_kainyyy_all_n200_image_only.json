@@ -1,0 +1,1222 @@
+{
+  "dataset": "kainyyy",
+  "protocol": "all_n200",
+  "pipeline_name": "image_only",
+  "n_samples": 200,
+  "elapsed_sec": 35.7599950931035,
+  "metrics": {
+    "threshold": 0.17996376702391098,
+    "apcer_max": 0.0,
+    "apcer_per_type": {},
+    "bpcer": 0.0,
+    "acer": 0.0,
+    "hter": 0.0,
+    "eer": 0.0,
+    "eer_threshold": 0.17996376702391098,
+    "auc": 0.0,
+    "n_bonafide": 200,
+    "n_attack": 0
+  },
+  "per_sample": [
+    {
+      "sample_id": "AGL752VM_id147_s0_105",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8971695699909926
+    },
+    {
+      "sample_id": "AGL752VM_id147_s0_120",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7108884129308161
+    },
+    {
+      "sample_id": "AGL752VM_id147_s0_135",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.710862371736896
+    },
+    {
+      "sample_id": "AGL752VM_id147_s0_15",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7110481858317125
+    },
+    {
+      "sample_id": "AGL752VM_id147_s0_150",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8919017227428496
+    },
+    {
+      "sample_id": "AGL752VM_id147_s0_30",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7105247914420313
+    },
+    {
+      "sample_id": "AGL752VM_id147_s0_45",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7105347554477479
+    },
+    {
+      "sample_id": "AGL752VM_id147_s0_60",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.895101018671122
+    },
+    {
+      "sample_id": "AGL752VM_id147_s0_75",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8896637784932517
+    },
+    {
+      "sample_id": "AGL752VM_id147_s0_90",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8925721416140393
+    },
+    {
+      "sample_id": "FT720P_id0_s0_105",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9027393375228467
+    },
+    {
+      "sample_id": "FT720P_id0_s0_120",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9028028111791404
+    },
+    {
+      "sample_id": "FT720P_id0_s0_135",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9009856563005573
+    },
+    {
+      "sample_id": "FT720P_id0_s0_15",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9032469130927671
+    },
+    {
+      "sample_id": "FT720P_id0_s0_150",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9028596175116766
+    },
+    {
+      "sample_id": "FT720P_id0_s0_30",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9039383635409582
+    },
+    {
+      "sample_id": "FT720P_id0_s0_45",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9395838672065666
+    },
+    {
+      "sample_id": "FT720P_id0_s0_60",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9028782867348308
+    },
+    {
+      "sample_id": "FT720P_id0_s0_75",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9000841895477002
+    },
+    {
+      "sample_id": "FT720P_id0_s0_90",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8989116545271464
+    },
+    {
+      "sample_id": "FT720P_id0_s1_105",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9218130595338333
+    },
+    {
+      "sample_id": "FT720P_id0_s1_120",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9127836796369782
+    },
+    {
+      "sample_id": "FT720P_id0_s1_135",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9187874478649302
+    },
+    {
+      "sample_id": "FT720P_id0_s1_15",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.914130295784942
+    },
+    {
+      "sample_id": "FT720P_id0_s1_150",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9141924350243016
+    },
+    {
+      "sample_id": "FT720P_id0_s1_30",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9114088609817307
+    },
+    {
+      "sample_id": "FT720P_id0_s1_45",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9155836075590313
+    },
+    {
+      "sample_id": "FT720P_id0_s1_60",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.919378426221956
+    },
+    {
+      "sample_id": "FT720P_id0_s1_75",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9198679107387187
+    },
+    {
+      "sample_id": "FT720P_id0_s1_90",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9243678069886679
+    },
+    {
+      "sample_id": "FT720P_id0_s2_105",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8938021223446013
+    },
+    {
+      "sample_id": "FT720P_id0_s2_120",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8893577654149173
+    },
+    {
+      "sample_id": "FT720P_id0_s2_135",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8925208367394218
+    },
+    {
+      "sample_id": "FT720P_id0_s2_15",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7093394370221595
+    },
+    {
+      "sample_id": "FT720P_id0_s2_150",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8932263595904353
+    },
+    {
+      "sample_id": "FT720P_id0_s2_30",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8920549273839192
+    },
+    {
+      "sample_id": "FT720P_id0_s2_45",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8900546031775596
+    },
+    {
+      "sample_id": "FT720P_id0_s2_60",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8923051855541064
+    },
+    {
+      "sample_id": "FT720P_id0_s2_75",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8942807982962101
+    },
+    {
+      "sample_id": "FT720P_id0_s2_90",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9236616496600847
+    },
+    {
+      "sample_id": "FT720P_id0_s3_107",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8787062511677179
+    },
+    {
+      "sample_id": "FT720P_id0_s3_127",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8462871741605023
+    },
+    {
+      "sample_id": "FT720P_id0_s3_142",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8639298609628174
+    },
+    {
+      "sample_id": "FT720P_id0_s3_157",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8821144709621508
+    },
+    {
+      "sample_id": "FT720P_id0_s3_16",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9202188922167486
+    },
+    {
+      "sample_id": "FT720P_id0_s3_31",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8584003550699899
+    },
+    {
+      "sample_id": "FT720P_id0_s3_46",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8895708301073181
+    },
+    {
+      "sample_id": "FT720P_id0_s3_61",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9149560647149672
+    },
+    {
+      "sample_id": "FT720P_id0_s3_77",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8549733784353396
+    },
+    {
+      "sample_id": "FT720P_id0_s3_92",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9299372964338176
+    },
+    {
+      "sample_id": "FT720P_id12_s0_105",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9858000489466293
+    },
+    {
+      "sample_id": "FT720P_id12_s0_120",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9857055085302509
+    },
+    {
+      "sample_id": "FT720P_id12_s0_135",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9855858114540382
+    },
+    {
+      "sample_id": "FT720P_id12_s0_15",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9856021544283096
+    },
+    {
+      "sample_id": "FT720P_id12_s0_150",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9856887692772403
+    },
+    {
+      "sample_id": "FT720P_id12_s0_30",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.985552601656614
+    },
+    {
+      "sample_id": "FT720P_id12_s0_45",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9858007783444362
+    },
+    {
+      "sample_id": "FT720P_id12_s0_60",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9854335533660233
+    },
+    {
+      "sample_id": "FT720P_id12_s0_75",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9856548136199149
+    },
+    {
+      "sample_id": "FT720P_id12_s0_90",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9855763327846142
+    },
+    {
+      "sample_id": "FT720P_id12_s1_105",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9856638248790337
+    },
+    {
+      "sample_id": "FT720P_id12_s1_120",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9861406679597398
+    },
+    {
+      "sample_id": "FT720P_id12_s1_135",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9860485694814751
+    },
+    {
+      "sample_id": "FT720P_id12_s1_15",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9862822724580694
+    },
+    {
+      "sample_id": "FT720P_id12_s1_150",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9861451840868892
+    },
+    {
+      "sample_id": "FT720P_id12_s1_30",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9862732982402745
+    },
+    {
+      "sample_id": "FT720P_id12_s1_45",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9862969926483526
+    },
+    {
+      "sample_id": "FT720P_id12_s1_60",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9857648948251115
+    },
+    {
+      "sample_id": "FT720P_id12_s1_75",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9855827862235851
+    },
+    {
+      "sample_id": "FT720P_id12_s1_90",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9859504882637311
+    },
+    {
+      "sample_id": "FT720P_id12_s2_105",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9859023706698646
+    },
+    {
+      "sample_id": "FT720P_id12_s2_120",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9858574903499808
+    },
+    {
+      "sample_id": "FT720P_id12_s2_135",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9861402953442171
+    },
+    {
+      "sample_id": "FT720P_id12_s2_15",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9860137484632882
+    },
+    {
+      "sample_id": "FT720P_id12_s2_150",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9857649654371473
+    },
+    {
+      "sample_id": "FT720P_id12_s2_30",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9860023375290905
+    },
+    {
+      "sample_id": "FT720P_id12_s2_45",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9860306095165534
+    },
+    {
+      "sample_id": "FT720P_id12_s2_60",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.985720980377714
+    },
+    {
+      "sample_id": "FT720P_id12_s2_75",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.985937718308834
+    },
+    {
+      "sample_id": "FT720P_id12_s2_90",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9858247522237453
+    },
+    {
+      "sample_id": "FT720P_id5_s0_105",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9309152194298641
+    },
+    {
+      "sample_id": "FT720P_id5_s0_120",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7117914298122368
+    },
+    {
+      "sample_id": "FT720P_id5_s0_135",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8956209886238289
+    },
+    {
+      "sample_id": "FT720P_id5_s0_15",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9013256164204879
+    },
+    {
+      "sample_id": "FT720P_id5_s0_150",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9304352965458496
+    },
+    {
+      "sample_id": "FT720P_id5_s0_30",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9290186348152304
+    },
+    {
+      "sample_id": "FT720P_id5_s0_45",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9318616522392362
+    },
+    {
+      "sample_id": "FT720P_id5_s0_60",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9261438400651543
+    },
+    {
+      "sample_id": "FT720P_id5_s0_75",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9288159428031313
+    },
+    {
+      "sample_id": "FT720P_id5_s0_90",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9290425029304068
+    },
+    {
+      "sample_id": "FT720P_id9_s0_105",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.6945255477169022
+    },
+    {
+      "sample_id": "FT720P_id9_s0_120",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.3582276699742481
+    },
+    {
+      "sample_id": "FT720P_id9_s0_135",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.17996376702391098
+    },
+    {
+      "sample_id": "FT720P_id9_s0_15",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8633354384632614
+    },
+    {
+      "sample_id": "FT720P_id9_s0_150",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.6251700316248281
+    },
+    {
+      "sample_id": "FT720P_id9_s0_30",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8203196720025315
+    },
+    {
+      "sample_id": "FT720P_id9_s0_45",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8378713535451267
+    },
+    {
+      "sample_id": "FT720P_id9_s0_60",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8088473608020038
+    },
+    {
+      "sample_id": "FT720P_id9_s0_75",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8396119821359288
+    },
+    {
+      "sample_id": "FT720P_id9_s0_90",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8490089098775562
+    },
+    {
+      "sample_id": "IPHONE8B_id5_s2_105",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.922765053482154
+    },
+    {
+      "sample_id": "IPHONE8B_id5_s2_120",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9264039543892472
+    },
+    {
+      "sample_id": "IPHONE8B_id5_s2_135",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9265375156843104
+    },
+    {
+      "sample_id": "IPHONE8B_id5_s2_15",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9299736767682126
+    },
+    {
+      "sample_id": "IPHONE8B_id5_s2_150",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9254612355440008
+    },
+    {
+      "sample_id": "IPHONE8B_id5_s2_30",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9226482154516705
+    },
+    {
+      "sample_id": "IPHONE8B_id5_s2_45",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9265079263058947
+    },
+    {
+      "sample_id": "IPHONE8B_id5_s2_60",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9302709466369987
+    },
+    {
+      "sample_id": "IPHONE8B_id5_s2_75",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9274499768605827
+    },
+    {
+      "sample_id": "IPHONE8B_id5_s2_90",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.922875373224693
+    },
+    {
+      "sample_id": "IPHONE8B_id81_s0_105",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9005075918563983
+    },
+    {
+      "sample_id": "IPHONE8B_id81_s0_120",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8887280558265395
+    },
+    {
+      "sample_id": "IPHONE8B_id81_s0_135",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9228178954940726
+    },
+    {
+      "sample_id": "IPHONE8B_id81_s0_15",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8988987632845976
+    },
+    {
+      "sample_id": "IPHONE8B_id81_s0_150",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9132118071040508
+    },
+    {
+      "sample_id": "IPHONE8B_id81_s0_30",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8734103733873565
+    },
+    {
+      "sample_id": "IPHONE8B_id81_s0_45",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8532695048947657
+    },
+    {
+      "sample_id": "IPHONE8B_id81_s0_60",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8780281063624009
+    },
+    {
+      "sample_id": "IPHONE8B_id81_s0_75",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9021722261929777
+    },
+    {
+      "sample_id": "IPHONE8B_id81_s0_90",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.888831029219281
+    },
+    {
+      "sample_id": "IPHONE8B_id9_s2_105",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7114481218939682
+    },
+    {
+      "sample_id": "IPHONE8B_id9_s2_120",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.711566494823637
+    },
+    {
+      "sample_id": "IPHONE8B_id9_s2_135",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7115078414212616
+    },
+    {
+      "sample_id": "IPHONE8B_id9_s2_15",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7112562517129261
+    },
+    {
+      "sample_id": "IPHONE8B_id9_s2_150",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7118447871019744
+    },
+    {
+      "sample_id": "IPHONE8B_id9_s2_30",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7120781999129201
+    },
+    {
+      "sample_id": "IPHONE8B_id9_s2_45",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.711653219219015
+    },
+    {
+      "sample_id": "IPHONE8B_id9_s2_60",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8920158490461767
+    },
+    {
+      "sample_id": "IPHONE8B_id9_s2_75",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7114949520448728
+    },
+    {
+      "sample_id": "IPHONE8B_id9_s2_90",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7118668166724473
+    },
+    {
+      "sample_id": "MSIGT72_id164_s0_105",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9843426374838113
+    },
+    {
+      "sample_id": "MSIGT72_id164_s0_120",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9845222934747458
+    },
+    {
+      "sample_id": "MSIGT72_id164_s0_135",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9849699890879265
+    },
+    {
+      "sample_id": "MSIGT72_id164_s0_15",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9825832455078379
+    },
+    {
+      "sample_id": "MSIGT72_id164_s0_30",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9613805733000745
+    },
+    {
+      "sample_id": "MSIGT72_id164_s0_45",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9853847370450162
+    },
+    {
+      "sample_id": "MSIGT72_id164_s0_60",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9828469973775916
+    },
+    {
+      "sample_id": "MSIGT72_id164_s0_75",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9831125583034015
+    },
+    {
+      "sample_id": "MSIGT72_id164_s0_90",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9823007682423122
+    },
+    {
+      "sample_id": "PBUNKNOWN_id169_s0_105",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9604308495796355
+    },
+    {
+      "sample_id": "PBUNKNOWN_id169_s0_120",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9632010023363563
+    },
+    {
+      "sample_id": "PBUNKNOWN_id169_s0_135",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.961954095554005
+    },
+    {
+      "sample_id": "PBUNKNOWN_id169_s0_15",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.939351512767723
+    },
+    {
+      "sample_id": "PBUNKNOWN_id169_s0_150",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9625145642538175
+    },
+    {
+      "sample_id": "PBUNKNOWN_id169_s0_30",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9618307352470543
+    },
+    {
+      "sample_id": "PBUNKNOWN_id169_s0_45",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9621174724979358
+    },
+    {
+      "sample_id": "PBUNKNOWN_id169_s0_60",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.937402260048929
+    },
+    {
+      "sample_id": "PBUNKNOWN_id169_s0_75",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9601813053238113
+    },
+    {
+      "sample_id": "PBUNKNOWN_id169_s0_90",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9383031734234633
+    },
+    {
+      "sample_id": "SIC320_id161_s0_105",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9594483934753197
+    },
+    {
+      "sample_id": "SIC320_id161_s0_120",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9330112367887723
+    },
+    {
+      "sample_id": "SIC320_id161_s0_135",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.937374903102487
+    },
+    {
+      "sample_id": "SIC320_id161_s0_15",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9099397475521067
+    },
+    {
+      "sample_id": "SIC320_id161_s0_150",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9618559592829671
+    },
+    {
+      "sample_id": "SIC320_id161_s0_30",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8968907672041931
+    },
+    {
+      "sample_id": "SIC320_id161_s0_45",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8918180328232006
+    },
+    {
+      "sample_id": "SIC320_id161_s0_60",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8937036225224578
+    },
+    {
+      "sample_id": "SIC320_id161_s0_75",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9044310270335387
+    },
+    {
+      "sample_id": "SIC320_id161_s0_90",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9041728000215514
+    },
+    {
+      "sample_id": "UNKNOWN_id152_s0_105",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7139089735875579
+    },
+    {
+      "sample_id": "UNKNOWN_id152_s0_120",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7139686255246616
+    },
+    {
+      "sample_id": "UNKNOWN_id152_s0_135",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7144250557979849
+    },
+    {
+      "sample_id": "UNKNOWN_id152_s0_15",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7149406891968278
+    },
+    {
+      "sample_id": "UNKNOWN_id152_s0_150",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7144255894022268
+    },
+    {
+      "sample_id": "UNKNOWN_id152_s0_30",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7147833062994203
+    },
+    {
+      "sample_id": "UNKNOWN_id152_s0_45",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7144704230448112
+    },
+    {
+      "sample_id": "UNKNOWN_id152_s0_60",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7141711505713322
+    },
+    {
+      "sample_id": "UNKNOWN_id152_s0_75",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7135598834457105
+    },
+    {
+      "sample_id": "UNKNOWN_id152_s0_90",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7133977509254698
+    },
+    {
+      "sample_id": "YOUTUBE_id115_s0_105",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8944771456942567
+    },
+    {
+      "sample_id": "YOUTUBE_id115_s0_120",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8944357600724885
+    },
+    {
+      "sample_id": "YOUTUBE_id115_s0_135",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8983364688478628
+    },
+    {
+      "sample_id": "YOUTUBE_id115_s0_15",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8951371691186598
+    },
+    {
+      "sample_id": "YOUTUBE_id115_s0_30",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8920321680898537
+    },
+    {
+      "sample_id": "YOUTUBE_id115_s0_45",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9016446208530167
+    },
+    {
+      "sample_id": "YOUTUBE_id115_s0_60",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8975063877983519
+    },
+    {
+      "sample_id": "YOUTUBE_id115_s0_75",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9007628935985557
+    },
+    {
+      "sample_id": "YOUTUBE_id115_s0_90",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8956171828406212
+    },
+    {
+      "sample_id": "YOUTUBE_id115_s1_105",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9034685598414121
+    },
+    {
+      "sample_id": "YOUTUBE_id115_s1_120",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9372665373952002
+    },
+    {
+      "sample_id": "YOUTUBE_id115_s1_135",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9016471452246718
+    },
+    {
+      "sample_id": "YOUTUBE_id115_s1_15",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9348118542600445
+    },
+    {
+      "sample_id": "YOUTUBE_id115_s1_150",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8986818582337689
+    },
+    {
+      "sample_id": "YOUTUBE_id115_s1_30",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9008553739690153
+    },
+    {
+      "sample_id": "YOUTUBE_id115_s1_45",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9021044717042065
+    },
+    {
+      "sample_id": "YOUTUBE_id115_s1_60",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9037384910117122
+    },
+    {
+      "sample_id": "YOUTUBE_id115_s1_75",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9020872023339459
+    },
+    {
+      "sample_id": "YOUTUBE_id115_s1_90",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8999511177661784
+    },
+    {
+      "sample_id": "YOUTUBE_id115_s2_105",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9040159205334405
+    },
+    {
+      "sample_id": "YOUTUBE_id115_s2_120",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9000333798202009
+    },
+    {
+      "sample_id": "YOUTUBE_id115_s2_135",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9841675808524561
+    },
+    {
+      "sample_id": "YOUTUBE_id115_s2_15",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8998503375756698
+    },
+    {
+      "sample_id": "YOUTUBE_id115_s2_150",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8975245367155124
+    },
+    {
+      "sample_id": "YOUTUBE_id115_s2_30",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9008030246510967
+    },
+    {
+      "sample_id": "YOUTUBE_id115_s2_45",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8985727735939704
+    },
+    {
+      "sample_id": "YOUTUBE_id115_s2_60",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8975875191417281
+    },
+    {
+      "sample_id": "YOUTUBE_id115_s2_75",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9031028124849433
+    },
+    {
+      "sample_id": "YOUTUBE_id115_s2_90",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9383882734917982
+    },
+    {
+      "sample_id": "YOUTUBE_id116_s0_105",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9042418176321113
+    },
+    {
+      "sample_id": "YOUTUBE_id116_s0_120",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8997191213655364
+    }
+  ]
+}

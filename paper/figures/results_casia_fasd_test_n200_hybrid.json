@@ -1,0 +1,1224 @@
+{
+  "dataset": "casia_fasd",
+  "protocol": "test_n200",
+  "pipeline_name": "hybrid",
+  "n_samples": 200,
+  "elapsed_sec": 48.012830887921154,
+  "metrics": {
+    "threshold": 0.41553001558664704,
+    "apcer_max": 0.304635761589404,
+    "apcer_per_type": {
+      "unknown": 0.304635761589404
+    },
+    "bpcer": 0.30612244897959184,
+    "acer": 0.3053791052844979,
+    "hter": 0.3053791052844979,
+    "eer": 0.29517502365184484,
+    "eer_threshold": 0.41553001558664704,
+    "auc": 0.8117313150425733,
+    "n_bonafide": 49,
+    "n_attack": 151
+  },
+  "per_sample": [
+    {
+      "sample_id": "10_1.avi_100_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.6738292217479676
+    },
+    {
+      "sample_id": "10_1.avi_125_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.6746373875461553
+    },
+    {
+      "sample_id": "10_1.avi_25_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.676094356846378
+    },
+    {
+      "sample_id": "10_1.avi_50_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.6730676509391003
+    },
+    {
+      "sample_id": "10_1.avi_75_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.6758884828721388
+    },
+    {
+      "sample_id": "10_2.avi_100_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.6325444257850664
+    },
+    {
+      "sample_id": "10_2.avi_125_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.6538537681537556
+    },
+    {
+      "sample_id": "10_2.avi_150_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.6660382203113128
+    },
+    {
+      "sample_id": "10_2.avi_175_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.6384569181700105
+    },
+    {
+      "sample_id": "10_2.avi_25_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.66575850308023
+    },
+    {
+      "sample_id": "10_2.avi_50_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.46993440761737926
+    },
+    {
+      "sample_id": "10_2.avi_75_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.6494250000109946
+    },
+    {
+      "sample_id": "10_3.avi_100_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3234005759418514
+    },
+    {
+      "sample_id": "10_3.avi_125_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.40027792157340786
+    },
+    {
+      "sample_id": "10_3.avi_150_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4012388484358198
+    },
+    {
+      "sample_id": "10_3.avi_25_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.32349328621632445
+    },
+    {
+      "sample_id": "10_3.avi_50_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4014757193070592
+    },
+    {
+      "sample_id": "10_3.avi_75_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.399303739411796
+    },
+    {
+      "sample_id": "10_4.avi_100_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.32259987467880263
+    },
+    {
+      "sample_id": "10_4.avi_125_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.32278889424773677
+    },
+    {
+      "sample_id": "10_4.avi_150_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.32265943193168156
+    },
+    {
+      "sample_id": "10_4.avi_175_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3228690468646686
+    },
+    {
+      "sample_id": "10_4.avi_25_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4124758277147901
+    },
+    {
+      "sample_id": "10_4.avi_50_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3226267083291211
+    },
+    {
+      "sample_id": "10_4.avi_75_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.32265163898604704
+    },
+    {
+      "sample_id": "10_5.avi_100_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3317756370867554
+    },
+    {
+      "sample_id": "10_5.avi_125_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.41628138595154884
+    },
+    {
+      "sample_id": "10_5.avi_150_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.33058465379556695
+    },
+    {
+      "sample_id": "10_5.avi_25_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.41345462512278236
+    },
+    {
+      "sample_id": "10_5.avi_50_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.324894037734907
+    },
+    {
+      "sample_id": "10_5.avi_75_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.32621109144571364
+    },
+    {
+      "sample_id": "10_6.avi_100_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4429538347003078
+    },
+    {
+      "sample_id": "10_6.avi_125_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4109958740725053
+    },
+    {
+      "sample_id": "10_6.avi_150_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.35987027429129215
+    },
+    {
+      "sample_id": "10_6.avi_175_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.38805334805493286
+    },
+    {
+      "sample_id": "10_6.avi_25_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3654821496279085
+    },
+    {
+      "sample_id": "10_6.avi_50_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3544837389423861
+    },
+    {
+      "sample_id": "10_6.avi_75_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3715745385150991
+    },
+    {
+      "sample_id": "10_7.avi_100_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.41244142908366144
+    },
+    {
+      "sample_id": "10_7.avi_125_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.41909738145679315
+    },
+    {
+      "sample_id": "10_7.avi_25_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4414217251369231
+    },
+    {
+      "sample_id": "10_7.avi_50_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.40408041101093967
+    },
+    {
+      "sample_id": "10_7.avi_75_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.6320774677804639
+    },
+    {
+      "sample_id": "10_8.avi_100_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.39965350204787903
+    },
+    {
+      "sample_id": "10_8.avi_125_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.626573647062598
+    },
+    {
+      "sample_id": "10_8.avi_25_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.622358382071478
+    },
+    {
+      "sample_id": "10_8.avi_50_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.42710324490205764
+    },
+    {
+      "sample_id": "10_8.avi_75_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.6226673979035873
+    },
+    {
+      "sample_id": "10_HR_1.avi_100_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.6608640154684149
+    },
+    {
+      "sample_id": "10_HR_1.avi_125_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.637866756578532
+    },
+    {
+      "sample_id": "10_HR_1.avi_150_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.6608987341841104
+    },
+    {
+      "sample_id": "10_HR_1.avi_25_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.6699882083589522
+    },
+    {
+      "sample_id": "10_HR_1.avi_50_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.6900586722796818
+    },
+    {
+      "sample_id": "10_HR_1.avi_75_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.6618955252908477
+    },
+    {
+      "sample_id": "10_HR_2.avi_100_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.40568207155366454
+    },
+    {
+      "sample_id": "10_HR_2.avi_125_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3999154046762145
+    },
+    {
+      "sample_id": "10_HR_2.avi_150_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4374747008640919
+    },
+    {
+      "sample_id": "10_HR_2.avi_175_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4177257538820447
+    },
+    {
+      "sample_id": "10_HR_2.avi_200_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.416843801742185
+    },
+    {
+      "sample_id": "10_HR_2.avi_225_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.37881427082901103
+    },
+    {
+      "sample_id": "10_HR_2.avi_250_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.40014733984077544
+    },
+    {
+      "sample_id": "10_HR_2.avi_25_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.40373169373059004
+    },
+    {
+      "sample_id": "10_HR_2.avi_50_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.32391972772458705
+    },
+    {
+      "sample_id": "10_HR_2.avi_75_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4026693524597923
+    },
+    {
+      "sample_id": "10_HR_3.avi_100_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.45614043593827935
+    },
+    {
+      "sample_id": "10_HR_3.avi_25_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.44084931004733235
+    },
+    {
+      "sample_id": "10_HR_3.avi_50_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3243941466146714
+    },
+    {
+      "sample_id": "10_HR_3.avi_75_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3826170506867192
+    },
+    {
+      "sample_id": "10_HR_4.avi_100_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.32440140300920134
+    },
+    {
+      "sample_id": "10_HR_4.avi_125_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.32425969286541306
+    },
+    {
+      "sample_id": "10_HR_4.avi_25_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.32444350692837953
+    },
+    {
+      "sample_id": "10_HR_4.avi_50_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3243332179694356
+    },
+    {
+      "sample_id": "10_HR_4.avi_75_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.32427060962837634
+    },
+    {
+      "sample_id": "11_1.avi_100_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.597520904101823
+    },
+    {
+      "sample_id": "11_1.avi_25_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.597540853646953
+    },
+    {
+      "sample_id": "11_1.avi_50_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.6729343069909633
+    },
+    {
+      "sample_id": "11_1.avi_75_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.6743507965499119
+    },
+    {
+      "sample_id": "11_2.avi_100_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.6711504858111205
+    },
+    {
+      "sample_id": "11_2.avi_125_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.6691256856840161
+    },
+    {
+      "sample_id": "11_2.avi_25_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.667158140289707
+    },
+    {
+      "sample_id": "11_2.avi_50_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.6558612670135139
+    },
+    {
+      "sample_id": "11_2.avi_75_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.6666634486641086
+    },
+    {
+      "sample_id": "11_3.avi_100_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4014857748597538
+    },
+    {
+      "sample_id": "11_3.avi_125_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.32372138994882205
+    },
+    {
+      "sample_id": "11_3.avi_150_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.39970119002804244
+    },
+    {
+      "sample_id": "11_3.avi_175_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.42111889172010214
+    },
+    {
+      "sample_id": "11_3.avi_200_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4170020519301232
+    },
+    {
+      "sample_id": "11_3.avi_25_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.32374484698070477
+    },
+    {
+      "sample_id": "11_3.avi_50_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.40238697471734547
+    },
+    {
+      "sample_id": "11_3.avi_75_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.32355287484379086
+    },
+    {
+      "sample_id": "11_4.avi_100_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4205637277149925
+    },
+    {
+      "sample_id": "11_4.avi_125_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.40312753703442017
+    },
+    {
+      "sample_id": "11_4.avi_150_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4690590569155506
+    },
+    {
+      "sample_id": "11_4.avi_175_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.40301641926330195
+    },
+    {
+      "sample_id": "11_4.avi_25_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.40518024826829174
+    },
+    {
+      "sample_id": "11_4.avi_50_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.40625446307093405
+    },
+    {
+      "sample_id": "11_4.avi_75_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4065864512915177
+    },
+    {
+      "sample_id": "11_5.avi_100_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4194502712090141
+    },
+    {
+      "sample_id": "11_5.avi_125_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.41821639686142015
+    },
+    {
+      "sample_id": "11_5.avi_150_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4199175771271842
+    },
+    {
+      "sample_id": "11_5.avi_175_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.41747383223142615
+    },
+    {
+      "sample_id": "11_5.avi_25_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4187761244383504
+    },
+    {
+      "sample_id": "11_5.avi_50_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4179742504110476
+    },
+    {
+      "sample_id": "11_5.avi_75_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4184657399183211
+    },
+    {
+      "sample_id": "11_6.avi_100_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3232168633750261
+    },
+    {
+      "sample_id": "11_6.avi_125_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.32315330801920766
+    },
+    {
+      "sample_id": "11_6.avi_150_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3233529806028492
+    },
+    {
+      "sample_id": "11_6.avi_175_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3233196490897255
+    },
+    {
+      "sample_id": "11_6.avi_25_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3232542408479902
+    },
+    {
+      "sample_id": "11_6.avi_50_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.32301185210911565
+    },
+    {
+      "sample_id": "11_6.avi_75_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.32308874110073216
+    },
+    {
+      "sample_id": "11_7.avi_100_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.40068914926319094
+    },
+    {
+      "sample_id": "11_7.avi_125_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.41931044879092005
+    },
+    {
+      "sample_id": "11_7.avi_25_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.41811819924976146
+    },
+    {
+      "sample_id": "11_7.avi_50_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.40356196631769076
+    },
+    {
+      "sample_id": "11_7.avi_75_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4182329492870613
+    },
+    {
+      "sample_id": "11_8.avi_25_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.40209575343579806
+    },
+    {
+      "sample_id": "11_8.avi_50_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4309870877504479
+    },
+    {
+      "sample_id": "11_8.avi_75_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.40131141185425373
+    },
+    {
+      "sample_id": "11_HR_1.avi_100_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.40182019386279044
+    },
+    {
+      "sample_id": "11_HR_1.avi_125_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.40553977733623914
+    },
+    {
+      "sample_id": "11_HR_1.avi_25_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.402476107091969
+    },
+    {
+      "sample_id": "11_HR_1.avi_50_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.4029804337323179
+    },
+    {
+      "sample_id": "11_HR_1.avi_75_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.6247351559996382
+    },
+    {
+      "sample_id": "11_HR_2.avi_100_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4708289690023325
+    },
+    {
+      "sample_id": "11_HR_2.avi_125_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4020941784967914
+    },
+    {
+      "sample_id": "11_HR_2.avi_150_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.46153972504671414
+    },
+    {
+      "sample_id": "11_HR_2.avi_175_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.31041067555177776
+    },
+    {
+      "sample_id": "11_HR_2.avi_200_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4667260593158819
+    },
+    {
+      "sample_id": "11_HR_2.avi_225_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.41558918144839896
+    },
+    {
+      "sample_id": "11_HR_2.avi_25_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4036341544083604
+    },
+    {
+      "sample_id": "11_HR_2.avi_50_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.42814283511844714
+    },
+    {
+      "sample_id": "11_HR_2.avi_75_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4053609690095116
+    },
+    {
+      "sample_id": "11_HR_3.avi_100_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.41226459843365293
+    },
+    {
+      "sample_id": "11_HR_3.avi_125_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.43292352221611907
+    },
+    {
+      "sample_id": "11_HR_3.avi_25_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4394800773019171
+    },
+    {
+      "sample_id": "11_HR_3.avi_50_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4263082369266374
+    },
+    {
+      "sample_id": "11_HR_3.avi_75_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4242131049459809
+    },
+    {
+      "sample_id": "11_HR_4.avi_100_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4014929458463978
+    },
+    {
+      "sample_id": "11_HR_4.avi_125_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4011337188581746
+    },
+    {
+      "sample_id": "11_HR_4.avi_25_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.40181348904879405
+    },
+    {
+      "sample_id": "11_HR_4.avi_50_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4021909618330111
+    },
+    {
+      "sample_id": "11_HR_4.avi_75_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4032987696038416
+    },
+    {
+      "sample_id": "12_1.avi_100_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.5969640055075911
+    },
+    {
+      "sample_id": "12_1.avi_125_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.3379555831745311
+    },
+    {
+      "sample_id": "12_1.avi_25_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.6718181103427809
+    },
+    {
+      "sample_id": "12_1.avi_50_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.3343808266769677
+    },
+    {
+      "sample_id": "12_1.avi_75_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.3355111386828987
+    },
+    {
+      "sample_id": "12_2.avi_100_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.44969294958668987
+    },
+    {
+      "sample_id": "12_2.avi_125_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.45128612576834304
+    },
+    {
+      "sample_id": "12_2.avi_25_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.437859823710154
+    },
+    {
+      "sample_id": "12_2.avi_50_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.6443774526023357
+    },
+    {
+      "sample_id": "12_2.avi_75_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.41477699552798625
+    },
+    {
+      "sample_id": "12_3.avi_100_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3233426056930981
+    },
+    {
+      "sample_id": "12_3.avi_125_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.32392738031356555
+    },
+    {
+      "sample_id": "12_3.avi_25_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3234306470705884
+    },
+    {
+      "sample_id": "12_3.avi_50_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3233680880567166
+    },
+    {
+      "sample_id": "12_3.avi_75_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.41339423170082723
+    },
+    {
+      "sample_id": "12_4.avi_100_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4003852529809709
+    },
+    {
+      "sample_id": "12_4.avi_125_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.40073155995134924
+    },
+    {
+      "sample_id": "12_4.avi_150_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4166482840898938
+    },
+    {
+      "sample_id": "12_4.avi_175_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.41576651970048056
+    },
+    {
+      "sample_id": "12_4.avi_25_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3995121376755434
+    },
+    {
+      "sample_id": "12_4.avi_50_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.40100964621315005
+    },
+    {
+      "sample_id": "12_4.avi_75_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.40061385166596314
+    },
+    {
+      "sample_id": "12_5.avi_100_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.40124146264905886
+    },
+    {
+      "sample_id": "12_5.avi_125_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.40417737193282227
+    },
+    {
+      "sample_id": "12_5.avi_25_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4004298933627395
+    },
+    {
+      "sample_id": "12_5.avi_50_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4013154735070579
+    },
+    {
+      "sample_id": "12_5.avi_75_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4005637108948837
+    },
+    {
+      "sample_id": "12_6.avi_100_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4160802484340519
+    },
+    {
+      "sample_id": "12_6.avi_125_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.39932035193567395
+    },
+    {
+      "sample_id": "12_6.avi_150_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3992134930768624
+    },
+    {
+      "sample_id": "12_6.avi_175_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3229021090745635
+    },
+    {
+      "sample_id": "12_6.avi_25_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.41240038801666284
+    },
+    {
+      "sample_id": "12_6.avi_50_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3992531369280407
+    },
+    {
+      "sample_id": "12_6.avi_75_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.39880914153337643
+    },
+    {
+      "sample_id": "12_7.avi_100_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.40275204654321756
+    },
+    {
+      "sample_id": "12_7.avi_125_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4064644468917884
+    },
+    {
+      "sample_id": "12_7.avi_150_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.40611562215707525
+    },
+    {
+      "sample_id": "12_7.avi_175_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3986388855601981
+    },
+    {
+      "sample_id": "12_7.avi_200_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.42148539531895207
+    },
+    {
+      "sample_id": "12_7.avi_225_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.40628687587217666
+    },
+    {
+      "sample_id": "12_7.avi_25_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4021910380085455
+    },
+    {
+      "sample_id": "12_7.avi_50_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.40175303912202986
+    },
+    {
+      "sample_id": "12_7.avi_75_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.40313082959908464
+    },
+    {
+      "sample_id": "12_8.avi_100_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4532710888328207
+    },
+    {
+      "sample_id": "12_8.avi_125_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3995879973742605
+    },
+    {
+      "sample_id": "12_8.avi_150_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4413893826721608
+    },
+    {
+      "sample_id": "12_8.avi_175_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.45313444870668396
+    },
+    {
+      "sample_id": "12_8.avi_25_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.40114905278007684
+    },
+    {
+      "sample_id": "12_8.avi_50_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3238242529082734
+    },
+    {
+      "sample_id": "12_8.avi_75_fake",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.45800882432066164
+    },
+    {
+      "sample_id": "12_HR_1.avi_100_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.40159622707114695
+    },
+    {
+      "sample_id": "12_HR_1.avi_125_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.4009143102786573
+    },
+    {
+      "sample_id": "12_HR_1.avi_150_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.3245269591028355
+    },
+    {
+      "sample_id": "12_HR_1.avi_175_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.40169223184490227
+    },
+    {
+      "sample_id": "12_HR_1.avi_200_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.32604024163791595
+    },
+    {
+      "sample_id": "12_HR_1.avi_225_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.40070591988703325
+    },
+    {
+      "sample_id": "12_HR_1.avi_25_real",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.4010059646621573
+    }
+  ]
+}
