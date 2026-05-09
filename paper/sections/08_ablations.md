@@ -6,16 +6,16 @@ This section ablates each design decision. Numbers come from `tests/benchmark/ab
 
 The most direct ablation: what does each track contribute? Three pipelines with identical face detection + tracking + fuser, differing only in the analyzer set:
 
-| Dataset | Pipeline | ACER (95% CI) | EER (95% CI) | AUC (95% CI) | N |
+| Dataset | Pipeline | ACER | EER | AUC | N |
 |---|---|---:|---:|---:|---:|
-| **CASIA-FASD test** | `minifasnet_only` | 24.03% [18.90, 28.19] | 23.68% [19.18, 28.32] | **0.8552** [0.8099, 0.8928] | 500 |
-| CASIA-FASD test | `image_only` | 26.85% [19.68, 33.10] | 26.98% [19.96, 33.03] | 0.8360 [0.7877, 0.8790] | 500 |
-| CASIA-FASD test | `hybrid` | 26.85% [19.68, 33.10] | 26.98% [19.96, 33.03] | 0.8360 [0.7877, 0.8790] | 500 |
-| **CelebA-Spoof eval** | `minifasnet_only` | 32.21% [23.59, 38.58] | 31.46% [23.97, 37.83] | **0.7915** [0.7186, 0.8557] | 200 |
-| CelebA-Spoof eval | `image_only` | 35.20% [26.59, 42.32] | 34.46% [26.97, 41.95] | 0.7264 [0.6396, 0.8013] | 200 |
-| **In-house replay** | `hybrid` | **12.67%** [4.00, 28.00] | 24.00% [4.00, 32.67] | **0.9264** [0.8685, 0.9744] | 100 |
-| In-house replay | `image_only` | 12.67% [4.00, 28.00] | 24.00% [4.00, 32.67] | 0.9264 [0.8685, 0.9744] | 100 |
-| In-house replay | `minifasnet_only` | 12.67% [4.00, 28.00] | 24.00% [4.00, 33.33] | 0.9245 [0.8568, 0.9811] | 100 |
+| **CASIA-FASD test FULL** | `minifasnet_only` | **12.67%** | 12.70% | **0.9454** | **2,408** |
+| CASIA-FASD test FULL | `image_only` | 13.70% | 13.73% | 0.9140 | 2,408 |
+| CASIA-FASD test FULL | `hybrid` | 13.70% | 13.62% | 0.9139 | 2,408 |
+| **CelebA-Spoof eval FULL** | `minifasnet_only` | **28.67%** | 28.61% | **0.7820** | **2,611** |
+| CelebA-Spoof eval FULL | `image_only` | 30.65% | 30.59% | 0.7262 | 2,611 |
+| **In-house replay** | `hybrid` | **12.67%** | 24.00% | **0.9264** | 100 |
+| In-house replay | `image_only` | 12.67% | 24.00% | 0.9264 | 100 |
+| In-house replay | `minifasnet_only` | 12.67% | 24.00% | 0.9245 | 100 |
 
 The cross-dataset finding: zero-shot, `minifasnet_only` outperforms `image_only` on both public datasets — the auxiliary analyzers (texture, moire, AR-filter, device-boundary) were calibrated against in-house spoof characteristics that diverge from CASIA-FASD's print/replay distributions and CelebA-Spoof's broader 10-class taxonomy. Without recalibration on the target distribution, the strong single-model baseline is more robust.
 

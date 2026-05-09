@@ -1,0 +1,2 @@
+dataset,protocol,method,APCER_max,BPCER,ACER,EER,AUC,N
+casia_fasd,test_full,hybrid,13.70%,13.71%,13.70%,13.62%,0.9139,2408
