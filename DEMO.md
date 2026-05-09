@@ -26,7 +26,47 @@ pytest tests/ -v
 Expected:
 
 ```
-============================== 68 passed in 2.78s ==============================
+============================= 114 passed in 2.5s ==============================
+```
+
+Of those: 68 are the original session-engine tests (`tests/test_*.py`) and 46 cover the v0.2.0 sub-packages (`tests/unit/{gates,fusion,pipeline}/`).
+
+### v0.2.0 sub-packages (no camera, no model download required)
+
+If you only want the **gates / fusion / assembler** that v0.2.0 introduced — for example because you are integrating from a service that already has its own face detector — you can use them without the rest of the engine:
+
+```python
+import cv2
+from src.gates import FaceUsabilityGate, LandmarkResult
+from src.fusion import HybridFusionEvaluator
+from src.pipeline import AntispoofPipelineAssembler
+
+# 1. Gate: cheapest, returns a usable/blocked verdict
+gate = FaceUsabilityGate()
+frame = cv2.imread("frame.jpg")
+gate_result = gate.evaluate(
+    frame=frame,
+    face_bbox=(20, 20, 200, 200),
+    landmarks=None,        # optional LandmarkResult
+)
+print(gate_result.usable, gate_result.reason)
+
+# 2. Fusion: combine pretrained MiniFASNet score + device-replay signals
+fuser = HybridFusionEvaluator()
+verdict = fuser.evaluate(
+    pretrained_spoof_score=0.30,
+    custom_signals={"moire_score": 0.10, "device_replay_score": 0.05},
+)
+print(verdict.is_spoof, verdict.spoof_score, verdict.reasoning)
+
+# 3. Assembler: run all configured layers in one call
+assembler = AntispoofPipelineAssembler(
+    face_usability_gate=gate,
+    hybrid_fusion_evaluator=fuser,
+    # device_spoof_risk_evaluator=...   # caller-supplied, duck-typed
+)
+result = assembler.evaluate(frame_bgr=frame)
+print(result.recommended_action, result.layers_evaluated)
 ```
 
 That covers domain types, all analyzers (texture, moire, screen-replay, temporal, MiniFASNet, device-boundary, blink, rPPG, AR-filter, multi-face tracker, fuser), session lifecycle, verdict logic, and incident detection.

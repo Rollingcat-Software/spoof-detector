@@ -1,0 +1,95 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "spoof-detector"
+version = "0.2.0"
+description = "Multi-signal face anti-spoofing engine — gates, fusion, pipeline assembler. Originally extracted from FIVUCSAS R&D."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+authors = [
+    { name = "Rollingcat Software" },
+]
+keywords = [
+    "anti-spoofing",
+    "presentation-attack-detection",
+    "face-recognition",
+    "liveness",
+    "iso-30107-3",
+    "fivucsas",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Image Recognition",
+    "Topic :: Security",
+]
+dependencies = [
+    "numpy>=1.26.0",
+    "opencv-python>=4.9.0",
+    # mediapipe / uniface / scikit-image / scipy / pyyaml are optional —
+    # only the full session engine needs them. The gates+fusion+assembler
+    # subset (the parts re-used by FIVUCSAS biometric-processor) only need
+    # numpy + opencv.
+]
+
+[project.optional-dependencies]
+full = [
+    "mediapipe>=0.10.9",
+    "uniface>=3.0.0",
+    "onnxruntime>=1.17.0",
+    "scikit-image>=0.22.0",
+    "scipy>=1.12.0",
+    "pyyaml>=6.0.1",
+    "python-json-logger>=2.0.7",
+]
+test = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/Rollingcat-Software/spoof-detector"
+Source = "https://github.com/Rollingcat-Software/spoof-detector"
+Issues = "https://github.com/Rollingcat-Software/spoof-detector/issues"
+
+[tool.setuptools]
+# We ship the existing `src/` layout flat (no top-level `spoof_detector`
+# package rename) so the in-tree imports (`from src.gates.* import ...`)
+# stay intact. Downstream callers that install via pip get the same
+# `src.gates`, `src.fusion`, `src.pipeline` namespace exposed by the
+# wheel — which is unusual but matches the established repo layout
+# (Stage-1 of the larger plan was an extraction, not a rewrite).
+package-dir = { "" = "." }
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = [
+    "src",
+    "src.*",
+]
+exclude = [
+    "tests",
+    "tests.*",
+    "tools",
+    "tools.*",
+    "data",
+    "data.*",
+    "logs",
+    "logs.*",
+    "models",
+    "models.*",
+    "paper",
+    "paper.*",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "strict"
