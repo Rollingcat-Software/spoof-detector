@@ -9,10 +9,9 @@ export type SourceImage = HTMLCanvasElement | OffscreenCanvas | ImageData;
 /** Get an ImageData snapshot from any supported input, no scaling. */
 export function toImageData(src: SourceImage): ImageData {
   if (src instanceof ImageData) return src;
-  // HTMLCanvasElement | OffscreenCanvas
-  const ctx = (src as HTMLCanvasElement | OffscreenCanvas).getContext(
-    "2d",
-  ) as CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null;
+  const ctx = (
+    src as HTMLCanvasElement | OffscreenCanvas
+  ).getContext("2d") as CanvasRenderingContext2D | null;
   if (!ctx) {
     throw new Error("toImageData: 2D context unavailable on source canvas");
   }

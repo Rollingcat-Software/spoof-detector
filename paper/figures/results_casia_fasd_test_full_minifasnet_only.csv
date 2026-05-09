@@ -1,0 +1,2 @@
+dataset,protocol,method,APCER_max,BPCER,ACER,EER,AUC,N
+casia_fasd,test_full,minifasnet_only,12.66%,12.69%,12.67%,12.70%,0.9454,2408

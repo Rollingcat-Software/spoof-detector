@@ -1,0 +1,2 @@
+dataset,protocol,method,APCER_max,BPCER,ACER,EER,AUC,N
+celeba_spoof_hf,eval_full,minifasnet_only,28.61%,28.72%,28.67%,28.61%,0.7820,2611
