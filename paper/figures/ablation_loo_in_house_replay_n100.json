@@ -1,0 +1,165 @@
+{
+  "dataset": "in_house",
+  "protocol": "replay_n100",
+  "n_samples": 83,
+  "baseline": {
+    "threshold": 0.9861930097907974,
+    "apcer_max": 0.1206896551724138,
+    "apcer_per_type": {
+      "replay": 0.1206896551724138
+    },
+    "bpcer": 0.16,
+    "acer": 0.1403448275862069,
+    "hter": 0.1403448275862069,
+    "eer": 0.1203448275862069,
+    "eer_threshold": 0.9861930097907974,
+    "auc": 0.949655172413793,
+    "n_bonafide": 25,
+    "n_attack": 58
+  },
+  "leave_one_out": [
+    {
+      "analyzer_removed": "ar_filter",
+      "acer": 0.1403448275862069,
+      "delta_acer": 0.0,
+      "auc": 0.949655172413793,
+      "delta_auc": 0.0,
+      "eer": 0.1203448275862069,
+      "apcer_per_type": {
+        "replay": 0.1206896551724138
+      }
+    },
+    {
+      "analyzer_removed": "background_grid",
+      "acer": 0.1489655172413793,
+      "delta_acer": 0.008620689655172403,
+      "auc": 0.9489655172413793,
+      "delta_auc": -0.0006896551724137057,
+      "eer": 0.10896551724137932,
+      "apcer_per_type": {
+        "replay": 0.13793103448275862
+      }
+    },
+    {
+      "analyzer_removed": "blink",
+      "acer": 0.1403448275862069,
+      "delta_acer": 0.0,
+      "auc": 0.949655172413793,
+      "delta_auc": 0.0,
+      "eer": 0.1203448275862069,
+      "apcer_per_type": {
+        "replay": 0.1206896551724138
+      }
+    },
+    {
+      "analyzer_removed": "device_boundary",
+      "acer": 0.15758620689655173,
+      "delta_acer": 0.017241379310344834,
+      "auc": 0.9527586206896551,
+      "delta_auc": 0.003103448275862064,
+      "eer": 0.16620689655172416,
+      "apcer_per_type": {
+        "replay": 0.15517241379310345
+      }
+    },
+    {
+      "analyzer_removed": "landmark_variance",
+      "acer": 0.1403448275862069,
+      "delta_acer": 0.0,
+      "auc": 0.949655172413793,
+      "delta_auc": 0.0,
+      "eer": 0.1203448275862069,
+      "apcer_per_type": {
+        "replay": 0.1206896551724138
+      }
+    },
+    {
+      "analyzer_removed": "micro_tremor",
+      "acer": 0.1403448275862069,
+      "delta_acer": 0.0,
+      "auc": 0.949655172413793,
+      "delta_auc": 0.0,
+      "eer": 0.1203448275862069,
+      "apcer_per_type": {
+        "replay": 0.1206896551724138
+      }
+    },
+    {
+      "analyzer_removed": "minifasnet",
+      "acer": 0.23206896551724138,
+      "delta_acer": 0.09172413793103448,
+      "auc": 0.8034482758620689,
+      "delta_auc": -0.14620689655172414,
+      "eer": 0.2406896551724138,
+      "apcer_per_type": {
+        "replay": 0.22413793103448276
+      }
+    },
+    {
+      "analyzer_removed": "moire",
+      "acer": 0.1403448275862069,
+      "delta_acer": 0.0,
+      "auc": 0.949655172413793,
+      "delta_auc": 0.0,
+      "eer": 0.1203448275862069,
+      "apcer_per_type": {
+        "replay": 0.1206896551724138
+      }
+    },
+    {
+      "analyzer_removed": "rppg",
+      "acer": 0.1403448275862069,
+      "delta_acer": 0.0,
+      "auc": 0.949655172413793,
+      "delta_auc": 0.0,
+      "eer": 0.1203448275862069,
+      "apcer_per_type": {
+        "replay": 0.1206896551724138
+      }
+    },
+    {
+      "analyzer_removed": "screen_flicker",
+      "acer": 0.1403448275862069,
+      "delta_acer": 0.0,
+      "auc": 0.949655172413793,
+      "delta_auc": 0.0,
+      "eer": 0.1203448275862069,
+      "apcer_per_type": {
+        "replay": 0.1206896551724138
+      }
+    },
+    {
+      "analyzer_removed": "screen_replay",
+      "acer": 0.1403448275862069,
+      "delta_acer": 0.0,
+      "auc": 0.949655172413793,
+      "delta_auc": 0.0,
+      "eer": 0.1203448275862069,
+      "apcer_per_type": {
+        "replay": 0.1206896551724138
+      }
+    },
+    {
+      "analyzer_removed": "temporal",
+      "acer": 0.1403448275862069,
+      "delta_acer": 0.0,
+      "auc": 0.949655172413793,
+      "delta_auc": 0.0,
+      "eer": 0.1203448275862069,
+      "apcer_per_type": {
+        "replay": 0.1206896551724138
+      }
+    },
+    {
+      "analyzer_removed": "texture",
+      "acer": 0.1403448275862069,
+      "delta_acer": 0.0,
+      "auc": 0.949655172413793,
+      "delta_auc": 0.0,
+      "eer": 0.1203448275862069,
+      "apcer_per_type": {
+        "replay": 0.1206896551724138
+      }
+    }
+  ]
+}
