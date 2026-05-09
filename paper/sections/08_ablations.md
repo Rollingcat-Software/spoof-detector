@@ -158,8 +158,8 @@ A practical observation from our test grid: increasing N tightens the AUC CI pre
 |---:|---:|---:|---|
 | 200 | 0.840 | [0.755, 0.910] = 0.155 | bootstrap n=1500 |
 | 500 | 0.855 | [0.810, 0.893] = 0.083 | bootstrap n=1500 |
-| 2,408 (full) | 0.945 | [width pending bootstrap n=100 — projected ≤ 0.04] | full test split |
+| 2,408 (full) | **0.9452** | [0.9366, 0.9560] = **0.0194** | bootstrap n=100 |
 
-The 200→500 sample increase halved the CI width; we project full-N CI width to drop below 0.04 (from the analytical relationship CI ∝ 1/√N for proportions). Note that the CASIA-FASD point estimate also rose from 0.840 (N=200) → 0.855 (N=500) → 0.945 (N=2,408). The pattern is consistent with sub-sample bias on small N (N=200 happened to draw subjects with weaker MiniFASNet scores), with the full-test result being the unbiased estimator.
+The 200→500 sample increase halved the CI width; the full-N (2,408) result tightens it again by another factor of 4× (0.083 → 0.019). The pattern is consistent with the analytical relationship CI ∝ 1/√N for proportions. Note that the CASIA-FASD point estimate also rose from 0.840 (N=200) → 0.855 (N=500) → 0.945 (N=2,408) — small-N happened to draw subjects with weaker MiniFASNet scores; the full-test result is the unbiased estimator.
 
 This three-row sequence is itself an instructive paper observation: small-N FAS evaluations are noisy, and reviewer comparisons that rely on intra-paper N-discrepancies (e.g. one method reports N=200, another N=2000) can be misleading without explicit CI reporting.

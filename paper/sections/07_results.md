@@ -35,7 +35,7 @@ The full eval shard — 874 bona-fide + 1,737 attacks. Same zero-shot UniFace Mi
 |--------------------|----------------------:|---------------------:|--------------------------:|-----:|
 | `minifasnet_only`  | **28.67%** [27.36, 30.23] | 28.61% [27.32, 30.29] | **0.7818** [0.7663, 0.7993] | 382.4s |
 | `image_only`       | 30.65% [28.52, 32.52] | 30.59% [28.49, 32.49] | 0.7261 [0.7061, 0.7498]   | 396.7s |
-| `hybrid`           | 30.73% [pending]      | 30.67% [pending]      | 0.7245 [pending]          | 642.8s |
+| `hybrid`           | 30.73% [28.72, 32.81] | 30.67% [28.69, 32.70] | 0.7246 [0.7051, 0.7483]   | 642.8s |
 
 **Cross-dataset claim now holds on BOTH academic datasets at 95% confidence**: on CelebA-Spoof, `minifasnet_only` AUC CI lower bound (0.7663) sits above `image_only` AUC upper bound (0.7498). Strictly separated, just like CASIA-FASD. The §8.1 paper finding ("`minifasnet_only` outperforms multi-analyzer pipelines on cross-dataset zero-shot") is now empirically nailed on TWO independent public datasets.
 
