@@ -85,6 +85,18 @@ The mixed-session column is the headline number a paper reviewer reads: a sessio
 
 When deployment can request user cooperation, add the active layer (light challenge from `from_biometric_processor/light_challenge_service.py` + gesture challenge from `active_gesture_liveness_manager.py`).
 
+### Synthetic-flash sanity test (in-house replay sub-protocol, N=100, color=red)
+
+`tests/benchmark/active_challenge.py` exercises the FlashSpoofAnalyzer code path end-to-end on synthesised pre/flash pairs (the input frame is the pre-flash; the flash response is simulated by adding +25 intensity to the expected color channel and -8 to the others — the diffuse-skin model). Results:
+
+| Configuration | ACER | EER | AUC | APCER (replay) |
+|---|---:|---:|---:|---:|
+| `flash_only` (synthetic pairs) | 40.00% | 40.00% | 0.5685 | 40.00% |
+
+This is an architectural smoke test: the FlashSpoofAnalyzer correctly produces non-trivial scores end-to-end against the synthetic pairs, validating the `pre_flash_bgr → flash_bgr → FlashSpoofAnalysis → fused live-ness score` plumbing. The 0.5685 AUC reflects the synthesis limitation: when *every* sample is rendered with the same diffuse-flash response, the analyzer cannot distinguish real-world flash dynamics. Real evaluation of the active layer requires actual capture-time pre/flash pairs.
+
+### Real-data placeholders (TBD)
+
 | Configuration | APCER | BPCER | ACER | UX cost (s) |
 |---|---:|---:|---:|---:|
 | hybrid (passive only, paper default) | 14.03% | 14.03% | 14.03% | 0 |
@@ -93,6 +105,8 @@ When deployment can request user cooperation, add the active layer (light challe
 | hybrid + both | TBD | TBD | TBD | ~4.0 |
 
 Active challenges add a +30 to +50 percentage-point swing on hard screen-replay attacks (per Aysenur's 2026 internal evaluation, see `research/aysenur/working_spoof_detection/`). They are not part of the headline pipeline reported in §7.
+
+The path to real numbers: Aysenur's evaluation data captured actual pre/flash frame pairs from real users + replay attacks under the `light_challenge_service` protocol. Once that capture set is consented for academic release, `tests/benchmark/active_challenge.py` will load the real pairs (replacing the synthesis step) and produce the paper-grade row above.
 
 ## 8.6 Session length curve (Figure 4)
 

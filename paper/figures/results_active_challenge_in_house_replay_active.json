@@ -1,0 +1,1224 @@
+{
+  "dataset": "in_house",
+  "protocol": "replay_active",
+  "method": "active_challenge_only",
+  "n_samples": 100,
+  "color": "red",
+  "metrics": {
+    "threshold": 0.5880914988698145,
+    "apcer_max": 0.4,
+    "apcer_per_type": {
+      "replay": 0.4
+    },
+    "bpcer": 0.4,
+    "acer": 0.4,
+    "hter": 0.4,
+    "eer": 0.4,
+    "eer_threshold": 0.5880914988698145,
+    "auc": 0.5685333333333332,
+    "n_bonafide": 25,
+    "n_attack": 75
+  },
+  "per_sample": [
+    {
+      "sample_id": "bonafide/a_afuat_000.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "active_score": 0.601774224624822,
+      "details": {
+        "flash_color_match": 0.9376948867973529,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.6169626990588088
+      }
+    },
+    {
+      "sample_id": "bonafide/a_afuat_001.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "active_score": 0.6035085583258617,
+      "details": {
+        "flash_color_match": 0.9415922659008127,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.6187165196553657
+      }
+    },
+    {
+      "sample_id": "bonafide/a_afuat_002.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "active_score": 0.5584443366862408,
+      "details": {
+        "flash_color_match": 0.8406297423337635,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.5719243975273531
+      }
+    },
+    {
+      "sample_id": "bonafide/a_afuat_003.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "active_score": 0.5465406493544579,
+      "details": {
+        "flash_color_match": 0.813574492931366,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.5611085218191146
+      }
+    },
+    {
+      "sample_id": "bonafide/a_afuat_004.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "active_score": 0.6169006728044193,
+      "details": {
+        "flash_color_match": 0.5470116710015185,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.0,
+        "flash_response_consistency": 0.6309600440381183
+      }
+    },
+    {
+      "sample_id": "bonafide/a_afuat_005.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "active_score": 0.629164471847857,
+      "details": {
+        "flash_color_match": 0.8307638016186263,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.48570531943764667,
+        "flash_response_consistency": 0.5900001508793573
+      }
+    },
+    {
+      "sample_id": "bonafide/a_aga_000.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "active_score": 0.5957352442623755,
+      "details": {
+        "flash_color_match": 0.9241241444098323,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.6108558649844245
+      }
+    },
+    {
+      "sample_id": "bonafide/a_aga_001.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "active_score": 0.607622085763803,
+      "details": {
+        "flash_color_match": 0.6959408212295007,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.34682249305999363,
+        "flash_response_consistency": 0.6361025588400145
+      }
+    },
+    {
+      "sample_id": "bonafide/a_aga_002.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "active_score": 0.5310757207559297,
+      "details": {
+        "flash_color_match": 0.767269389409768,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.8166835605055277,
+        "flash_response_consistency": 0.5250467709312804
+      }
+    },
+    {
+      "sample_id": "bonafide/a_ahab_000.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "active_score": 0.6029923352205666,
+      "details": {
+        "flash_color_match": 0.8930651051433464,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.752646164840322,
+        "flash_response_consistency": 0.6129552613129238
+      }
+    },
+    {
+      "sample_id": "bonafide/a_ahab_001.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "active_score": 0.5598945377547491,
+      "details": {
+        "flash_color_match": 0.8435832309095483,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.5746124539092967
+      }
+    },
+    {
+      "sample_id": "bonafide/b_person_0001_000.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "active_score": 0.5957352442623755,
+      "details": {
+        "flash_color_match": 0.9241241444098323,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.6108558649844245
+      }
+    },
+    {
+      "sample_id": "bonafide/b_person_0001_001.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "active_score": 0.5683590829623374,
+      "details": {
+        "flash_color_match": 0.8626046808142411,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.5831721063664085
+      }
+    },
+    {
+      "sample_id": "bonafide/b_person_0001_002.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "active_score": 0.5543416042876872,
+      "details": {
+        "flash_color_match": 0.8311047287363755,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.568997127931369
+      }
+    },
+    {
+      "sample_id": "bonafide/b_person_0001_003.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "active_score": 0.607622085763803,
+      "details": {
+        "flash_color_match": 0.6959408212295007,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.34682249305999363,
+        "flash_response_consistency": 0.6361025588400145
+      }
+    },
+    {
+      "sample_id": "bonafide/b_person_0001_004.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "active_score": 0.5310757207559297,
+      "details": {
+        "flash_color_match": 0.767269389409768,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.8166835605055277,
+        "flash_response_consistency": 0.5250467709312804
+      }
+    },
+    {
+      "sample_id": "bonafide/b_person_0002_000.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "active_score": 0.601774224624822,
+      "details": {
+        "flash_color_match": 0.9376948867973529,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.6169626990588088
+      }
+    },
+    {
+      "sample_id": "bonafide/b_person_0002_001.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "active_score": 0.6035085583258617,
+      "details": {
+        "flash_color_match": 0.9415922659008127,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.6187165196553657
+      }
+    },
+    {
+      "sample_id": "bonafide/b_person_0002_002.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "active_score": 0.5584443366862408,
+      "details": {
+        "flash_color_match": 0.8406297423337635,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.5719243975273531
+      }
+    },
+    {
+      "sample_id": "bonafide/b_person_0002_003.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "active_score": 0.6010038400810016,
+      "details": {
+        "flash_color_match": 0.9359636855752844,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.616183658508878
+      }
+    },
+    {
+      "sample_id": "bonafide/b_person_0002_004.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "active_score": 0.5465406493544579,
+      "details": {
+        "flash_color_match": 0.813574492931366,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.5611085218191146
+      }
+    },
+    {
+      "sample_id": "bonafide/b_person_0002_005.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "active_score": 0.6169006728044193,
+      "details": {
+        "flash_color_match": 0.5470116710015185,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.0,
+        "flash_response_consistency": 0.6309600440381183
+      }
+    },
+    {
+      "sample_id": "bonafide/b_person_0002_006.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "active_score": 0.629164471847857,
+      "details": {
+        "flash_color_match": 0.8307638016186263,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.48570531943764667,
+        "flash_response_consistency": 0.5900001508793573
+      }
+    },
+    {
+      "sample_id": "bonafide/b_person_0003_000.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "active_score": 0.5598945377547491,
+      "details": {
+        "flash_color_match": 0.8435832309095483,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.5746124539092967
+      }
+    },
+    {
+      "sample_id": "bonafide/b_person_0003_001.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "active_score": 0.6029923352205666,
+      "details": {
+        "flash_color_match": 0.8930651051433464,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.752646164840322,
+        "flash_response_consistency": 0.6129552613129238
+      }
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_000_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5893349977323883,
+      "details": {
+        "flash_color_match": 0.9097415679379512,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.6043837055720781
+      }
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_000_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5891461446308777,
+      "details": {
+        "flash_color_match": 0.9093171789457923,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.6041927305256065
+      }
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_000_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5949806171083137,
+      "details": {
+        "flash_color_match": 0.9224283530523902,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.6100927588735756
+      }
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_001_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5958136668542497,
+      "details": {
+        "flash_color_match": 0.9243003749533703,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.6109351687290167
+      }
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_001_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5937630860052611,
+      "details": {
+        "flash_color_match": 0.9196923281017102,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.6088615476457696
+      }
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_001_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5943327318735813,
+      "details": {
+        "flash_color_match": 0.9209724311765872,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.6094375940294643
+      }
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_002_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5791321119446504,
+      "details": {
+        "flash_color_match": 0.8868137347070795,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.5940661806181857
+      }
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_002_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.578147405960058,
+      "details": {
+        "flash_color_match": 0.8846009122697931,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.5930704105214069
+      }
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_002_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.578639104575703,
+      "details": {
+        "flash_color_match": 0.885705852979108,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.5935676338405986
+      }
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_003_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5619703141988108,
+      "details": {
+        "flash_color_match": 0.8482478970759793,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.5767115536841907
+      }
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_003_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5639149514679846,
+      "details": {
+        "flash_color_match": 0.8526178684673811,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.5786780408103215
+      }
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_003_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5629208486346822,
+      "details": {
+        "flash_color_match": 0.8503839295161397,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.5776727682822629
+      }
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_004_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5179237505646592,
+      "details": {
+        "flash_color_match": 0.7359524816274643,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.82083816930766,
+        "flash_response_consistency": 0.5271039177520551
+      }
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_004_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5172834561131746,
+      "details": {
+        "flash_color_match": 0.7332644493956315,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.8183712595868903,
+        "flash_response_consistency": 0.5265192827230006
+      }
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_004_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5172343547309789,
+      "details": {
+        "flash_color_match": 0.73134078791267,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.8145502268505828,
+        "flash_response_consistency": 0.526080849360274
+      }
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_005_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5769300036383304,
+      "details": {
+        "flash_color_match": 0.8818651767153489,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.591839329521907
+      }
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_005_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5787890615290717,
+      "details": {
+        "flash_color_match": 0.8860428348967904,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.5937192757035556
+      }
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_005_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.577723538687116,
+      "details": {
+        "flash_color_match": 0.8837057250110727,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.5924124868268689
+      }
+    },
+    {
+      "sample_id": "attack_replay/a_aga_000_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.7074210245890127,
+      "details": {
+        "flash_color_match": 0.9282103369110508,
+        "diffuse_response": 0.7933357020737345,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.6813617920247198
+      }
+    },
+    {
+      "sample_id": "attack_replay/a_aga_000_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.6947465905951178,
+      "details": {
+        "flash_color_match": 0.9305466233115447,
+        "diffuse_response": 0.750479197567126,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.6738418200036204
+      }
+    },
+    {
+      "sample_id": "attack_replay/a_aga_000_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.6859670171560175,
+      "details": {
+        "flash_color_match": 0.9304276296966955,
+        "diffuse_response": 0.7232085060655873,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.6683341345766305
+      }
+    },
+    {
+      "sample_id": "attack_replay/a_aga_001_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5275987904043852,
+      "details": {
+        "flash_color_match": 0.7611808925867081,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.8217826244476112,
+        "flash_response_consistency": 0.5248295825922414
+      }
+    },
+    {
+      "sample_id": "attack_replay/a_aga_001_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5225460098873764,
+      "details": {
+        "flash_color_match": 0.7598789624477688,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.5359442490826891
+      }
+    },
+    {
+      "sample_id": "attack_replay/a_aga_001_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.6014021389612534,
+      "details": {
+        "flash_color_match": 0.7611008380588733,
+        "diffuse_response": 0.6944426785335875,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.5862900017762773
+      }
+    },
+    {
+      "sample_id": "attack_replay/a_aga_002_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.6353387237104017,
+      "details": {
+        "flash_color_match": 0.8855050990456028,
+        "diffuse_response": 0.627465483234714,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.628970391217464
+      }
+    },
+    {
+      "sample_id": "attack_replay/a_aga_002_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.6351395658074053,
+      "details": {
+        "flash_color_match": 0.8915621269690364,
+        "diffuse_response": 0.6184200603318251,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.6298869692024314
+      }
+    },
+    {
+      "sample_id": "attack_replay/a_aga_002_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5789490456267408,
+      "details": {
+        "flash_color_match": 0.8864023497230128,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.5938810573753558
+      }
+    },
+    {
+      "sample_id": "attack_replay/a_ahab_000_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.6023209149602213,
+      "details": {
+        "flash_color_match": 0.9389234044049916,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.6175155319822462
+      }
+    },
+    {
+      "sample_id": "attack_replay/a_ahab_000_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.6049169820915712,
+      "details": {
+        "flash_color_match": 0.9447572631271262,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.6201407684072068
+      }
+    },
+    {
+      "sample_id": "attack_replay/a_ahab_000_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.6055999872062524,
+      "details": {
+        "flash_color_match": 0.9345852207196386,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.8249754481303417,
+        "flash_response_consistency": 0.6176098854446529
+      }
+    },
+    {
+      "sample_id": "attack_replay/a_ahab_001_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5510028437383865,
+      "details": {
+        "flash_color_match": 0.823601896041318,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.565620853218593
+      }
+    },
+    {
+      "sample_id": "attack_replay/a_ahab_001_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.551262788319274,
+      "details": {
+        "flash_color_match": 0.8241860411669079,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.5658837185251085
+      }
+    },
+    {
+      "sample_id": "attack_replay/a_ahab_001_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5511636895192298,
+      "details": {
+        "flash_color_match": 0.823963347234224,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.5657835062554009
+      }
+    },
+    {
+      "sample_id": "attack_replay/b_person_0001_000_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.6600534243947014,
+      "details": {
+        "flash_color_match": 0.9289563557035044,
+        "diffuse_response": 0.6442745190832557,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.6518852638832282
+      }
+    },
+    {
+      "sample_id": "attack_replay/b_person_0001_000_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.6826180915783063,
+      "details": {
+        "flash_color_match": 0.9328235011351736,
+        "diffuse_response": 0.7094113549161064,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.6666528464940494
+      }
+    },
+    {
+      "sample_id": "attack_replay/b_person_0001_000_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.6973274191052606,
+      "details": {
+        "flash_color_match": 0.9332584142684937,
+        "diffuse_response": 0.7547732023618153,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.6759209268931853
+      }
+    },
+    {
+      "sample_id": "attack_replay/b_person_0001_001_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5810906874364928,
+      "details": {
+        "flash_color_match": 0.8912150279471749,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.5960467625762287
+      }
+    },
+    {
+      "sample_id": "attack_replay/b_person_0001_001_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5776818562353913,
+      "details": {
+        "flash_color_match": 0.8835547331132387,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.5925996299009574
+      }
+    },
+    {
+      "sample_id": "attack_replay/b_person_0001_001_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5784243381588082,
+      "details": {
+        "flash_color_match": 0.8852232318175466,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.5933504543178959
+      }
+    },
+    {
+      "sample_id": "attack_replay/b_person_0001_002_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5783426981278156,
+      "details": {
+        "flash_color_match": 0.885039771073743,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.5932678969831844
+      }
+    },
+    {
+      "sample_id": "attack_replay/b_person_0001_002_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5773183892682979,
+      "details": {
+        "flash_color_match": 0.8827379534119053,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.5922320790353574
+      }
+    },
+    {
+      "sample_id": "attack_replay/b_person_0001_002_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5809834220158427,
+      "details": {
+        "flash_color_match": 0.8909739820580734,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.595938291926133
+      }
+    },
+    {
+      "sample_id": "attack_replay/b_person_0001_003_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5223819839499159,
+      "details": {
+        "flash_color_match": 0.7605235160965669,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.5317257751128903
+      }
+    },
+    {
+      "sample_id": "attack_replay/b_person_0001_003_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5248069600544751,
+      "details": {
+        "flash_color_match": 0.7655474229862815,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.5358799085996243
+      }
+    },
+    {
+      "sample_id": "attack_replay/b_person_0001_003_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.523773623454832,
+      "details": {
+        "flash_color_match": 0.7621527227916216,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.849320570465244,
+        "flash_response_consistency": 0.537766484312321
+      }
+    },
+    {
+      "sample_id": "attack_replay/b_person_0001_004_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5751176158903462,
+      "details": {
+        "flash_color_match": 0.8777923952592047,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.5900065778666421
+      }
+    },
+    {
+      "sample_id": "attack_replay/b_person_0001_004_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5783500030652473,
+      "details": {
+        "flash_color_match": 0.885056186663477,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.5932752839985647
+      }
+    },
+    {
+      "sample_id": "attack_replay/b_person_0001_004_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5818636130557249,
+      "details": {
+        "flash_color_match": 0.892951939451067,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.5968283727529802
+      }
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_000_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5925741338863185,
+      "details": {
+        "flash_color_match": 0.9170205255872325,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.6076592365142546
+      }
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_000_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5880914988698145,
+      "details": {
+        "flash_color_match": 0.906947188471493,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.6031262348121719
+      }
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_000_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.59070787994642,
+      "details": {
+        "flash_color_match": 0.9128266965088091,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.605772013428964
+      }
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_001_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5935856190574796,
+      "details": {
+        "flash_color_match": 0.9192935259718644,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.608682086687339
+      }
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_001_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5913043311763752,
+      "details": {
+        "flash_color_match": 0.9141670363514047,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.6063751663581322
+      }
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_001_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5961098879826697,
+      "details": {
+        "flash_color_match": 0.9249660404104936,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.6112347181847221
+      }
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_002_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5787506888822506,
+      "details": {
+        "flash_color_match": 0.8859566042297764,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.5936804719033993
+      }
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_002_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5780532804225621,
+      "details": {
+        "flash_color_match": 0.8843893942080047,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.5929752273936021
+      }
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_002_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5768751406999011,
+      "details": {
+        "flash_color_match": 0.8817418892132608,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.5917838501459673
+      }
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_003_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.7320843918794498,
+      "details": {
+        "flash_color_match": 0.978935497371774,
+        "diffuse_response": 0.7998690485906577,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.7054947835354299
+      }
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_003_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.7303042156535491,
+      "details": {
+        "flash_color_match": 0.9767162046934429,
+        "diffuse_response": 0.797392201765522,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.7040007324651537
+      }
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_003_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.7147204842359368,
+      "details": {
+        "flash_color_match": 0.967672807605643,
+        "diffuse_response": 0.7612690151607052,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.6927065664546804
+      }
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_004_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5650136760402668,
+      "details": {
+        "flash_color_match": 0.8550869124500375,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.5797891106025169
+      }
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_004_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5644296579666829,
+      "details": {
+        "flash_color_match": 0.8537745122846805,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.5791985305281062
+      }
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_004_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.562907159075141,
+      "details": {
+        "flash_color_match": 0.8503531664609909,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.5776589249074459
+      }
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_005_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5176603418473325,
+      "details": {
+        "flash_color_match": 0.7354882712426939,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.8210710634051077,
+        "flash_response_consistency": 0.5267924603127642
+      }
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_005_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.50852119677744,
+      "details": {
+        "flash_color_match": 0.7285706424399425,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.52092939801463
+      }
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_005_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5206387759782029,
+      "details": {
+        "flash_color_match": 0.7316902985698299,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.798478869465001,
+        "flash_response_consistency": 0.5265843044327108
+      }
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_006_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5769729569217092,
+      "details": {
+        "flash_color_match": 0.8819617009476611,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.5918827654264475
+      }
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_006_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5760496191429465,
+      "details": {
+        "flash_color_match": 0.8820265798192275,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.5823898721525543
+      }
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_006_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5774250788374953,
+      "details": {
+        "flash_color_match": 0.8829777052527981,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.5923399673637592
+      }
+    },
+    {
+      "sample_id": "attack_replay/b_person_0003_000_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5509955147198942,
+      "details": {
+        "flash_color_match": 0.8235854263368406,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.5656134418515782
+      }
+    },
+    {
+      "sample_id": "attack_replay/b_person_0003_000_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5497776412469777,
+      "details": {
+        "flash_color_match": 0.82084863201568,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.5643818844070561
+      }
+    },
+    {
+      "sample_id": "attack_replay/b_person_0003_000_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.5491588888607527,
+      "details": {
+        "flash_color_match": 0.8194581772151746,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.5637561797468286
+      }
+    },
+    {
+      "sample_id": "attack_replay/b_person_0003_001_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.601643188056193,
+      "details": {
+        "flash_color_match": 0.9374004225981862,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.6168301901691838
+      }
+    },
+    {
+      "sample_id": "attack_replay/b_person_0003_001_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.6050065793426415,
+      "details": {
+        "flash_color_match": 0.9449586052643626,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.6202313723689632
+      }
+    },
+    {
+      "sample_id": "attack_replay/b_person_0003_001_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "active_score": 0.6019747476177781,
+      "details": {
+        "flash_color_match": 0.9381455002646697,
+        "diffuse_response": 0.45,
+        "planar_surface_risk": 0.85,
+        "flash_response_consistency": 0.6171654751191014
+      }
+    }
+  ]
+}
