@@ -3,9 +3,68 @@
 **Project**: FIVUCSAS Session-Based Face Presentation Attack Detection
 **Paper Target**: BIOSIG 2026 / IJCB 2026
 **Demo**: amispoof.com
-**Last Updated**: 2026-05-02
+**Last Updated**: 2026-05-09 (research-consolidation pass)
 
-## Current State (v1)
+## Where things live
+
+`spoof-detector` is now the single canonical home for every
+liveness / anti-spoof asset across the FIVUCSAS programme.
+
+| Directory                  | Status     | Audience                                 |
+|----------------------------|------------|------------------------------------------|
+| `src/`                     | production | importable library; v0.2.0 curated.      |
+| `tests/`                   | production | 114 tests, green at consolidation.       |
+| `tools/`                   | operator   | offline / desktop scripts.               |
+| `research/aysenur/`        | reference  | Aysenur's 7 FIVUCSAS R&D branches.       |
+| `research/ayse-gulsum-eren/` | reference  | attribution + commit pointers.         |
+| `research/ahmet-original-spoof-detector/` | reference  | pointer; content is in `src/`. |
+| `from_biometric_processor/`  | mirror     | algorithms also deployed in `bio` main; |
+|                            |            | mirror-only — edit upstream first.       |
+
+See [`research/README.md`](research/README.md) for the layout rationale and
+[`from_biometric_processor/README.md`](from_biometric_processor/README.md) for
+the sync policy.
+
+## Resuming research
+
+The most fertile starting ground is
+[`research/aysenur/working_spoof_detection/`](research/aysenur/working_spoof_detection/)
+— it contains:
+
+- The flash-challenge service that became `from_biometric_processor/light_challenge_service.py`.
+- The Gabor / moire detector and the screen-replay defence that became `from_biometric_processor/screen_replay_anti_spoof.py`.
+- The cutout-anomaly detector that became `from_biometric_processor/cutout_anomaly_detector.py`.
+- The device-spoof risk evaluator that became `from_biometric_processor/device_spoof_risk_evaluator.py`.
+- The hybrid-fusion experimental harness that informed `src/fusion/hybrid_evaluator.py`.
+
+For each of those, the curated, ISO-30107-3-calibrated v0.2.0 surface lives
+under `src/`, but the experimental ground-truth, alternate-threshold sweeps,
+and unit tests for in-flight ideas remain in the research tree.
+
+## Productization checklist (research → src)
+
+Any module graduating from `research/` (or `from_biometric_processor/`) into
+`src/` must satisfy:
+
+1. **Tests** — at least one unit test per public function; integration test
+   if it crosses a gate / fusion / pipeline boundary. Co-locate under
+   `tests/unit/<module-area>/`.
+2. **Dependencies** — every imported package present in `requirements.txt`
+   with a pinned version, and the new pin must pass Dependabot / `pip-audit`.
+3. **Public API** — top-level docstring; `__all__` declared; type hints on
+   public surface; no `app.*` imports left over from upstream namespaces.
+4. **Provenance** — module docstring lists original author, original branch,
+   and the consolidation commit it was promoted from.
+5. **Attribution** — entry added to [`AUTHORS.md`](AUTHORS.md).
+
+When a module graduates from `from_biometric_processor/`, also coordinate
+with the bio team so that `biometric-processor` imports the productized
+spoof-detector copy (rather than maintaining its own fork) — this is how the
+mirror eventually retires.
+
+---
+
+## Current State (v0.2.0 / 2026-05-09)
 
 - 9 analyzers (MiniFASNet, Device Boundary, Blink, rPPG, Screen Replay, Temporal, Texture, Moire, AR Filter)
 - Session engine with incident detection and peak-sensitive verdict
