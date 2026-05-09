@@ -33,7 +33,22 @@ Three configurations evaluated on every protocol:
 
 All three share the same face detector, tracker, and fuser code path; only the analyzer set differs. This isolates the contribution of each track.
 
-## 6.4 Metrics
+## 6.4 In-house attack synthesis (validation only)
+
+We additionally run a fast feedback loop on a small *in-house* set of synthesised attacks. This is **not** a substitute for the four academic benchmarks above; it is a smoke test that verifies the productized pipeline runs end-to-end and produces the discrimination it claims, and it is the only data we control directly enough to release with the repository under MIT.
+
+The in-house synthesiser (`tests/benchmark/synthesize_attacks.py`) takes a real bona-fide face image and produces four physics-motivated attack variants:
+
+- **`replay`** (paper-grade): full rephotograph simulation — visible LCD bezel (12% border), scan-line beat (sinusoidal vertical band), heavy moire (Gabor at random orientation, frequency 0.08–0.16 cycles/pixel), 6-bit-per-channel colour quantisation, blue tint (LCD), specular highlight from camera flash.
+- **`print`** (weak): gamma compression (γ = 0.7–0.85), slight Gaussian blur (σ = 0.6–1.2), Poisson grain noise, slight desaturation. This *does not* reproduce inkjet halftone, paper texture, or rephotograph lens distortion — the actual signatures of real print attacks. Reported but not paper-grade.
+- **`ar_filter`** (weak): bilateral filter (skin smoothing) + warm tone-shift + saturation bump. Plausible for *some* beauty filters but not for all (and specifically not for the boundary-artefact AR filters MiniFASNet was trained against).
+- **`digital_photo`** (weak): downsample-upsample + JPEG round-trip at 72% quality. This is essentially a re-encoding, not an attack — included as a negative control.
+
+Why include the weak classes at all: their failure mode (analyzers score them *higher* than bona-fide) is itself an interpretable result and feeds the discussion in §9 of why per-frame liveness analyzers cannot be trusted on adversarial inputs that lack rephotograph artefacts.
+
+For the headline §7.1 result we use only the `replay` sub-protocol (11 bona-fide × 11 strong replay-attack variants). The §7.7 transparency block includes the full-set numbers showing what the weak attack classes look like.
+
+## 6.5 Metrics
 
 We report the ISO/IEC 30107-3 canonical set:
 
@@ -47,7 +62,7 @@ For OULU-NPU we additionally report the published-style per-protocol APCER/BPCER
 
 All metrics are computed by `src/metrics/` (ISO 30107-3 reference implementation, 12 unit tests passing). The benchmark harness logs per-sample scores so the metrics can be re-computed at any threshold post-hoc.
 
-## 6.5 Hardware and reproducibility
+## 6.6 Hardware and reproducibility
 
 All evaluation runs on a single CPU thread (no GPU) on:
 

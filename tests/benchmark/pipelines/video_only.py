@@ -28,13 +28,15 @@ def score_sample(sample: Sample, *, max_frames: int = 30) -> float:
         # Video-only pipeline needs temporal context.
         return 0.5
 
+    from src.domain.models import SpoofCategory
     per_frame_scores: list[float] = []
     for frame in frames:
         analysis = pipeline.process(frame)
         if not analysis.classifications:
             continue
         best = max(analysis.classifications.values(), key=lambda c: c.confidence or 0.0)
-        per_frame_scores.append(float(best.p_real))
+        p_real = float(best.probabilities.get(SpoofCategory.REAL, 0.0))
+        per_frame_scores.append(p_real)
 
     if not per_frame_scores:
         return 0.5

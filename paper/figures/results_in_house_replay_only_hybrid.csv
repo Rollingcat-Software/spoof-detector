@@ -1,0 +1,2 @@
+dataset,protocol,method,APCER_max,BPCER,ACER,EER,AUC,N
+in_house,replay_only,hybrid,0.00%,0.00%,0.00%,0.00%,0.8750,8

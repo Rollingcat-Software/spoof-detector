@@ -45,3 +45,6 @@ Thumbs.db
 
 # Working notes
 initial-prompt.txt
+# Derived sub-protocol directories — built from data/in_house/ on demand
+data/in_house_replay/
+data/in_house_clean/
