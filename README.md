@@ -1,6 +1,7 @@
 # Spoof Detector
 
-[![Tests](https://img.shields.io/badge/tests-68%20passing-brightgreen)](#testing)
+[![Tests](https://img.shields.io/badge/tests-114%20passing-brightgreen)](#testing)
+[![Version](https://img.shields.io/badge/version-0.2.0-blue)](pyproject.toml)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![ISO 30107-3](https://img.shields.io/badge/ISO%2030107--3-Grade%20C-yellow)](#iso-30107-3-evaluation-2026-05-02)
 
@@ -8,7 +9,32 @@ Multi-signal face anti-spoofing engine that produces **session-level verdicts** 
 
 Originally extracted from the [FIVUCSAS](https://github.com/Rollingcat-Software/FIVUCSAS) biometric-authentication platform's R&D track and now maintained as a standalone repository so it can be reused, evaluated and cited independently.
 
-> **Status (2026-05-09):** runnable working example. `pytest` is green (68/68). MiniFASNet ONNX, MediaPipe FaceLandmarker, and the calibrated 7-class fuser are wired end-to-end. Production integration into FIVUCSAS `biometric-processor` is upcoming (Stage 2/3 of the larger plan).
+> **Status (2026-05-09):** runnable working example. `pytest` is green (114/114). MiniFASNet ONNX, MediaPipe FaceLandmarker, and the calibrated 7-class fuser are wired end-to-end. v0.2.0 adds the **gates** (`src/gates/`), **fusion** (`src/fusion/`), and **pipeline assembler** (`src/pipeline/`) sub-packages so a downstream service can consume just the parts it needs without bringing up the full session engine.
+
+## What's new in v0.2.0 (2026-05-09)
+
+Three new sub-packages, all importable independently of the main session engine:
+
+- **`src.gates`** — pre-liveness face usability gates (no-face / occlusion / illumination quality). Useful as a short-circuit before any heavier ML runs.
+  - `FaceUsabilityGate` — frame-level usable/blocked verdict with hysteresis.
+  - `CriticalRegionVisibilityGate` — per-region (eyes/nose/mouth/lower-face) visibility scoring from pixel forensics + optional landmarks.
+  - `FaceQualityIlluminationGate` — under/over-exposure + shadow-asymmetry verdict.
+- **`src.fusion`** — `HybridFusionEvaluator` calibrated against MiniFASNet + heuristic device-replay signals.
+- **`src.pipeline`** — `AntispoofPipelineAssembler` — one duck-typed adapter that runs the gates, fusion evaluator, and a caller-supplied device-spoof evaluator. Returns a single `AntispoofPipelineResult` with an advisory `recommended_action` (`allow` / `review` / `block`). The assembler **never enforces** — the caller decides.
+
+These modules are Aysenur's work — see [AUTHORS.md](AUTHORS.md). They were ported from the FIVUCSAS `biometric-processor` R&D branch so they can be evaluated and cited independently.
+
+### Quick install
+
+```bash
+pip install "git+https://github.com/Rollingcat-Software/spoof-detector.git@v0.2.0"
+```
+
+The lean install (`pip install spoof-detector`) brings in only `numpy + opencv-python`. To run the full session engine (MediaPipe, MiniFASNet, the existing 14-analyzer pipeline) install the `[full]` extra:
+
+```bash
+pip install "spoof-detector[full] @ git+https://github.com/Rollingcat-Software/spoof-detector.git@v0.2.0"
+```
 
 ## What it does
 
