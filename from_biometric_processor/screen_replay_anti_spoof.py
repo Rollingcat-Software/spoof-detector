@@ -1,5 +1,5 @@
 # This file is a copy from biometric-processor/app/infrastructure/ml/liveness/screen_replay_anti_spoof.py
-# Source SHA: 178d2fa231daf6c1d667e652a6d390add789cd34 (bio main as of 2026-05-09).
+# Source SHA: 9d17359e18186abc317f4fe4b903ab8e82626297 (bio main as of 2026-05-09).
 # Synced: 2026-05-09. DO NOT edit here without syncing back to biometric-processor.
 
 """Fast screen-replay anti-spoofing heuristics for phone/tablet attacks."""
