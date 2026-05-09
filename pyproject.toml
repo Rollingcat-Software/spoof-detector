@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "spoof-detector"
-version = "0.2.0"
+version = "0.3.0-dev"
 description = "Multi-signal face anti-spoofing engine — gates, fusion, pipeline assembler. Originally extracted from FIVUCSAS R&D."
 readme = "README.md"
 license = { file = "LICENSE" }

@@ -11,6 +11,25 @@ Originally extracted from the [FIVUCSAS](https://github.com/Rollingcat-Software/
 
 > **Status (2026-05-09):** runnable working example. `pytest` is green (114/114). MiniFASNet ONNX, MediaPipe FaceLandmarker, and the calibrated 7-class fuser are wired end-to-end. v0.2.0 adds the **gates** (`src/gates/`), **fusion** (`src/fusion/`), and **pipeline assembler** (`src/pipeline/`) sub-packages so a downstream service can consume just the parts it needs without bringing up the full session engine.
 
+## Research consolidation (2026-05-09)
+
+In addition to `src/` (productized v0.2.0 library), the repo now also hosts
+the full body of FIVUCSAS liveness / anti-spoof research from all three
+contributors. Everything is **additive** — no source location was removed
+upstream; this repo is the consolidated read-only mirror.
+
+| Directory                                 | Contents                                                       |
+|-------------------------------------------|----------------------------------------------------------------|
+| [`research/aysenur/`](research/aysenur/)  | All 7 of Aysenur's (`@Aysenur15`) FIVUCSAS R&D branches.       |
+| [`research/ayse-gulsum-eren/`](research/ayse-gulsum-eren/) | Ayşe Gülsüm Eren attribution + commit pointers. |
+| [`research/ahmet-original-spoof-detector/`](research/ahmet-original-spoof-detector/) | Pointer to the user's original work (now in `src/`). |
+| [`from_biometric_processor/`](from_biometric_processor/) | Algorithms also deployed in `biometric-processor` prod (cutout / device-spoof / light-challenge / screen-replay). Mirror only. |
+| [`tools/`](tools/)                         | Now includes Aysenur's `live_liveness_preview.py` desktop tuner + `train_spoof_classifier.py` + `test_data_collector.py` + `export_training_data.py`. |
+
+See [`research/README.md`](research/README.md) and
+[`ROADMAP.md`](ROADMAP.md) ("Where things live" + "Productization checklist")
+for how the research tree is intended to feed back into `src/`.
+
 ## What's new in v0.2.0 (2026-05-09)
 
 Three new sub-packages, all importable independently of the main session engine:
