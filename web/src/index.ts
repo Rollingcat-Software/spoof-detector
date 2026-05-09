@@ -1,13 +1,20 @@
-// Public API for @rollingcat/spoof-detector (Phase 1).
+// Public API for @rollingcat/spoof-detector.
 //
-// Exposes:
-//   - createSpoofDetector(options): factory that wires
-//       MediaPipeFaceDetector + MiniFASNetAnalyzer + MultiClassFuser + SessionEngine
-//   - SpoofDetector class with analyzeFrame() / getVerdict() / conclude() / reset()
-//   - All domain types (re-exported from ./domain/* for snapshot interop)
+// Phase 1 shipped:
+//   * MediaPipeFaceDetector + MiniFASNetAnalyzer + MultiClassFuser + SessionEngine
 //
-// Phase 2+ will expand the analyzer roster (Landmark Variance, Blink, etc.).
-// The signature here is forward-compatible — callers won't need to change.
+// Phase 2 (this commit) adds the next 5 analyzers — covering ~88% of the
+// fuser's weight mass after Phase 1's MiniFASNet:
+//
+//   * LandmarkVarianceAnalyzer  (weight 2.0)
+//   * DeviceBoundaryAnalyzer    (weight 2.5)
+//   * BlinkAnalyzer             (weight 0.5 — high-impact for incidents)
+//   * MicroTremorAnalyzer       (weight 2.5)
+//   * ScreenFlickerAnalyzer     (weight 3.0)
+//
+// All Phase 2 analyzers are LAZY: the constructor only allocates state;
+// no models are loaded. Only MiniFASNet (ONNX) and MediaPipe (WASM)
+// require an explicit warmup() round-trip.
 
 import { SessionEngine } from "./application/SessionEngine";
 import {
@@ -16,8 +23,14 @@ import {
   FrameAnalysis,
   SpoofClassification,
 } from "./domain/models";
+import type { IFaceAnalyzer } from "./domain/models";
 import { SessionVerdict } from "./domain/session";
+import { BlinkAnalyzer } from "./infrastructure/analyzers/BlinkAnalyzer";
+import { DeviceBoundaryAnalyzer } from "./infrastructure/analyzers/DeviceBoundaryAnalyzer";
+import { LandmarkVarianceAnalyzer } from "./infrastructure/analyzers/LandmarkVarianceAnalyzer";
+import { MicroTremorAnalyzer } from "./infrastructure/analyzers/MicroTremorAnalyzer";
 import { MiniFASNetAnalyzer } from "./infrastructure/analyzers/MiniFASNetAnalyzer";
+import { ScreenFlickerAnalyzer } from "./infrastructure/analyzers/ScreenFlickerAnalyzer";
 import { MediaPipeFaceDetector } from "./infrastructure/detection/MediaPipeFaceDetector";
 import { MultiClassFuser } from "./infrastructure/fusion/MultiClassFuser";
 import { toImageData } from "./utils/imageOps";
@@ -27,6 +40,11 @@ export * from "./domain/session";
 export * from "./domain/taxonomy";
 export { MultiClassFuser, DEFAULT_ANALYZER_WEIGHTS } from "./infrastructure/fusion/MultiClassFuser";
 export { MiniFASNetAnalyzer } from "./infrastructure/analyzers/MiniFASNetAnalyzer";
+export { LandmarkVarianceAnalyzer } from "./infrastructure/analyzers/LandmarkVarianceAnalyzer";
+export { BlinkAnalyzer } from "./infrastructure/analyzers/BlinkAnalyzer";
+export { DeviceBoundaryAnalyzer } from "./infrastructure/analyzers/DeviceBoundaryAnalyzer";
+export { MicroTremorAnalyzer } from "./infrastructure/analyzers/MicroTremorAnalyzer";
+export { ScreenFlickerAnalyzer } from "./infrastructure/analyzers/ScreenFlickerAnalyzer";
 export { MediaPipeFaceDetector } from "./infrastructure/detection/MediaPipeFaceDetector";
 export { SessionEngine } from "./application/SessionEngine";
 
@@ -47,17 +65,42 @@ export interface SpoofDetectorOptions {
   useGpu?: boolean;
   /** Optional explicit session id. */
   sessionId?: string;
+  /**
+   * Phase-2 analyzer toggles. All default to ENABLED. Disabling an
+   * analyzer skips its `analyze()` call AND removes its weight from the
+   * fusion total — safer than setting weight to 0 because the score
+   * never enters the evidence calculation.
+   */
+  enableLandmarkVariance?: boolean;
+  enableBlink?: boolean;
+  enableDeviceBoundary?: boolean;
+  enableMicroTremor?: boolean;
+  enableScreenFlicker?: boolean;
 }
 
 /**
- * SpoofDetector — Phase 1 facade combining detection, MiniFASNet anti-spoof,
+ * SpoofDetector — facade combining detection, all 6 ported analyzers,
  * fusion and session aggregation.
  */
 export class SpoofDetector {
   private readonly detector: MediaPipeFaceDetector;
   private readonly minifasnet: MiniFASNetAnalyzer;
+  // Phase 2 analyzers (lazy-init on first analyzeFrame; nothing to load).
+  private landmarkVariance: LandmarkVarianceAnalyzer | null = null;
+  private blink: BlinkAnalyzer | null = null;
+  private deviceBoundary: DeviceBoundaryAnalyzer | null = null;
+  private microTremor: MicroTremorAnalyzer | null = null;
+  private screenFlicker: ScreenFlickerAnalyzer | null = null;
+
   private readonly fuser: MultiClassFuser;
   private readonly engine: SessionEngine;
+  private readonly toggles: Required<{
+    landmarkVariance: boolean;
+    blink: boolean;
+    deviceBoundary: boolean;
+    microTremor: boolean;
+    screenFlicker: boolean;
+  }>;
   private frameId = 0;
   private started = false;
 
@@ -75,9 +118,16 @@ export class SpoofDetector {
     });
     this.fuser = new MultiClassFuser(opts.analyzerWeights);
     this.engine = new SessionEngine({ sessionId: opts.sessionId });
+    this.toggles = {
+      landmarkVariance: opts.enableLandmarkVariance !== false,
+      blink: opts.enableBlink !== false,
+      deviceBoundary: opts.enableDeviceBoundary !== false,
+      microTremor: opts.enableMicroTremor !== false,
+      screenFlicker: opts.enableScreenFlicker !== false,
+    };
   }
 
-  /** Lazy-load both models. Optional — they auto-warmup on first analyzeFrame. */
+  /** Lazy-load both heavy models. Phase 2 analyzers don't need a warmup. */
   async warmup(): Promise<void> {
     await Promise.all([this.detector.warmup(), this.minifasnet.warmup()]);
   }
@@ -86,8 +136,6 @@ export class SpoofDetector {
    * Analyze a single frame. Accepts:
    *   - HTMLCanvasElement: a canvas already containing the current video frame
    *   - ImageData: raw pixels
-   *
-   * For best perf, callers should reuse a single canvas across frames.
    */
   async analyzeFrame(
     input: HTMLCanvasElement | ImageData,
@@ -108,21 +156,53 @@ export class SpoofDetector {
     if (input instanceof HTMLCanvasElement) {
       faces = await this.detector.detect(input, tsMs, width, height);
     } else {
-      // ImageData: stage to OffscreenCanvas because MediaPipe can't ingest ImageData directly.
       const stage = new OffscreenCanvas(width, height);
       stage.getContext("2d")!.putImageData(input, 0, 0);
       faces = await this.detector.detect(stage, tsMs, width, height);
     }
 
-    // 2) Set the original frame on MiniFASNet so it gets context, not a crop.
+    // 2) Set the original frame on analyzers that need surroundings.
     this.minifasnet.setFrame(input);
+    if (this.toggles.deviceBoundary) {
+      const a = this.ensureDeviceBoundary();
+      a.setFrame(input);
+    }
+    if (this.toggles.screenFlicker) {
+      const a = this.ensureScreenFlicker();
+      a.setFrame(input);
+    }
 
-    // 3) Per-face analysis. Only MiniFASNet in Phase 1.
+    // 3) Per-face analysis. Run every enabled analyzer.
     const classifications: Record<number, SpoofClassification> = {};
     for (const face of faces) {
       const results: Record<string, AnalyzerResult> = {};
-      const r = await this.minifasnet.analyze(toFaceCropOrNull(input, face), face);
-      results[r.name] = r;
+      const crop = toFaceCropOrNull(input, face);
+
+      // MiniFASNet first (highest weight).
+      const mfn = await this.minifasnet.analyze(crop, face);
+      results[mfn.name] = mfn;
+
+      // Phase 2 analyzers — order matches DEFAULT_ANALYZER_WEIGHTS desc.
+      if (this.toggles.screenFlicker) {
+        const a = this.ensureScreenFlicker();
+        results[a.name] = await asyncify(a.analyze(crop, face));
+      }
+      if (this.toggles.deviceBoundary) {
+        const a = this.ensureDeviceBoundary();
+        results[a.name] = await asyncify(a.analyze(crop, face));
+      }
+      if (this.toggles.microTremor) {
+        const a = this.ensureMicroTremor();
+        results[a.name] = await asyncify(a.analyze(crop, face));
+      }
+      if (this.toggles.landmarkVariance) {
+        const a = this.ensureLandmarkVariance();
+        results[a.name] = await asyncify(a.analyze(crop, face));
+      }
+      if (this.toggles.blink) {
+        const a = this.ensureBlink();
+        results[a.name] = await asyncify(a.analyze(crop, face));
+      }
 
       const cls = this.fuser.fuse(face.face_id, results);
       classifications[face.face_id] = cls;
@@ -141,7 +221,7 @@ export class SpoofDetector {
     return analysis;
   }
 
-  /** Get current (interim) verdict. Call between frames or at session end. */
+  /** Get current (interim) verdict. */
   getVerdict(): SessionVerdict {
     return this.engine.getVerdict();
   }
@@ -156,16 +236,47 @@ export class SpoofDetector {
     this.engine.reset();
     this.frameId = 0;
     this.started = false;
+    this.landmarkVariance?.reset();
+    this.blink?.reset();
+    this.deviceBoundary?.reset();
+    this.microTremor?.reset();
+    this.screenFlicker?.reset();
   }
 
   /** Release native resources. */
   async close(): Promise<void> {
     await this.detector.close();
   }
+
+  // === Phase 2 lazy-init helpers ===
+  private ensureLandmarkVariance(): LandmarkVarianceAnalyzer {
+    if (!this.landmarkVariance) {
+      this.landmarkVariance = new LandmarkVarianceAnalyzer();
+    }
+    return this.landmarkVariance;
+  }
+  private ensureBlink(): BlinkAnalyzer {
+    if (!this.blink) this.blink = new BlinkAnalyzer();
+    return this.blink;
+  }
+  private ensureDeviceBoundary(): DeviceBoundaryAnalyzer {
+    if (!this.deviceBoundary) {
+      this.deviceBoundary = new DeviceBoundaryAnalyzer();
+    }
+    return this.deviceBoundary;
+  }
+  private ensureMicroTremor(): MicroTremorAnalyzer {
+    if (!this.microTremor) this.microTremor = new MicroTremorAnalyzer();
+    return this.microTremor;
+  }
+  private ensureScreenFlicker(): ScreenFlickerAnalyzer {
+    if (!this.screenFlicker) this.screenFlicker = new ScreenFlickerAnalyzer();
+    return this.screenFlicker;
+  }
 }
 
 /**
- * Factory that builds a SpoofDetector and warms up the models.
+ * Factory that builds a SpoofDetector and warms up the heavy models.
  */
 export async function createSpoofDetector(
   options: SpoofDetectorOptions,
@@ -175,7 +286,7 @@ export async function createSpoofDetector(
   return det;
 }
 
-/** Best-effort face crop (currently unused — MiniFASNet uses the full frame). */
+/** Best-effort face crop. Used by analyzers that prefer the crop over the full frame. */
 function toFaceCropOrNull(
   input: HTMLCanvasElement | ImageData,
   face: FaceROI,
@@ -185,7 +296,6 @@ function toFaceCropOrNull(
   if (w <= 0 || h <= 0) return null;
   try {
     const data = toImageData(input);
-    // Allocate a stage canvas and slice via drawImage.
     const stage = new OffscreenCanvas(data.width, data.height);
     stage.getContext("2d")!.putImageData(data, 0, 0);
     const out = new OffscreenCanvas(w, h);
@@ -197,3 +307,11 @@ function toFaceCropOrNull(
     return null;
   }
 }
+
+/** Promote a sync IFaceAnalyzer return value to a Promise for uniform handling. */
+function asyncify<T>(v: T | Promise<T>): Promise<T> {
+  return v instanceof Promise ? v : Promise.resolve(v);
+}
+
+// Re-export the interface so consumer code can author its own analyzers.
+export type { IFaceAnalyzer };

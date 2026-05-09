@@ -114,4 +114,44 @@ describe("MultiClassFuser", () => {
     );
     expect(cls.dominant_category).not.toBe(SpoofCategory.REAL);
   });
+
+  it("Phase-2 analyzer keys are wired (landmark_variance, device_boundary, blink, micro_tremor, screen_flicker)", () => {
+    // A high-score read across all 6 wired analyzers should still
+    // produce dominant=REAL — and zero analyzers should be silently
+    // dropped from the fusion total.
+    const fuser = new MultiClassFuser();
+    const cls = fuser.fuse(
+      4,
+      results(
+        makeAnalyzerResult("minifasnet", 95.0),
+        makeAnalyzerResult("landmark_variance", 90.0),
+        makeAnalyzerResult("device_boundary", 90.0),
+        makeAnalyzerResult("blink", 95.0),
+        makeAnalyzerResult("micro_tremor", 85.0),
+        makeAnalyzerResult("screen_flicker", 92.0),
+      ),
+    );
+    expect(cls.dominant_category).toBe(SpoofCategory.REAL);
+    // All 6 analyzers must show up in the analyzer_results round-trip.
+    expect(Object.keys(cls.analyzer_results).sort()).toEqual([
+      "blink",
+      "device_boundary",
+      "landmark_variance",
+      "micro_tremor",
+      "minifasnet",
+      "screen_flicker",
+    ]);
+  });
+
+  it("low screen_flicker score (high weight 3.0) flags VIDEO_REPLAY", () => {
+    // screen_flicker has weight 3.0 and the SPOOF_SIGNAL_MAP entry
+    // routes 0.50 of evidence to VIDEO_REPLAY. A solo low score should
+    // make VIDEO_REPLAY the dominant non-REAL category.
+    const fuser = new MultiClassFuser();
+    const cls = fuser.fuse(
+      5,
+      results(makeAnalyzerResult("screen_flicker", 5.0)),
+    );
+    expect(cls.dominant_category).toBe(SpoofCategory.VIDEO_REPLAY);
+  });
 });

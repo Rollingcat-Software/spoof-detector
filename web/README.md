@@ -1,12 +1,23 @@
 # @rollingcat/spoof-detector
 
 Browser/TypeScript port of the [spoof-detector](https://github.com/rollingcat/spoof-detector)
-session-based anti-spoof pipeline. **Phase 1** ships the highest-weight
-discriminator (MiniFASNet, fusion weight 5.0 of 17.6) plus the multi-class
-fuser and the session-state engine. Subsequent phases will add Landmark
-Variance, Blink, Device Boundary, Micro-tremor and Screen Flicker.
+session-based anti-spoof pipeline. **Phases 1 and 2** ship 6 of the
+fuser's analyzers, covering ~95% of its weight mass:
 
-> Status: scaffolding pass — files compile, but the demo requires
+| Analyzer | Weight | Phase | Source line range |
+|---|---|---|---|
+| `minifasnet` | 5.0 | 1 | `src/infrastructure/analyzers/minifasnet_analyzer.py` |
+| `screen_flicker` | 3.0 | 2 | `src/infrastructure/analyzers/screen_flicker_analyzer.py:1-141` |
+| `device_boundary` | 2.5 | 2 | `src/infrastructure/analyzers/device_boundary_analyzer.py:1-189` |
+| `micro_tremor` | 2.5 | 2 | `src/infrastructure/analyzers/micro_tremor_analyzer.py:1-163` |
+| `landmark_variance` | 2.0 | 2 | `src/infrastructure/analyzers/landmark_variance_analyzer.py:1-165` |
+| `blink` | 0.5 | 2 | `src/infrastructure/analyzers/blink_analyzer.py:1-253` |
+
+The multi-class fuser and session-state engine are also ported. Phase 3+
+will port the lower-weight analyzers (texture, moire, screen_replay, rppg,
+ar_filter, background_grid) plus the LivenessProver.
+
+> Status: source pass — files compile, but the demo requires
 > `npm install` to fetch `onnxruntime-web` and `@mediapipe/tasks-vision`,
 > and the MiniFASNet ONNX model must be placed at `public/models/minifasnet_v2.onnx`
 > (see "Model assets" below).
@@ -92,11 +103,17 @@ the pattern used by the FIVUCSAS web-app's BiometricEngine).
 
 ## Phasing
 
-- **Phase 1 (this PR):** MiniFASNet + multi-class fuser + session engine + MediaPipe FaceLandmarker wrapper.
-- **Phase 2:** Landmark Variance + Blink (EAR) — both pure arithmetic on the FaceLandmarker output.
-- **Phase 3:** Device Boundary (OpenCV.js Hough/Canny) + Micro-tremor + Screen Flicker (FFT-based).
-- **Phase 4:** Texture / Moire / Screen Replay / rPPG / AR Filter / Background Grid (suppressed-weight analyzers — port for completeness).
-- **Phase 5:** Liveness Prover + full session-engine parity tests.
+- **Phase 1:** MiniFASNet + multi-class fuser + session engine + MediaPipe FaceLandmarker wrapper.
+- **Phase 2 (this PR):** Landmark Variance + Blink (EAR) + Device Boundary (Sobel + hand-rolled Hough) + Micro-tremor (hand-rolled DFT) + Screen Flicker (hand-rolled DFT). 95% cumulative weight coverage.
+- **Phase 3:** Texture / Moire / Screen Replay / rPPG / AR Filter / Background Grid (suppressed-weight analyzers — port for completeness).
+- **Phase 4:** Liveness Prover + full session-engine parity tests.
+
+### Phase-2 implementation notes
+
+- All Phase-2 analyzers are pure TypeScript with no extra deps. **No `npm install` step is required** — `onnxruntime-web` and `@mediapipe/tasks-vision` from Phase 1 still cover the runtime.
+- `DeviceBoundaryAnalyzer` ships a documented ~10% accuracy approximation vs the OpenCV reference (Canvas2D + Sobel + axis-aligned line scan instead of `cv2.HoughLinesP` + `cv2.findContours`). The opt-in to lazy-load OpenCV.js is on the Phase 3 backlog.
+- `MicroTremorAnalyzer` and `ScreenFlickerAnalyzer` use a hand-rolled DFT instead of `numpy.fft.rfft`. At the default `historyLen=30` the DFT is < 1 ms; callers who need a finer FFT can lazy-load `fft.js` and replace `bandPowerRatio()`.
+- All analyzers honour the same `score_history`-style buffer naming as the Python source, so JSON snapshots remain interoperable.
 
 See `../SPOOF_DETECTOR_BROWSER_READINESS.md` (in the repo root) for the
 full readiness audit, op-by-op port mapping and effort estimates.

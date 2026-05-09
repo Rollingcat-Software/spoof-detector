@@ -119,6 +119,28 @@ export function makeAnalyzerResult(
   return { name, score, details, elapsed_ms };
 }
 
+/**
+ * Common interface for all per-face analyzers (port of the duck-typed
+ * `analyze(face_crop, face_roi)` contract in the Python pipeline).
+ *
+ * Analyzers that need the full original frame (e.g. MiniFASNet, Device
+ * Boundary, Screen Flicker) implement `setFrame()`.
+ *
+ * Analyzers that need landmark data (e.g. Landmark Variance, Blink,
+ * Micro-Tremor) implement `setLandmarks()`. The orchestrator pulls
+ * landmarks off `FaceROI.landmarks` and forwards them once per frame
+ * — analyzers don't run MediaPipe themselves.
+ */
+export interface IFaceAnalyzer {
+  /** Stable name (e.g. "minifasnet", "blink"). Drives fusion weights. */
+  readonly name: string;
+  /** Analyze a face. `faceCrop` may be null for analyzers that need the full frame. */
+  analyze(
+    faceCrop: ImageData | null,
+    face: FaceROI,
+  ): Promise<AnalyzerResult> | AnalyzerResult;
+}
+
 /** Final multi-class spoof classification for a face. */
 export interface SpoofClassification {
   face_id: number;
