@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>spoof-detector — browser demo</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+      body {
+        margin: 0;
+        background: #0e1116;
+        color: #e6edf3;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 360px;
+        min-height: 100vh;
+      }
+      main {
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+      }
+      video {
+        width: min(100%, 720px);
+        background: #000;
+        border-radius: 12px;
+      }
+      aside {
+        background: #161b22;
+        padding: 24px;
+        border-left: 1px solid #30363d;
+      }
+      h1 {
+        font-size: 18px;
+        margin: 0 0 4px 0;
+      }
+      h2 {
+        font-size: 14px;
+        margin: 24px 0 8px 0;
+        color: #8b949e;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      #verdict {
+        font-size: 22px;
+        font-weight: 600;
+        padding: 12px;
+        border-radius: 8px;
+        background: #21262d;
+        border: 1px solid #30363d;
+      }
+      #verdict.live {
+        color: #3fb950;
+        border-color: #238636;
+      }
+      #verdict.spoof {
+        color: #f85149;
+        border-color: #da3633;
+      }
+      .row {
+        display: flex;
+        justify-content: space-between;
+        font-variant-numeric: tabular-nums;
+        margin: 4px 0;
+        font-size: 13px;
+      }
+      .row span:first-child {
+        color: #8b949e;
+      }
+      button {
+        background: #238636;
+        color: white;
+        border: 0;
+        padding: 8px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      button:disabled {
+        background: #30363d;
+        cursor: not-allowed;
+      }
+      .hint {
+        font-size: 12px;
+        color: #8b949e;
+        max-width: 340px;
+        line-height: 1.5;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>spoof-detector — browser demo (Phase 1)</h1>
+      <video id="video" autoplay playsinline muted></video>
+      <button id="start">Start camera</button>
+      <p class="hint">
+        Phase 1 ships MiniFASNet + multi-class fuser + session engine.
+        Hold a phone or printed photo up to the camera to see the verdict
+        flip from LIVE to SPOOF after a few seconds.
+      </p>
+    </main>
+    <aside>
+      <h2>Verdict</h2>
+      <div id="verdict">waiting&hellip;</div>
+
+      <h2>Session</h2>
+      <div class="row"><span>State</span><span id="state">-</span></div>
+      <div class="row"><span>Frames</span><span id="frames">0</span></div>
+      <div class="row"><span>FPS</span><span id="fps">0</span></div>
+      <div class="row"><span>Confidence</span><span id="conf">-</span></div>
+      <div class="row"><span>Incidents</span><span id="incidents">0</span></div>
+      <div class="row"><span>Duration</span><span id="duration">0.0s</span></div>
+
+      <h2>Per-category P(spoof)</h2>
+      <div id="cats"></div>
+    </aside>
+
+    <script type="module">
+      // The demo imports from the local source so `vite` can serve it
+      // straight after `npm install`. In a real consumer app you'd
+      // import from "@rollingcat/spoof-detector" instead.
+      import { createSpoofDetector } from "../src/index.ts";
+
+      const video = document.getElementById("video");
+      const startBtn = document.getElementById("start");
+      const verdictEl = document.getElementById("verdict");
+      const stateEl = document.getElementById("state");
+      const framesEl = document.getElementById("frames");
+      const fpsEl = document.getElementById("fps");
+      const confEl = document.getElementById("conf");
+      const incidentsEl = document.getElementById("incidents");
+      const durationEl = document.getElementById("duration");
+      const catsEl = document.getElementById("cats");
+
+      let detector = null;
+      let canvas = null;
+      let ctx = null;
+      let lastTs = 0;
+      let smoothedFps = 0;
+
+      startBtn.addEventListener("click", async () => {
+        startBtn.disabled = true;
+        startBtn.textContent = "loading models...";
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: 640, height: 480 },
+          audio: false,
+        });
+        video.srcObject = stream;
+        await new Promise((resolve) => video.addEventListener("loadeddata", resolve, { once: true }));
+        await video.play();
+
+        canvas = document.createElement("canvas");
+        canvas.width = video.videoWidth || 640;
+        canvas.height = video.videoHeight || 480;
+        ctx = canvas.getContext("2d");
+
+        detector = await createSpoofDetector({
+          miniFasNetModelUrl: "/public/models/minifasnet_v2.onnx",
+          faceLandmarkerTaskUrl: "/public/models/face_landmarker.task",
+        });
+
+        startBtn.textContent = "Running";
+        loop();
+      });
+
+      async function loop() {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        await detector.analyzeFrame(canvas);
+        const v = detector.getVerdict();
+
+        const now = performance.now();
+        if (lastTs > 0) {
+          const dt = now - lastTs;
+          const inst = 1000 / Math.max(dt, 1);
+          smoothedFps = smoothedFps === 0 ? inst : smoothedFps * 0.9 + inst * 0.1;
+        }
+        lastTs = now;
+
+        verdictEl.textContent = v.summary;
+        verdictEl.classList.toggle("live", v.is_live);
+        verdictEl.classList.toggle("spoof", !v.is_live);
+        stateEl.textContent = v.frames_analyzed < 30 ? "warming_up" : "analyzing";
+        framesEl.textContent = String(v.frames_analyzed);
+        fpsEl.textContent = smoothedFps.toFixed(1);
+        confEl.textContent = `${(v.confidence * 100).toFixed(0)}%`;
+        incidentsEl.textContent = String(v.incidents.length);
+        durationEl.textContent = `${v.session_duration_sec.toFixed(1)}s`;
+
+        const rows = [];
+        for (const [cat, p] of Object.entries(v.category_scores)) {
+          if (cat === "real") continue;
+          rows.push(
+            `<div class="row"><span>${cat}</span><span>${(p * 100).toFixed(0)}%</span></div>`,
+          );
+        }
+        catsEl.innerHTML = rows.join("");
+
+        requestAnimationFrame(loop);
+      }
+    </script>
+  </body>
+</html>

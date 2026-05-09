@@ -1,0 +1,5 @@
+# Place static model assets here:
+#   minifasnet_v2.onnx        (1.7 MB — copy from ~/.uniface/models/)
+#   face_landmarker.task      (~10 MB — copy from ../../models/)
+#
+# A `fetch-models.mjs` helper to automate this lands in Phase 2.
