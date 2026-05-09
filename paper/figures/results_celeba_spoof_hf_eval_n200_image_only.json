@@ -1,0 +1,1224 @@
+{
+  "dataset": "celeba_spoof_hf",
+  "protocol": "eval_n200",
+  "pipeline_name": "image_only",
+  "n_samples": 200,
+  "elapsed_sec": 29.541705478914082,
+  "metrics": {
+    "threshold": 0.4013105470565375,
+    "apcer_max": 0.3458646616541353,
+    "apcer_per_type": {
+      "unknown": 0.3458646616541353
+    },
+    "bpcer": 0.3582089552238806,
+    "acer": 0.352036808439008,
+    "hter": 0.352036808439008,
+    "eer": 0.3445741218718438,
+    "eer_threshold": 0.4013105470565375,
+    "auc": 0.7285377623162383,
+    "n_bonafide": 67,
+    "n_attack": 133
+  },
+  "per_sample": [
+    {
+      "sample_id": "Data/train/1873/live/392207.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.29508468565968754
+    },
+    {
+      "sample_id": "Data/train/8224/spoof/390982.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.25195213159392094
+    },
+    {
+      "sample_id": "Data/train/3258/live/398365.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8260636053316927
+    },
+    {
+      "sample_id": "Data/train/8438/live/396266.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.362029056194982
+    },
+    {
+      "sample_id": "Data/train/4431/spoof/398036.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.7862988429605419
+    },
+    {
+      "sample_id": "Data/train/989/spoof/397737.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.35210080742375155
+    },
+    {
+      "sample_id": "Data/train/3270/live/391043.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.2656213044623694
+    },
+    {
+      "sample_id": "Data/train/449/spoof/393410.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4536554422384999
+    },
+    {
+      "sample_id": "Data/train/7884/live/395953.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.921935720901391
+    },
+    {
+      "sample_id": "Data/train/1943/live/399574.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8778492582729158
+    },
+    {
+      "sample_id": "Data/train/2382/spoof/391532.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.12360370938805221
+    },
+    {
+      "sample_id": "Data/train/2832/spoof/393247.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.38681646250120416
+    },
+    {
+      "sample_id": "Data/train/9741/spoof/397164.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.713861637665254
+    },
+    {
+      "sample_id": "Data/train/7357/spoof/394840.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.34917625532353985
+    },
+    {
+      "sample_id": "Data/train/7650/spoof/390986.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.7255880364391635
+    },
+    {
+      "sample_id": "Data/train/4697/spoof/392457.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.31908156391562303
+    },
+    {
+      "sample_id": "Data/train/4639/spoof/391988.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3447908340288567
+    },
+    {
+      "sample_id": "Data/train/8438/live/392465.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9051140606936514
+    },
+    {
+      "sample_id": "Data/train/7554/spoof/399537.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.06514161735853467
+    },
+    {
+      "sample_id": "Data/train/5902/spoof/394298.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4154985325497891
+    },
+    {
+      "sample_id": "Data/train/2712/live/396916.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7642389970394151
+    },
+    {
+      "sample_id": "Data/train/9488/live/398273.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.4396070216105556
+    },
+    {
+      "sample_id": "Data/train/352/live/393059.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.40100383548784857
+    },
+    {
+      "sample_id": "Data/train/9981/spoof/393191.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.2621332987072989
+    },
+    {
+      "sample_id": "Data/train/5265/spoof/392619.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3365866066459756
+    },
+    {
+      "sample_id": "Data/train/8236/spoof/397469.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.32764726508886116
+    },
+    {
+      "sample_id": "Data/train/8130/spoof/397106.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.2960673775094373
+    },
+    {
+      "sample_id": "Data/train/1611/live/396267.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8826003624120843
+    },
+    {
+      "sample_id": "Data/train/961/spoof/392218.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.28987582832337083
+    },
+    {
+      "sample_id": "Data/train/3740/spoof/397597.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.425991524256571
+    },
+    {
+      "sample_id": "Data/train/6718/live/390808.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8865900478480315
+    },
+    {
+      "sample_id": "Data/train/8933/live/394062.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9246359251925219
+    },
+    {
+      "sample_id": "Data/train/8785/spoof/394922.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.2495283447069544
+    },
+    {
+      "sample_id": "Data/train/7289/spoof/392540.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.28873138741765864
+    },
+    {
+      "sample_id": "Data/train/9190/live/391413.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8953774258024669
+    },
+    {
+      "sample_id": "Data/train/2889/spoof/394902.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.32039078710878055
+    },
+    {
+      "sample_id": "Data/train/1371/live/390045.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7117140597625411
+    },
+    {
+      "sample_id": "Data/train/90/spoof/399413.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.37393609181528265
+    },
+    {
+      "sample_id": "Data/train/8012/spoof/393269.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3042439199200833
+    },
+    {
+      "sample_id": "Data/train/5843/live/396140.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8975828171285035
+    },
+    {
+      "sample_id": "Data/train/1377/spoof/393940.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.30559907882026544
+    },
+    {
+      "sample_id": "Data/train/9476/live/393024.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.1431266639090399
+    },
+    {
+      "sample_id": "Data/train/985/spoof/394582.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.34868576502247517
+    },
+    {
+      "sample_id": "Data/train/3779/live/392416.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.3407712658012126
+    },
+    {
+      "sample_id": "Data/train/8827/spoof/395442.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.5
+    },
+    {
+      "sample_id": "Data/train/5142/live/395176.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9257215712503075
+    },
+    {
+      "sample_id": "Data/train/4414/live/399527.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.3229934392231889
+    },
+    {
+      "sample_id": "Data/train/2054/live/390194.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.6515331064968298
+    },
+    {
+      "sample_id": "Data/train/7262/live/395174.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7008234883590012
+    },
+    {
+      "sample_id": "Data/train/7794/spoof/390981.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.5
+    },
+    {
+      "sample_id": "Data/train/3401/spoof/392620.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.8321561068006775
+    },
+    {
+      "sample_id": "Data/train/4808/spoof/399638.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.9323869368218335
+    },
+    {
+      "sample_id": "Data/train/2458/spoof/395444.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.5
+    },
+    {
+      "sample_id": "Data/train/2576/live/392536.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.661613256962235
+    },
+    {
+      "sample_id": "Data/train/211/live/393347.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.24190154780910944
+    },
+    {
+      "sample_id": "Data/train/9354/spoof/397666.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3184306742319434
+    },
+    {
+      "sample_id": "Data/train/3226/spoof/397762.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.37755869262719116
+    },
+    {
+      "sample_id": "Data/train/8867/live/398885.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.3750984730247335
+    },
+    {
+      "sample_id": "Data/train/5869/spoof/390904.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3087645773838861
+    },
+    {
+      "sample_id": "Data/train/7466/live/392346.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.4589228458513723
+    },
+    {
+      "sample_id": "Data/train/1416/spoof/391192.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.834592207234435
+    },
+    {
+      "sample_id": "Data/train/6712/spoof/399811.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.44790053152623366
+    },
+    {
+      "sample_id": "Data/train/9543/spoof/394621.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.5
+    },
+    {
+      "sample_id": "Data/train/5919/spoof/392928.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.31518451195188346
+    },
+    {
+      "sample_id": "Data/train/3785/live/398843.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8954882316376287
+    },
+    {
+      "sample_id": "Data/train/6523/spoof/392654.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.1854617706309979
+    },
+    {
+      "sample_id": "Data/train/256/spoof/395268.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3587127359313362
+    },
+    {
+      "sample_id": "Data/train/8374/live/391562.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8782974048834865
+    },
+    {
+      "sample_id": "Data/train/7638/spoof/391811.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.5
+    },
+    {
+      "sample_id": "Data/train/250/spoof/391631.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.41765166141816246
+    },
+    {
+      "sample_id": "Data/train/6493/spoof/397492.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.6683566314090167
+    },
+    {
+      "sample_id": "Data/train/9595/spoof/397409.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.7107858793886104
+    },
+    {
+      "sample_id": "Data/train/5404/live/391966.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9179632782734217
+    },
+    {
+      "sample_id": "Data/train/9224/spoof/395945.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.5
+    },
+    {
+      "sample_id": "Data/train/7195/spoof/397782.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.2846094029246918
+    },
+    {
+      "sample_id": "Data/train/3803/live/393432.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7030755126624489
+    },
+    {
+      "sample_id": "Data/train/6746/live/396832.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.33930138012722744
+    },
+    {
+      "sample_id": "Data/train/1389/spoof/396902.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3822628920119582
+    },
+    {
+      "sample_id": "Data/train/8820/live/395000.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.858947072644703
+    },
+    {
+      "sample_id": "Data/train/2067/live/391890.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.4349966711232349
+    },
+    {
+      "sample_id": "Data/train/9007/live/390230.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.3755049185398609
+    },
+    {
+      "sample_id": "Data/train/6048/live/392374.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8912036071556148
+    },
+    {
+      "sample_id": "Data/train/2807/spoof/395571.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.47016706025678767
+    },
+    {
+      "sample_id": "Data/train/6021/live/392359.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.697633983243226
+    },
+    {
+      "sample_id": "Data/train/8582/live/396097.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.802099488802335
+    },
+    {
+      "sample_id": "Data/train/8061/spoof/392062.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.2800551336395633
+    },
+    {
+      "sample_id": "Data/train/323/spoof/397395.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.5
+    },
+    {
+      "sample_id": "Data/train/569/spoof/399271.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.40286635229421414
+    },
+    {
+      "sample_id": "Data/train/1224/live/391287.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.14269662779010492
+    },
+    {
+      "sample_id": "Data/train/564/spoof/393144.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.2551219952243866
+    },
+    {
+      "sample_id": "Data/train/7157/spoof/390173.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.29345871905493215
+    },
+    {
+      "sample_id": "Data/train/2191/spoof/394446.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.29092001978239296
+    },
+    {
+      "sample_id": "Data/train/2069/live/394872.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.4329482744576878
+    },
+    {
+      "sample_id": "Data/train/7887/spoof/399077.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.32802758294317047
+    },
+    {
+      "sample_id": "Data/train/6266/live/390079.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.2922546669059417
+    },
+    {
+      "sample_id": "Data/train/127/spoof/397630.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.35428498083867704
+    },
+    {
+      "sample_id": "Data/train/5472/live/390682.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9194793805933953
+    },
+    {
+      "sample_id": "Data/train/919/live/390425.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.6910616342676198
+    },
+    {
+      "sample_id": "Data/train/4342/live/394904.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.33097392577464074
+    },
+    {
+      "sample_id": "Data/train/6695/spoof/392308.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.20081907344256889
+    },
+    {
+      "sample_id": "Data/train/7773/spoof/396163.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4510397103490218
+    },
+    {
+      "sample_id": "Data/train/6643/spoof/398177.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.41909637359541324
+    },
+    {
+      "sample_id": "Data/train/9064/spoof/397610.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.40277742847200637
+    },
+    {
+      "sample_id": "Data/train/7364/spoof/396954.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4331198207809954
+    },
+    {
+      "sample_id": "Data/train/4496/spoof/393248.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.35146396253756534
+    },
+    {
+      "sample_id": "Data/train/8013/live/393337.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.3764526217519623
+    },
+    {
+      "sample_id": "Data/train/671/live/398686.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.2869877907839251
+    },
+    {
+      "sample_id": "Data/train/9434/spoof/393473.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.34215312038201595
+    },
+    {
+      "sample_id": "Data/train/8910/spoof/393336.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.2979302553499333
+    },
+    {
+      "sample_id": "Data/train/7118/spoof/396132.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.5
+    },
+    {
+      "sample_id": "Data/train/3101/spoof/391352.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.40536234918807873
+    },
+    {
+      "sample_id": "Data/train/8528/spoof/398662.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3621159194497971
+    },
+    {
+      "sample_id": "Data/train/9772/live/391699.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7108702341275105
+    },
+    {
+      "sample_id": "Data/train/6830/spoof/399486.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3823557636680019
+    },
+    {
+      "sample_id": "Data/train/3907/live/395221.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7112181393987523
+    },
+    {
+      "sample_id": "Data/train/10175/spoof/399544.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.8642563714737206
+    },
+    {
+      "sample_id": "Data/train/1283/spoof/393991.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.35685689999970455
+    },
+    {
+      "sample_id": "Data/train/7432/spoof/391701.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.28486411133085177
+    },
+    {
+      "sample_id": "Data/train/9905/spoof/398307.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.5
+    },
+    {
+      "sample_id": "Data/train/2961/spoof/396135.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3014780609616849
+    },
+    {
+      "sample_id": "Data/train/2602/spoof/392067.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.31465352752593756
+    },
+    {
+      "sample_id": "Data/train/3209/spoof/396521.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3035578986758119
+    },
+    {
+      "sample_id": "Data/train/3392/spoof/390861.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.33503214660741465
+    },
+    {
+      "sample_id": "Data/train/1264/live/394084.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8846502345541994
+    },
+    {
+      "sample_id": "Data/train/9480/spoof/393553.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.5
+    },
+    {
+      "sample_id": "Data/train/4162/spoof/395868.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.9074307677938872
+    },
+    {
+      "sample_id": "Data/train/7770/spoof/390635.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.2894069899037724
+    },
+    {
+      "sample_id": "Data/train/4522/spoof/397031.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.36465877455850265
+    },
+    {
+      "sample_id": "Data/train/4203/spoof/390990.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3070847968360293
+    },
+    {
+      "sample_id": "Data/train/8799/live/390426.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.3264951399074032
+    },
+    {
+      "sample_id": "Data/train/7449/live/396463.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.38683927185190875
+    },
+    {
+      "sample_id": "Data/train/1894/spoof/394055.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.34976061136521824
+    },
+    {
+      "sample_id": "Data/train/5940/spoof/393044.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.8871545513246338
+    },
+    {
+      "sample_id": "Data/train/216/spoof/391741.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.48271676420384296
+    },
+    {
+      "sample_id": "Data/train/805/spoof/393098.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4220155463465461
+    },
+    {
+      "sample_id": "Data/train/1963/live/395421.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9318879132487289
+    },
+    {
+      "sample_id": "Data/train/8658/spoof/398266.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.2935563269505794
+    },
+    {
+      "sample_id": "Data/train/2190/live/395960.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.3726847827499195
+    },
+    {
+      "sample_id": "Data/train/3299/spoof/393569.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.2875368126173434
+    },
+    {
+      "sample_id": "Data/train/4435/spoof/390115.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3195470049047307
+    },
+    {
+      "sample_id": "Data/train/1914/spoof/391422.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.1455194935339599
+    },
+    {
+      "sample_id": "Data/train/7965/spoof/395035.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.06712525825514475
+    },
+    {
+      "sample_id": "Data/train/8666/spoof/394602.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3364090450775649
+    },
+    {
+      "sample_id": "Data/train/4903/spoof/398890.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.9240120715623248
+    },
+    {
+      "sample_id": "Data/train/6640/spoof/396813.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.28633772720159945
+    },
+    {
+      "sample_id": "Data/train/3170/spoof/391850.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.29506172975939504
+    },
+    {
+      "sample_id": "Data/train/4928/spoof/391646.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3571177653480004
+    },
+    {
+      "sample_id": "Data/train/7725/spoof/391897.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.31095518703422653
+    },
+    {
+      "sample_id": "Data/train/7735/spoof/391751.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.29557908577266795
+    },
+    {
+      "sample_id": "Data/train/5938/spoof/398265.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.41617014757884374
+    },
+    {
+      "sample_id": "Data/train/5623/live/397111.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9822772264291378
+    },
+    {
+      "sample_id": "Data/train/4983/spoof/390707.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.41340086700469053
+    },
+    {
+      "sample_id": "Data/train/3758/spoof/398960.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.38781963317021206
+    },
+    {
+      "sample_id": "Data/train/9593/spoof/392914.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.08204646697061392
+    },
+    {
+      "sample_id": "Data/train/5082/spoof/390026.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.30515801437612866
+    },
+    {
+      "sample_id": "Data/train/8883/spoof/395333.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.5
+    },
+    {
+      "sample_id": "Data/train/329/spoof/390558.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4253329320582893
+    },
+    {
+      "sample_id": "Data/train/3746/spoof/397796.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.5
+    },
+    {
+      "sample_id": "Data/train/5405/spoof/399173.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3305883616534729
+    },
+    {
+      "sample_id": "Data/train/8123/spoof/397665.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.5
+    },
+    {
+      "sample_id": "Data/train/2508/spoof/398094.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.2937095773141691
+    },
+    {
+      "sample_id": "Data/train/6022/live/398605.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.3070549620531694
+    },
+    {
+      "sample_id": "Data/train/4366/live/390991.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8910441450515829
+    },
+    {
+      "sample_id": "Data/train/6309/spoof/394709.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.29513987597258384
+    },
+    {
+      "sample_id": "Data/train/4130/spoof/391064.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.29167538864954434
+    },
+    {
+      "sample_id": "Data/train/1445/live/392226.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.6879765898732617
+    },
+    {
+      "sample_id": "Data/train/1390/live/390645.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.6144466156873839
+    },
+    {
+      "sample_id": "Data/train/1128/spoof/390505.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.2780019570626349
+    },
+    {
+      "sample_id": "Data/train/918/live/398564.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.40660389612867176
+    },
+    {
+      "sample_id": "Data/train/7417/live/396886.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.35042119847521946
+    },
+    {
+      "sample_id": "Data/train/1629/live/398091.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8885482378699003
+    },
+    {
+      "sample_id": "Data/train/5143/live/396677.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9254969489781477
+    },
+    {
+      "sample_id": "Data/train/189/spoof/398152.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.2952190504639307
+    },
+    {
+      "sample_id": "Data/train/2113/live/392669.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.699405766899955
+    },
+    {
+      "sample_id": "Data/train/2920/spoof/394537.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.320433926900165
+    },
+    {
+      "sample_id": "Data/train/250/live/399531.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.31362234390728616
+    },
+    {
+      "sample_id": "Data/train/2595/spoof/395184.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.2897581371584168
+    },
+    {
+      "sample_id": "Data/train/3823/spoof/396837.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3469479988049297
+    },
+    {
+      "sample_id": "Data/train/10117/spoof/392206.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.5
+    },
+    {
+      "sample_id": "Data/train/1405/spoof/398108.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.30987381823981036
+    },
+    {
+      "sample_id": "Data/train/5897/spoof/391091.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.8541572206390668
+    },
+    {
+      "sample_id": "Data/train/4410/spoof/394195.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.2887039496098446
+    },
+    {
+      "sample_id": "Data/train/3035/spoof/392977.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3314146838289412
+    },
+    {
+      "sample_id": "Data/train/4061/spoof/397212.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3288993810222063
+    },
+    {
+      "sample_id": "Data/train/3381/live/397968.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9299415723343546
+    },
+    {
+      "sample_id": "Data/train/4528/spoof/396825.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3691125884920872
+    },
+    {
+      "sample_id": "Data/train/9912/spoof/396763.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.2823385175846323
+    },
+    {
+      "sample_id": "Data/train/2848/spoof/397681.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.8563989432076429
+    },
+    {
+      "sample_id": "Data/train/2320/spoof/392035.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3949350750286566
+    },
+    {
+      "sample_id": "Data/train/9399/live/394159.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8557771263607818
+    },
+    {
+      "sample_id": "Data/train/1227/spoof/398465.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.28854807378501707
+    },
+    {
+      "sample_id": "Data/train/9503/spoof/394274.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3165515292519056
+    },
+    {
+      "sample_id": "Data/train/4633/spoof/390500.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3904218666334475
+    },
+    {
+      "sample_id": "Data/train/4647/spoof/393742.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.28755462679000876
+    },
+    {
+      "sample_id": "Data/train/9490/spoof/394221.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.12039691122845698
+    },
+    {
+      "sample_id": "Data/train/3795/live/397873.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.24994066053125824
+    },
+    {
+      "sample_id": "Data/train/6939/spoof/398986.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.31489868194257564
+    },
+    {
+      "sample_id": "Data/train/8082/spoof/394027.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3929381759002552
+    },
+    {
+      "sample_id": "Data/train/6222/live/397916.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.33879787596529887
+    },
+    {
+      "sample_id": "Data/train/1887/spoof/397881.jpg",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.46486739791034193
+    }
+  ]
+}

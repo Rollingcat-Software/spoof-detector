@@ -1,0 +1,1977 @@
+{
+  "dataset": "in_house",
+  "protocol": "full_n325",
+  "pipeline_name": "image_only",
+  "n_samples": 325,
+  "elapsed_sec": 42.35776857798919,
+  "metrics": {
+    "threshold": 0.7151489639344903,
+    "apcer_max": 0.56,
+    "apcer_per_type": {
+      "ar_filter": 0.56,
+      "digital_photo": 0.38666666666666666,
+      "print": 0.3333333333333333,
+      "replay": 0.04
+    },
+    "bpcer": 0.56,
+    "acer": 0.56,
+    "hter": 0.56,
+    "eer": 0.56,
+    "eer_threshold": 0.7151489639344903,
+    "auc": 0.40079999999999993,
+    "n_bonafide": 25,
+    "n_attack": 300
+  },
+  "per_sample": [
+    {
+      "sample_id": "bonafide/a_afuat_000.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.3894056924842915
+    },
+    {
+      "sample_id": "attack_print/a_afuat_000_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.346557341187976
+    },
+    {
+      "sample_id": "attack_print/a_afuat_000_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.34299034614993
+    },
+    {
+      "sample_id": "attack_print/a_afuat_000_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.3431617924864766
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_000_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06388139410385367
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_000_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06388838402620224
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_000_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.5
+    },
+    {
+      "sample_id": "attack_ar_filter/a_afuat_000_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.9376454905910494
+    },
+    {
+      "sample_id": "attack_ar_filter/a_afuat_000_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.9376454905910494
+    },
+    {
+      "sample_id": "attack_ar_filter/a_afuat_000_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.9376454905910494
+    },
+    {
+      "sample_id": "attack_digital_photo/a_afuat_000_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.4191697688946079
+    },
+    {
+      "sample_id": "attack_digital_photo/a_afuat_000_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.4712165095402619
+    },
+    {
+      "sample_id": "attack_digital_photo/a_afuat_000_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.4545911101109811
+    },
+    {
+      "sample_id": "bonafide/a_afuat_001.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.31672553037722745
+    },
+    {
+      "sample_id": "attack_print/a_afuat_001_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.31911409307623706
+    },
+    {
+      "sample_id": "attack_print/a_afuat_001_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.3123935247463002
+    },
+    {
+      "sample_id": "attack_print/a_afuat_001_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.3186806848432592
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_001_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.5
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_001_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06662144774790628
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_001_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.5
+    },
+    {
+      "sample_id": "attack_ar_filter/a_afuat_001_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.4201459635915047
+    },
+    {
+      "sample_id": "attack_ar_filter/a_afuat_001_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.4201459635915047
+    },
+    {
+      "sample_id": "attack_ar_filter/a_afuat_001_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.4201459635915047
+    },
+    {
+      "sample_id": "attack_digital_photo/a_afuat_001_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.32518074766747984
+    },
+    {
+      "sample_id": "attack_digital_photo/a_afuat_001_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.3254568165228665
+    },
+    {
+      "sample_id": "attack_digital_photo/a_afuat_001_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.3297480556980873
+    },
+    {
+      "sample_id": "bonafide/a_afuat_002.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9619330133627891
+    },
+    {
+      "sample_id": "attack_print/a_afuat_002_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.8199761824775086
+    },
+    {
+      "sample_id": "attack_print/a_afuat_002_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.8764688228463524
+    },
+    {
+      "sample_id": "attack_print/a_afuat_002_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.8691172493416979
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_002_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.5
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_002_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.5
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_002_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.5
+    },
+    {
+      "sample_id": "attack_ar_filter/a_afuat_002_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.9574291758068794
+    },
+    {
+      "sample_id": "attack_ar_filter/a_afuat_002_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.9574291758068794
+    },
+    {
+      "sample_id": "attack_ar_filter/a_afuat_002_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.9574291758068794
+    },
+    {
+      "sample_id": "attack_digital_photo/a_afuat_002_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.9693433059756578
+    },
+    {
+      "sample_id": "attack_digital_photo/a_afuat_002_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.9699483167393863
+    },
+    {
+      "sample_id": "attack_digital_photo/a_afuat_002_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.9753958576671146
+    },
+    {
+      "sample_id": "bonafide/a_afuat_003.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7105153617163315
+    },
+    {
+      "sample_id": "attack_print/a_afuat_003_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.8997520100767121
+    },
+    {
+      "sample_id": "attack_print/a_afuat_003_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.9300613970896613
+    },
+    {
+      "sample_id": "attack_print/a_afuat_003_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.899900083586223
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_003_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.8870015477938711
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_003_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.841033167340611
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_003_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.8045626486800654
+    },
+    {
+      "sample_id": "attack_ar_filter/a_afuat_003_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.9396200412431358
+    },
+    {
+      "sample_id": "attack_ar_filter/a_afuat_003_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.9396200412431358
+    },
+    {
+      "sample_id": "attack_ar_filter/a_afuat_003_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.9396200412431358
+    },
+    {
+      "sample_id": "attack_digital_photo/a_afuat_003_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.8944018136239661
+    },
+    {
+      "sample_id": "attack_digital_photo/a_afuat_003_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.8881724301531292
+    },
+    {
+      "sample_id": "attack_digital_photo/a_afuat_003_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.7090370302425528
+    },
+    {
+      "sample_id": "bonafide/a_afuat_004.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7130687097878933
+    },
+    {
+      "sample_id": "attack_print/a_afuat_004_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.7118425603030868
+    },
+    {
+      "sample_id": "attack_print/a_afuat_004_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.7114289422287066
+    },
+    {
+      "sample_id": "attack_print/a_afuat_004_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.7115879260119061
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_004_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.17483364978493676
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_004_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.14258264496498613
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_004_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06490366518868208
+    },
+    {
+      "sample_id": "attack_ar_filter/a_afuat_004_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.711784611269352
+    },
+    {
+      "sample_id": "attack_ar_filter/a_afuat_004_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.711784611269352
+    },
+    {
+      "sample_id": "attack_ar_filter/a_afuat_004_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.711784611269352
+    },
+    {
+      "sample_id": "attack_digital_photo/a_afuat_004_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.7111941565666868
+    },
+    {
+      "sample_id": "attack_digital_photo/a_afuat_004_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.7111944319765177
+    },
+    {
+      "sample_id": "attack_digital_photo/a_afuat_004_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.7112320462846011
+    },
+    {
+      "sample_id": "bonafide/a_afuat_005.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.709832167908781
+    },
+    {
+      "sample_id": "attack_print/a_afuat_005_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.7103326895150628
+    },
+    {
+      "sample_id": "attack_print/a_afuat_005_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.7110386640698537
+    },
+    {
+      "sample_id": "attack_print/a_afuat_005_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.7103112752667846
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_005_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.1343915487555777
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_005_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.6720393993651992
+    },
+    {
+      "sample_id": "attack_replay/a_afuat_005_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.6641245433898888
+    },
+    {
+      "sample_id": "attack_ar_filter/a_afuat_005_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.7090915728477507
+    },
+    {
+      "sample_id": "attack_ar_filter/a_afuat_005_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.7090915728477507
+    },
+    {
+      "sample_id": "attack_ar_filter/a_afuat_005_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.7090915728477507
+    },
+    {
+      "sample_id": "attack_digital_photo/a_afuat_005_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.7097268233844173
+    },
+    {
+      "sample_id": "attack_digital_photo/a_afuat_005_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.7097497302213792
+    },
+    {
+      "sample_id": "attack_digital_photo/a_afuat_005_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.7097679480978276
+    },
+    {
+      "sample_id": "bonafide/a_aga_000.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8137424376336799
+    },
+    {
+      "sample_id": "attack_print/a_aga_000_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.4215928261177202
+    },
+    {
+      "sample_id": "attack_print/a_aga_000_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.3471216126159264
+    },
+    {
+      "sample_id": "attack_print/a_aga_000_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.42332396437842595
+    },
+    {
+      "sample_id": "attack_replay/a_aga_000_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.5
+    },
+    {
+      "sample_id": "attack_replay/a_aga_000_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.5
+    },
+    {
+      "sample_id": "attack_replay/a_aga_000_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.5
+    },
+    {
+      "sample_id": "attack_ar_filter/a_aga_000_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.804139233454918
+    },
+    {
+      "sample_id": "attack_ar_filter/a_aga_000_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.804139233454918
+    },
+    {
+      "sample_id": "attack_ar_filter/a_aga_000_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.804139233454918
+    },
+    {
+      "sample_id": "attack_digital_photo/a_aga_000_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.4388957292905529
+    },
+    {
+      "sample_id": "attack_digital_photo/a_aga_000_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.4388957292905529
+    },
+    {
+      "sample_id": "attack_digital_photo/a_aga_000_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.781540664543803
+    },
+    {
+      "sample_id": "bonafide/a_aga_001.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7112744173541347
+    },
+    {
+      "sample_id": "attack_print/a_aga_001_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.7127799605698883
+    },
+    {
+      "sample_id": "attack_print/a_aga_001_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.7122255415859193
+    },
+    {
+      "sample_id": "attack_print/a_aga_001_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.7110111840351779
+    },
+    {
+      "sample_id": "attack_replay/a_aga_001_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06468205989925505
+    },
+    {
+      "sample_id": "attack_replay/a_aga_001_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06502911360618778
+    },
+    {
+      "sample_id": "attack_replay/a_aga_001_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06453914969620518
+    },
+    {
+      "sample_id": "attack_ar_filter/a_aga_001_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.7070179766591067
+    },
+    {
+      "sample_id": "attack_ar_filter/a_aga_001_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.7070179766591067
+    },
+    {
+      "sample_id": "attack_ar_filter/a_aga_001_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.7070179766591067
+    },
+    {
+      "sample_id": "attack_digital_photo/a_aga_001_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.7086271123799363
+    },
+    {
+      "sample_id": "attack_digital_photo/a_aga_001_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.7106733327211454
+    },
+    {
+      "sample_id": "attack_digital_photo/a_aga_001_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.7089615796456873
+    },
+    {
+      "sample_id": "bonafide/a_aga_002.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.889679987166054
+    },
+    {
+      "sample_id": "attack_print/a_aga_002_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.8874941566214051
+    },
+    {
+      "sample_id": "attack_print/a_aga_002_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.8979370700135454
+    },
+    {
+      "sample_id": "attack_print/a_aga_002_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.8876664800526911
+    },
+    {
+      "sample_id": "attack_replay/a_aga_002_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06529822329359929
+    },
+    {
+      "sample_id": "attack_replay/a_aga_002_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.07012360074408103
+    },
+    {
+      "sample_id": "attack_replay/a_aga_002_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.0652586305284447
+    },
+    {
+      "sample_id": "attack_ar_filter/a_aga_002_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.8749510793337186
+    },
+    {
+      "sample_id": "attack_ar_filter/a_aga_002_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.8749510793337186
+    },
+    {
+      "sample_id": "attack_ar_filter/a_aga_002_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.8749510793337186
+    },
+    {
+      "sample_id": "attack_digital_photo/a_aga_002_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.8936012272782704
+    },
+    {
+      "sample_id": "attack_digital_photo/a_aga_002_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.8967124059213214
+    },
+    {
+      "sample_id": "attack_digital_photo/a_aga_002_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.8906313205813138
+    },
+    {
+      "sample_id": "bonafide/a_ahab_000.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7151489639344903
+    },
+    {
+      "sample_id": "attack_print/a_ahab_000_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.7102043453443542
+    },
+    {
+      "sample_id": "attack_print/a_ahab_000_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.7101092713869995
+    },
+    {
+      "sample_id": "attack_print/a_ahab_000_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.7099194919903178
+    },
+    {
+      "sample_id": "attack_replay/a_ahab_000_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.0672713674175528
+    },
+    {
+      "sample_id": "attack_replay/a_ahab_000_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06518122910416108
+    },
+    {
+      "sample_id": "attack_replay/a_ahab_000_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06514862105435433
+    },
+    {
+      "sample_id": "attack_ar_filter/a_ahab_000_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.7142803599177209
+    },
+    {
+      "sample_id": "attack_ar_filter/a_ahab_000_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.7142803599177209
+    },
+    {
+      "sample_id": "attack_ar_filter/a_ahab_000_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.7142803599177209
+    },
+    {
+      "sample_id": "attack_digital_photo/a_ahab_000_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.71338201294684
+    },
+    {
+      "sample_id": "attack_digital_photo/a_ahab_000_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.7141717691769256
+    },
+    {
+      "sample_id": "attack_digital_photo/a_ahab_000_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.7136810767857934
+    },
+    {
+      "sample_id": "bonafide/a_ahab_001.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9603758736193839
+    },
+    {
+      "sample_id": "attack_print/a_ahab_001_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.4369354493515079
+    },
+    {
+      "sample_id": "attack_print/a_ahab_001_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.8159974979818955
+    },
+    {
+      "sample_id": "attack_print/a_ahab_001_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.8337939265833395
+    },
+    {
+      "sample_id": "attack_replay/a_ahab_001_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06548342978311807
+    },
+    {
+      "sample_id": "attack_replay/a_ahab_001_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06533045740104296
+    },
+    {
+      "sample_id": "attack_replay/a_ahab_001_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06562819763743576
+    },
+    {
+      "sample_id": "attack_ar_filter/a_ahab_001_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.9590660626587876
+    },
+    {
+      "sample_id": "attack_ar_filter/a_ahab_001_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.9590660626587876
+    },
+    {
+      "sample_id": "attack_ar_filter/a_ahab_001_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.9590660626587876
+    },
+    {
+      "sample_id": "attack_digital_photo/a_ahab_001_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.9603354164928987
+    },
+    {
+      "sample_id": "attack_digital_photo/a_ahab_001_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.9843777251906686
+    },
+    {
+      "sample_id": "attack_digital_photo/a_ahab_001_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.9840420023387684
+    },
+    {
+      "sample_id": "bonafide/b_person_0001_000.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8137424376336799
+    },
+    {
+      "sample_id": "attack_print/b_person_0001_000_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.41366319633034065
+    },
+    {
+      "sample_id": "attack_print/b_person_0001_000_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.3860608280500697
+    },
+    {
+      "sample_id": "attack_print/b_person_0001_000_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.40278137369988587
+    },
+    {
+      "sample_id": "attack_replay/b_person_0001_000_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06355638396446925
+    },
+    {
+      "sample_id": "attack_replay/b_person_0001_000_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.5
+    },
+    {
+      "sample_id": "attack_replay/b_person_0001_000_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.5
+    },
+    {
+      "sample_id": "attack_ar_filter/b_person_0001_000_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.804139233454918
+    },
+    {
+      "sample_id": "attack_ar_filter/b_person_0001_000_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.804139233454918
+    },
+    {
+      "sample_id": "attack_ar_filter/b_person_0001_000_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.804139233454918
+    },
+    {
+      "sample_id": "attack_digital_photo/b_person_0001_000_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.7592027808570804
+    },
+    {
+      "sample_id": "attack_digital_photo/b_person_0001_000_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.7992355784125309
+    },
+    {
+      "sample_id": "attack_digital_photo/b_person_0001_000_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.44956418129430414
+    },
+    {
+      "sample_id": "bonafide/b_person_0001_001.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7138020151953245
+    },
+    {
+      "sample_id": "attack_print/b_person_0001_001_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.7136184034268132
+    },
+    {
+      "sample_id": "attack_print/b_person_0001_001_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.7125111257396757
+    },
+    {
+      "sample_id": "attack_print/b_person_0001_001_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.7127322603384921
+    },
+    {
+      "sample_id": "attack_replay/b_person_0001_001_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06433274037413121
+    },
+    {
+      "sample_id": "attack_replay/b_person_0001_001_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06420670496158344
+    },
+    {
+      "sample_id": "attack_replay/b_person_0001_001_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.21672896517992649
+    },
+    {
+      "sample_id": "attack_ar_filter/b_person_0001_001_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.7134036303090443
+    },
+    {
+      "sample_id": "attack_ar_filter/b_person_0001_001_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.7134036303090443
+    },
+    {
+      "sample_id": "attack_ar_filter/b_person_0001_001_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.7134036303090443
+    },
+    {
+      "sample_id": "attack_digital_photo/b_person_0001_001_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.7125014755170327
+    },
+    {
+      "sample_id": "attack_digital_photo/b_person_0001_001_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.7127123119059745
+    },
+    {
+      "sample_id": "attack_digital_photo/b_person_0001_001_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.7125055404485622
+    },
+    {
+      "sample_id": "bonafide/b_person_0001_002.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.930671549099782
+    },
+    {
+      "sample_id": "attack_print/b_person_0001_002_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.8995960864162877
+    },
+    {
+      "sample_id": "attack_print/b_person_0001_002_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.4927169708702356
+    },
+    {
+      "sample_id": "attack_print/b_person_0001_002_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.9206989622705865
+    },
+    {
+      "sample_id": "attack_replay/b_person_0001_002_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06375147410551965
+    },
+    {
+      "sample_id": "attack_replay/b_person_0001_002_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06411389392627687
+    },
+    {
+      "sample_id": "attack_replay/b_person_0001_002_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06372874722088666
+    },
+    {
+      "sample_id": "attack_ar_filter/b_person_0001_002_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.9599545876318513
+    },
+    {
+      "sample_id": "attack_ar_filter/b_person_0001_002_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.9599545876318513
+    },
+    {
+      "sample_id": "attack_ar_filter/b_person_0001_002_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.9599545876318513
+    },
+    {
+      "sample_id": "attack_digital_photo/b_person_0001_002_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.9332987445763212
+    },
+    {
+      "sample_id": "attack_digital_photo/b_person_0001_002_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.9273389668054355
+    },
+    {
+      "sample_id": "attack_digital_photo/b_person_0001_002_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.9299892849622255
+    },
+    {
+      "sample_id": "bonafide/b_person_0001_003.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7112744173541347
+    },
+    {
+      "sample_id": "attack_print/b_person_0001_003_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.7113017669248312
+    },
+    {
+      "sample_id": "attack_print/b_person_0001_003_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.7122384501947473
+    },
+    {
+      "sample_id": "attack_print/b_person_0001_003_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.7128630672555274
+    },
+    {
+      "sample_id": "attack_replay/b_person_0001_003_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06613766593165217
+    },
+    {
+      "sample_id": "attack_replay/b_person_0001_003_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06425300807178358
+    },
+    {
+      "sample_id": "attack_replay/b_person_0001_003_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06450940959587424
+    },
+    {
+      "sample_id": "attack_ar_filter/b_person_0001_003_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.7070179766591067
+    },
+    {
+      "sample_id": "attack_ar_filter/b_person_0001_003_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.7070179766591067
+    },
+    {
+      "sample_id": "attack_ar_filter/b_person_0001_003_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.7070179766591067
+    },
+    {
+      "sample_id": "attack_digital_photo/b_person_0001_003_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.7089615796456873
+    },
+    {
+      "sample_id": "attack_digital_photo/b_person_0001_003_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.7110571357497513
+    },
+    {
+      "sample_id": "attack_digital_photo/b_person_0001_003_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.7099424330701252
+    },
+    {
+      "sample_id": "bonafide/b_person_0001_004.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.889679987166054
+    },
+    {
+      "sample_id": "attack_print/b_person_0001_004_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.9374298235545971
+    },
+    {
+      "sample_id": "attack_print/b_person_0001_004_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.8829175526096097
+    },
+    {
+      "sample_id": "attack_print/b_person_0001_004_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.8830884667286657
+    },
+    {
+      "sample_id": "attack_replay/b_person_0001_004_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.18879150342686482
+    },
+    {
+      "sample_id": "attack_replay/b_person_0001_004_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.0652561264209958
+    },
+    {
+      "sample_id": "attack_replay/b_person_0001_004_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06440589516783679
+    },
+    {
+      "sample_id": "attack_ar_filter/b_person_0001_004_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.8749510793337186
+    },
+    {
+      "sample_id": "attack_ar_filter/b_person_0001_004_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.8749510793337186
+    },
+    {
+      "sample_id": "attack_ar_filter/b_person_0001_004_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.8749510793337186
+    },
+    {
+      "sample_id": "attack_digital_photo/b_person_0001_004_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.8930776656982305
+    },
+    {
+      "sample_id": "attack_digital_photo/b_person_0001_004_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.8945497570926509
+    },
+    {
+      "sample_id": "attack_digital_photo/b_person_0001_004_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.8938817080963872
+    },
+    {
+      "sample_id": "bonafide/b_person_0002_000.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.3894056924842915
+    },
+    {
+      "sample_id": "attack_print/b_person_0002_000_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.31846491273391453
+    },
+    {
+      "sample_id": "attack_print/b_person_0002_000_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.3413149532950635
+    },
+    {
+      "sample_id": "attack_print/b_person_0002_000_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.3358070661394371
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_000_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.5
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_000_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.0650778459893219
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_000_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06337959965426691
+    },
+    {
+      "sample_id": "attack_ar_filter/b_person_0002_000_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.9376454905910494
+    },
+    {
+      "sample_id": "attack_ar_filter/b_person_0002_000_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.9376454905910494
+    },
+    {
+      "sample_id": "attack_ar_filter/b_person_0002_000_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.9376454905910494
+    },
+    {
+      "sample_id": "attack_digital_photo/b_person_0002_000_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.4293610830527083
+    },
+    {
+      "sample_id": "attack_digital_photo/b_person_0002_000_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.46818885962578627
+    },
+    {
+      "sample_id": "attack_digital_photo/b_person_0002_000_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.37857058410654404
+    },
+    {
+      "sample_id": "bonafide/b_person_0002_001.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.31672553037722745
+    },
+    {
+      "sample_id": "attack_print/b_person_0002_001_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.3203192568195657
+    },
+    {
+      "sample_id": "attack_print/b_person_0002_001_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.3201546705459267
+    },
+    {
+      "sample_id": "attack_print/b_person_0002_001_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.33622130122895927
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_001_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.1307761399836238
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_001_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06497095714514828
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_001_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.5
+    },
+    {
+      "sample_id": "attack_ar_filter/b_person_0002_001_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.4201459635915047
+    },
+    {
+      "sample_id": "attack_ar_filter/b_person_0002_001_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.4201459635915047
+    },
+    {
+      "sample_id": "attack_ar_filter/b_person_0002_001_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.4201459635915047
+    },
+    {
+      "sample_id": "attack_digital_photo/b_person_0002_001_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.3483210538256756
+    },
+    {
+      "sample_id": "attack_digital_photo/b_person_0002_001_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.32714634532466097
+    },
+    {
+      "sample_id": "attack_digital_photo/b_person_0002_001_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.34688126165934885
+    },
+    {
+      "sample_id": "bonafide/b_person_0002_002.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9619330133627891
+    },
+    {
+      "sample_id": "attack_print/b_person_0002_002_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.4452291990911605
+    },
+    {
+      "sample_id": "attack_print/b_person_0002_002_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.8277119603218314
+    },
+    {
+      "sample_id": "attack_print/b_person_0002_002_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.8780888867910616
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_002_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.5
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_002_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.5
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_002_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.5
+    },
+    {
+      "sample_id": "attack_ar_filter/b_person_0002_002_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.9574291758068794
+    },
+    {
+      "sample_id": "attack_ar_filter/b_person_0002_002_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.9574291758068794
+    },
+    {
+      "sample_id": "attack_ar_filter/b_person_0002_002_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.9574291758068794
+    },
+    {
+      "sample_id": "attack_digital_photo/b_person_0002_002_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.9765887642290422
+    },
+    {
+      "sample_id": "attack_digital_photo/b_person_0002_002_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.9764889007484547
+    },
+    {
+      "sample_id": "attack_digital_photo/b_person_0002_002_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.969894278579696
+    },
+    {
+      "sample_id": "bonafide/b_person_0002_003.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7149340868748368
+    },
+    {
+      "sample_id": "attack_print/b_person_0002_003_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.8958732954479651
+    },
+    {
+      "sample_id": "attack_print/b_person_0002_003_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.8986485432854993
+    },
+    {
+      "sample_id": "attack_print/b_person_0002_003_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.7128024904968144
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_003_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06527761053779707
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_003_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06461589459266827
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_003_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06458527230971436
+    },
+    {
+      "sample_id": "attack_ar_filter/b_person_0002_003_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.8969019814818928
+    },
+    {
+      "sample_id": "attack_ar_filter/b_person_0002_003_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.8969019814818928
+    },
+    {
+      "sample_id": "attack_ar_filter/b_person_0002_003_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.8969019814818928
+    },
+    {
+      "sample_id": "attack_digital_photo/b_person_0002_003_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.7124109212427291
+    },
+    {
+      "sample_id": "attack_digital_photo/b_person_0002_003_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.7122565357965364
+    },
+    {
+      "sample_id": "attack_digital_photo/b_person_0002_003_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.712275184811541
+    },
+    {
+      "sample_id": "bonafide/b_person_0002_004.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7105153617163315
+    },
+    {
+      "sample_id": "attack_print/b_person_0002_004_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.9045232154310641
+    },
+    {
+      "sample_id": "attack_print/b_person_0002_004_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.9014598866690169
+    },
+    {
+      "sample_id": "attack_print/b_person_0002_004_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.8966462841123154
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_004_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.6125822669541242
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_004_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.40797900503849915
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_004_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.1326865891782108
+    },
+    {
+      "sample_id": "attack_ar_filter/b_person_0002_004_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.9396200412431358
+    },
+    {
+      "sample_id": "attack_ar_filter/b_person_0002_004_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.9396200412431358
+    },
+    {
+      "sample_id": "attack_ar_filter/b_person_0002_004_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.9396200412431358
+    },
+    {
+      "sample_id": "attack_digital_photo/b_person_0002_004_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.8906167172887977
+    },
+    {
+      "sample_id": "attack_digital_photo/b_person_0002_004_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.8906399378713666
+    },
+    {
+      "sample_id": "attack_digital_photo/b_person_0002_004_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.888502517311457
+    },
+    {
+      "sample_id": "bonafide/b_person_0002_005.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7130687097878933
+    },
+    {
+      "sample_id": "attack_print/b_person_0002_005_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.711445253874369
+    },
+    {
+      "sample_id": "attack_print/b_person_0002_005_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.711654983511398
+    },
+    {
+      "sample_id": "attack_print/b_person_0002_005_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.7114027901345854
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_005_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06483990224440403
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_005_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06498163068888332
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_005_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06493288883608134
+    },
+    {
+      "sample_id": "attack_ar_filter/b_person_0002_005_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.711784611269352
+    },
+    {
+      "sample_id": "attack_ar_filter/b_person_0002_005_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.711784611269352
+    },
+    {
+      "sample_id": "attack_ar_filter/b_person_0002_005_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.711784611269352
+    },
+    {
+      "sample_id": "attack_digital_photo/b_person_0002_005_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.7112252331240226
+    },
+    {
+      "sample_id": "attack_digital_photo/b_person_0002_005_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.7109185605704822
+    },
+    {
+      "sample_id": "attack_digital_photo/b_person_0002_005_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.7112259035517925
+    },
+    {
+      "sample_id": "bonafide/b_person_0002_006.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.709832167908781
+    },
+    {
+      "sample_id": "attack_print/b_person_0002_006_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.7102947584077512
+    },
+    {
+      "sample_id": "attack_print/b_person_0002_006_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.7101003937541712
+    },
+    {
+      "sample_id": "attack_print/b_person_0002_006_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.7102689038203043
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_006_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.0646263061638371
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_006_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.6966980728178392
+    },
+    {
+      "sample_id": "attack_replay/b_person_0002_006_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06470022573909198
+    },
+    {
+      "sample_id": "attack_ar_filter/b_person_0002_006_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.7090915728477507
+    },
+    {
+      "sample_id": "attack_ar_filter/b_person_0002_006_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.7090915728477507
+    },
+    {
+      "sample_id": "attack_ar_filter/b_person_0002_006_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.7090915728477507
+    },
+    {
+      "sample_id": "attack_digital_photo/b_person_0002_006_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.70972542387094
+    },
+    {
+      "sample_id": "attack_digital_photo/b_person_0002_006_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.7097322852336263
+    },
+    {
+      "sample_id": "attack_digital_photo/b_person_0002_006_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.7097285653844945
+    },
+    {
+      "sample_id": "bonafide/b_person_0003_000.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9603758736193839
+    },
+    {
+      "sample_id": "attack_print/b_person_0003_000_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.4607070548109491
+    },
+    {
+      "sample_id": "attack_print/b_person_0003_000_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.8917978700673215
+    },
+    {
+      "sample_id": "attack_print/b_person_0003_000_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.9018558159126944
+    },
+    {
+      "sample_id": "attack_replay/b_person_0003_000_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06523311320432335
+    },
+    {
+      "sample_id": "attack_replay/b_person_0003_000_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.06538542565617116
+    },
+    {
+      "sample_id": "attack_replay/b_person_0003_000_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.5
+    },
+    {
+      "sample_id": "attack_ar_filter/b_person_0003_000_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.9590660626587876
+    },
+    {
+      "sample_id": "attack_ar_filter/b_person_0003_000_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.9590660626587876
+    },
+    {
+      "sample_id": "attack_ar_filter/b_person_0003_000_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.9590660626587876
+    },
+    {
+      "sample_id": "attack_digital_photo/b_person_0003_000_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.9831032694479903
+    },
+    {
+      "sample_id": "attack_digital_photo/b_person_0003_000_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.9616269941671927
+    },
+    {
+      "sample_id": "attack_digital_photo/b_person_0003_000_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.983165621924089
+    },
+    {
+      "sample_id": "bonafide/b_person_0003_001.jpg",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7151489639344903
+    },
+    {
+      "sample_id": "attack_print/b_person_0003_001_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.7118455157803565
+    },
+    {
+      "sample_id": "attack_print/b_person_0003_001_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.7110005471589778
+    },
+    {
+      "sample_id": "attack_print/b_person_0003_001_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "print",
+      "score": 0.712045161155384
+    },
+    {
+      "sample_id": "attack_replay/b_person_0003_001_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.07756664676119954
+    },
+    {
+      "sample_id": "attack_replay/b_person_0003_001_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.09450573481917524
+    },
+    {
+      "sample_id": "attack_replay/b_person_0003_001_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "replay",
+      "score": 0.07258872585671328
+    },
+    {
+      "sample_id": "attack_ar_filter/b_person_0003_001_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.7142803599177209
+    },
+    {
+      "sample_id": "attack_ar_filter/b_person_0003_001_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.7142803599177209
+    },
+    {
+      "sample_id": "attack_ar_filter/b_person_0003_001_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "ar_filter",
+      "score": 0.7142803599177209
+    },
+    {
+      "sample_id": "attack_digital_photo/b_person_0003_001_v0.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.7134583709520923
+    },
+    {
+      "sample_id": "attack_digital_photo/b_person_0003_001_v1.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.7147818804111806
+    },
+    {
+      "sample_id": "attack_digital_photo/b_person_0003_001_v2.jpg",
+      "is_bonafide": false,
+      "attack_type": "digital_photo",
+      "score": 0.7143886955232386
+    }
+  ]
+}

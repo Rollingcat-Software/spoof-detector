@@ -51,6 +51,26 @@ def _load_adapter(dataset: str, root: str | None, protocol: str):
     if dataset == "in_house":
         from tests.benchmark.datasets.in_house import iter_in_house
         return iter_in_house(root)
+    if dataset == "casia_fasd":
+        from tests.benchmark.datasets.casia_fasd import iter_casia_fasd
+        if root is None:
+            raise SystemExit("--root required for casia_fasd")
+        return iter_casia_fasd(root, split="test")
+    if dataset == "axon_video":
+        from tests.benchmark.datasets.axon_video import iter_axon_video
+        if root is None:
+            raise SystemExit("--root required for axon_video")
+        return iter_axon_video(root, kind="cut_print")
+    if dataset == "kainyyy":
+        from tests.benchmark.datasets.kainyyy_largecrowd import iter_kainyyy_largecrowd
+        if root is None:
+            raise SystemExit("--root required for kainyyy")
+        return iter_kainyyy_largecrowd(root, split="all")
+    if dataset == "celeba_spoof_hf":
+        from tests.benchmark.datasets.celeba_spoof_hf import iter_celeba_spoof_hf
+        if root is None:
+            raise SystemExit("--root required for celeba_spoof_hf")
+        return iter_celeba_spoof_hf(parquet_paths=[root])
     raise SystemExit(f"unknown dataset: {dataset}")
 
 
@@ -74,7 +94,10 @@ def _load_pipeline(name: str):
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description="Run a paper-grade FAS benchmark.")
     p.add_argument("--dataset", required=True,
-                   choices=["oulu_npu", "siw", "casia_surf", "celeba_spoof", "in_house"])
+                   choices=["oulu_npu", "siw", "casia_surf", "celeba_spoof", "in_house",
+                            "casia_fasd", "axon_video", "kainyyy", "celeba_spoof_hf"])
+    p.add_argument("--limit", type=int, default=None,
+                   help="Cap on samples processed (for fast iteration). Default unlimited.")
     p.add_argument("--root", help="Path to dataset root.")
     p.add_argument("--protocol", default="default", help="Protocol name (dataset-specific).")
     p.add_argument("--pipeline", default="hybrid",
@@ -87,6 +110,9 @@ def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.WARNING - 10 * args.verbose)
 
     samples = _load_adapter(args.dataset, args.root, args.protocol)
+    if args.limit:
+        from itertools import islice
+        samples = islice(samples, args.limit)
     score_fn = _load_pipeline(args.pipeline)
 
     result = run_benchmark(

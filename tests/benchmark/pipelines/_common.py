@@ -27,6 +27,12 @@ def load_frames(sample: Sample, *, max_frames: int = 30) -> list[np.ndarray]:
     """
     if isinstance(sample.payload, np.ndarray):
         return [sample.payload]
+    if isinstance(sample.payload, bytes):
+        # JPEG / PNG bytes — used by parquet-shard adapters (CelebA-Spoof HF)
+        import cv2
+        arr = np.frombuffer(sample.payload, dtype=np.uint8)
+        img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+        return [img] if img is not None else []
     if not isinstance(sample.payload, str):
         raise TypeError(f"unsupported payload type: {type(sample.payload)}")
 

@@ -188,8 +188,12 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--out", required=True, help="Output dir for synthesized in-house set.")
     p.add_argument("--max-per-subject", type=int, default=10,
                    help="Cap on bona-fide images per subject (default 10).")
-    p.add_argument("--min-size", type=int, default=200,
-                   help="Minimum min-edge size for source images (default 200).")
+    p.add_argument("--min-size", type=int, default=100,
+                   help="Hard reject below this size (default 100).")
+    p.add_argument("--upresize-to", type=int, default=256,
+                   help="Up-resize images smaller than this (default 256, preserves aspect).")
+    p.add_argument("--variants-per-attack", type=int, default=1,
+                   help="Stochastic variants per attack type per source (default 1).")
     p.add_argument("--seed", type=int, default=42)
     args = p.parse_args(argv)
 
@@ -220,6 +224,12 @@ def main(argv: list[str] | None = None) -> int:
         if min(h, w) < args.min_size:
             logger.debug("skipping too-small (%dx%d): %s", w, h, path)
             continue
+        # Up-resize images below `upresize_to` so face detector and MiniFASNet have
+        # enough pixels (Lanczos for sharpness; preserves aspect).
+        if min(h, w) < args.upresize_to:
+            scale = args.upresize_to / min(h, w)
+            img = cv2.resize(img, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_LANCZOS4)
+            h, w = img.shape[:2]
         # Cap at 1024px on the long edge — pipeline analyzers down-resize anyway.
         if max(h, w) > 1024:
             scale = 1024 / max(h, w)
@@ -240,19 +250,21 @@ def main(argv: list[str] | None = None) -> int:
         })
         n_bonafide += 1
 
-        # Each attack variant
+        # Each attack variant — generate `variants_per_attack` stochastic variants per type
         for attack_name, fn in ATTACK_FUNCS.items():
-            spoof = fn(img, rng=rng)
-            sp_path = out_root / f"attack_{attack_name}" / f"{stem}.jpg"
-            cv2.imwrite(str(sp_path), spoof)
-            rows.append({
-                "filename": f"attack_{attack_name}/{stem}.jpg",
-                "is_bonafide": "0",
-                "attack_type": attack_name,
-                "subject": subject,
-                "source_image": str(path.relative_to(src_root)),
-            })
-            n_attacks += 1
+            for v in range(args.variants_per_attack):
+                spoof = fn(img, rng=rng)
+                v_stem = f"{stem}_v{v}" if args.variants_per_attack > 1 else stem
+                sp_path = out_root / f"attack_{attack_name}" / f"{v_stem}.jpg"
+                cv2.imwrite(str(sp_path), spoof)
+                rows.append({
+                    "filename": f"attack_{attack_name}/{v_stem}.jpg",
+                    "is_bonafide": "0",
+                    "attack_type": attack_name,
+                    "subject": subject,
+                    "source_image": str(path.relative_to(src_root)),
+                })
+                n_attacks += 1
 
         subj_counts[subject] += 1
 

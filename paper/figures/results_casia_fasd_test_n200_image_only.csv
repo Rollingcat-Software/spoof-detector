@@ -1,0 +1,2 @@
+dataset,protocol,method,APCER_max,BPCER,ACER,EER,AUC,N
+casia_fasd,test_n200,image_only,30.46%,30.61%,30.54%,29.52%,0.8117,200
