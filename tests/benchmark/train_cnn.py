@@ -190,6 +190,11 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--lr", type=float, default=1e-3)
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--num-workers", type=int, default=2)
+    p.add_argument("--arch", default="small",
+                   choices=["small", "resnet18", "mobilenetv3"],
+                   help="CNN architecture. small (242K params, CPU-friendly), "
+                        "resnet18 (11M params, GPU recommended), "
+                        "mobilenetv3 (2M params, fast on GPU).")
     p.add_argument("-v", "--verbose", action="count", default=0)
     args = p.parse_args(argv)
     logging.basicConfig(level=logging.WARNING - 10 * args.verbose, format="%(message)s")
@@ -219,11 +224,28 @@ def main(argv: list[str] | None = None) -> int:
     dl_te = DataLoader(ds_te, batch_size=args.batch_size, num_workers=args.num_workers)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"  device={device}")
+    if device.type == "cuda":
+        print(f"  device={device}  ({torch.cuda.get_device_name(0)}, {torch.cuda.get_device_properties(0).total_memory // 1024**3} GB)")
+    else:
+        print(f"  device={device}  (no CUDA)")
 
-    model = SmallCNN().to(device)
+    if args.arch == "small":
+        model = SmallCNN().to(device)
+    elif args.arch == "resnet18":
+        # Larger model for GPU. Falls back fine on CPU but slower.
+        from torchvision.models import resnet18
+        m = resnet18(weights=None)
+        m.fc = nn.Linear(m.fc.in_features, 2)
+        model = m.to(device)
+    elif args.arch == "mobilenetv3":
+        from torchvision.models import mobilenet_v3_small
+        m = mobilenet_v3_small(weights=None)
+        m.classifier[3] = nn.Linear(m.classifier[3].in_features, 2)
+        model = m.to(device)
+    else:
+        raise SystemExit(f"unknown --arch: {args.arch}")
     n_params = sum(p.numel() for p in model.parameters())
-    print(f"  model: SmallCNN, {n_params:,} params")
+    print(f"  model: {args.arch}, {n_params:,} params")
     print()
 
     print(f"=== training ===")
