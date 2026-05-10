@@ -46,9 +46,12 @@ def load_v1se_analyzer():
                     result = self._spoofer.predict(self._frame, [x1, y1, x2 - x1, y2 - y1])
                 else:
                     result = self._spoofer.predict(crop, [0, 0, crop.shape[1], crop.shape[0]])
-                # SpoofingResult has .real_score (or .score) — handle both
-                live_score = float(getattr(result, "real_score", getattr(result, "score", 0.5)))
-                live_score = live_score * 100.0  # normalize to 0-100
+                # SpoofingResult: .is_real (bool) + .confidence (0..1)
+                # convert to 0..100 live-ness: real → confidence*100, attack → (1-confidence)*100
+                if getattr(result, "is_real", True):
+                    live_score = float(result.confidence) * 100.0
+                else:
+                    live_score = (1 - float(result.confidence)) * 100.0
             except Exception as e:
                 logger.debug(f"V1SE failed: {e}")
                 live_score = 50.0

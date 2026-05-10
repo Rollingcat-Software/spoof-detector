@@ -1,0 +1,86 @@
+{
+  "capture": "paper/figures/captures/casia_fasd_test.json",
+  "area_threshold": 5000,
+  "subsets": {
+    "all": {
+      "label": "all (no gating)",
+      "N": 2408,
+      "bonafide": 591,
+      "metrics": {
+        "threshold": 0.9988864488912923,
+        "apcer_max": 0.15520088057237205,
+        "apcer_per_type": {
+          "unknown": 0.15520088057237205
+        },
+        "bpcer": 0.155668358714044,
+        "acer": 0.15543461964320804,
+        "hter": 0.15543461964320804,
+        "eer": 0.1557097985094711,
+        "eer_threshold": 0.9988864488912923,
+        "auc": 0.8983900872284414,
+        "n_bonafide": 591,
+        "n_attack": 1817
+      }
+    },
+    "face_detected": {
+      "label": "face_detected (drops detection failures)",
+      "N": 2408,
+      "bonafide": 591,
+      "metrics": {
+        "threshold": 0.9988864488912923,
+        "apcer_max": 0.15520088057237205,
+        "apcer_per_type": {
+          "unknown": 0.15520088057237205
+        },
+        "bpcer": 0.155668358714044,
+        "acer": 0.15543461964320804,
+        "hter": 0.15543461964320804,
+        "eer": 0.1557097985094711,
+        "eer_threshold": 0.9988864488912923,
+        "auc": 0.8983900872284414,
+        "n_bonafide": 591,
+        "n_attack": 1817
+      }
+    },
+    "large_face": {
+      "label": "large_face (area >= 5000 px)",
+      "N": 2408,
+      "bonafide": 591,
+      "metrics": {
+        "threshold": 0.9988864488912923,
+        "apcer_max": 0.15520088057237205,
+        "apcer_per_type": {
+          "unknown": 0.15520088057237205
+        },
+        "bpcer": 0.155668358714044,
+        "acer": 0.15543461964320804,
+        "hter": 0.15543461964320804,
+        "eer": 0.1557097985094711,
+        "eer_threshold": 0.9988864488912923,
+        "auc": 0.8983900872284414,
+        "n_bonafide": 591,
+        "n_attack": 1817
+      }
+    },
+    "single_large": {
+      "label": "single_large_face (single face, large)",
+      "N": 2408,
+      "bonafide": 591,
+      "metrics": {
+        "threshold": 0.9988864488912923,
+        "apcer_max": 0.15520088057237205,
+        "apcer_per_type": {
+          "unknown": 0.15520088057237205
+        },
+        "bpcer": 0.155668358714044,
+        "acer": 0.15543461964320804,
+        "hter": 0.15543461964320804,
+        "eer": 0.1557097985094711,
+        "eer_threshold": 0.9988864488912923,
+        "auc": 0.8983900872284414,
+        "n_bonafide": 591,
+        "n_attack": 1817
+      }
+    }
+  }
+}
