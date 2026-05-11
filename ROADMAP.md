@@ -3,7 +3,7 @@
 **Project**: FIVUCSAS Session-Based Face Presentation Attack Detection
 **Paper Target**: BIOSIG 2026 / IJCB 2026
 **Demo**: amispoof.com
-**Last Updated**: 2026-05-09 (research-consolidation pass)
+**Last Updated**: 2026-05-11 (perf/blink-cache-and-ear-calibration)
 
 ## Where things live
 
@@ -13,7 +13,7 @@ liveness / anti-spoof asset across the FIVUCSAS programme.
 | Directory                  | Status     | Audience                                 |
 |----------------------------|------------|------------------------------------------|
 | `src/`                     | production | importable library; v0.2.0 curated.      |
-| `tests/`                   | production | 114 tests, green at consolidation.       |
+| `tests/`                   | production | 139 tests, green (perf/blink branch).    |
 | `tools/`                   | operator   | offline / desktop scripts.               |
 | `research/aysenur/`        | reference  | Aysenur's 7 FIVUCSAS R&D branches.       |
 | `research/ayse-gulsum-eren/` | reference  | attribution + commit pointers.         |
@@ -68,7 +68,7 @@ mirror eventually retires.
 
 - 9 analyzers (MiniFASNet, Device Boundary, Blink, rPPG, Screen Replay, Temporal, Texture, Moire, AR Filter)
 - Session engine with incident detection and peak-sensitive verdict
-- 68 tests, 23 source modules, 8 tools, ~7000 lines
+- 139 tests, 23 source modules, 8 tools, ~7000 lines
 - Tested accuracy: LIVE session 98% confidence, SPOOF session 63% + 13 incidents
 - Blink detection working (20 blinks detected in 31s)
 - rPPG pulse detection implemented (needs validation)
@@ -85,9 +85,16 @@ mirror eventually retires.
 
 - [x] Fullscreen content scaling (frame resize to screen resolution)
 - [x] rPPG FPS measurement (measure actual FPS instead of assuming 30)
-- [ ] Blink analyzer caching — runs FaceLandmarker on full frame per face, should cache per frame
+- [x] Blink analyzer caching — FaceLandmarker.detect() now runs once per
+      frame (was once per face). Linear speedup with face count: 3 faces
+      ≈ 3.0x, 5 faces ≈ 4.9x; closed by `perf/blink-cache-and-ear-calibration`
+      2026-05-11.
 - [ ] Session verdict threshold tuning — phone-photo-only session still borders LIVE/SPOOF at 55%
-- [ ] EAR threshold calibration — 20 blinks in 31s = 38/min is too high, likely false blinks
+- [x] EAR threshold calibration — EAR_THRESHOLD 0.20→0.18, REOPEN
+      0.22→0.23, MIN_OPEN_BETWEEN 6→12 frames. On a simulated 60 s
+      session with 1 blink / 3.5 s the detector now lands at 17/min
+      (target 15-20); pinned by `tests/unit/analyzers/test_blink_calibration.py`.
+      Closed 2026-05-11.
 
 ## P1 — Paper Requirements
 
@@ -125,7 +132,7 @@ mirror eventually retires.
 
 ### Performance
 - [ ] GPU acceleration — install onnxruntime-gpu for MiniFASNet + future AR model
-- [ ] Blink analyzer frame caching (avoid running FaceLandmarker N times for N faces)
+- [x] Blink analyzer frame caching (avoid running FaceLandmarker N times for N faces) — shipped 2026-05-11
 - [ ] Disable anti-correlated analyzers (moire, texture) — save ~10ms/frame
 - [ ] Profile and optimize to sustain 30+ FPS with all analyzers
 
@@ -229,7 +236,8 @@ mirror eventually retires.
 - Texture and moire are ANTI-CORRELATED (score spoofs higher than real) — suppressed but still waste compute
 - Phone-screen close-up (no visible bezel) fools all analyzers except MiniFASNet
 - 60% accuracy on STATIC_SCREEN scenario in test protocol — needs temporal signals (blink/rPPG) to improve
-- Blink rate of 38/min is double normal — EAR threshold likely too sensitive
+- ~~Blink rate of 38/min is double normal — EAR threshold likely too sensitive~~
+  Fixed 2026-05-11 (EAR 0.18, REOPEN 0.23, MIN_OPEN 12); simulated rate now 17/min.
 
 ### Paper Gaps
 - No public benchmark comparison yet
@@ -240,7 +248,8 @@ mirror eventually retires.
 
 ### Performance
 - No GPU utilization (GTX 1650 available but unused)
-- FaceLandmarker runs once per face per frame (~15ms each)
+- ~~FaceLandmarker runs once per face per frame (~15ms each)~~
+  Fixed 2026-05-11: now runs once per frame regardless of face count.
 - Total pipeline ~25-35ms (30 FPS) but could be 15ms with optimization
 
 ---
