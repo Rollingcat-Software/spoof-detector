@@ -11,6 +11,26 @@ EAR formula (Soukupova & Cech, 2016):
   EAR = (||p2-p6|| + ||p3-p5||) / (2 * ||p1-p4||)
   Open eye: EAR ~ 0.25-0.35
   Closed eye: EAR < 0.21
+
+Performance notes (perf/blink-cache-and-ear-calibration, 2026-05-11):
+  - The FaceLandmarker model is *per-frame* — its `detect()` already
+    returns landmarks for every face in the frame. Earlier versions
+    called `detect()` once per tracked face, repeating the same work
+    N times for N faces. We now cache the result on `set_frame()` and
+    re-use it across every `analyze()` call for that frame. Cost drops
+    from N x ~15ms to 1 x ~15ms per frame for the multi-face case
+    (~3x speedup for 3 faces, ~5x for 5 faces).
+
+EAR calibration history:
+  - 2026-05-09 (v0.2.0): EAR_THRESHOLD=0.20, REOPEN_THRESHOLD=0.22
+    yielded 20 blinks in 31s = 38 blinks/min on a live session — about
+    double the human baseline of 15-20 blinks/min (Bentivoglio et al.,
+    1997; Doughty, 2001), indicating false positives from EAR noise and
+    micro-saccades.
+  - 2026-05-11 (this branch): EAR_THRESHOLD=0.18, REOPEN_THRESHOLD=0.23,
+    MIN_OPEN_BETWEEN=12 frames (~0.8s) tightens the V-shape requirement
+    and pushes the simulated session rate into the 15-20/min range. See
+    `tests/test_blink_calibration.py` for the pinned fixture.
 """
 
 import time
@@ -74,11 +94,15 @@ class BlinkAnalyzer:
     - 60-100: Normal blink rate detected (LIVE-like)
     """
 
-    EAR_THRESHOLD = 0.20       # Below this = eye closed
+    # Calibrated 2026-05-11 (perf/blink-cache-and-ear-calibration).
+    # Empirical adult blink rate is 15-20 blinks/min (Bentivoglio 1997,
+    # Doughty 2001). The previous setting (0.20 / 0.22 / MIN_OPEN=6) was
+    # producing ~38 blinks/min on the in-house LIVE session.
+    EAR_THRESHOLD = 0.18       # Below this = eye closed (tightened from 0.20)
     CONSECUTIVE_FRAMES = 2     # Frames eye must be closed (at 14fps, blink = 2-3 frames)
-    REOPEN_THRESHOLD = 0.22    # EAR must recover above this after closing
+    REOPEN_THRESHOLD = 0.23    # EAR must recover above this after closing (was 0.22)
     REOPEN_FRAMES = 8          # Must reopen within this many frames
-    MIN_OPEN_BETWEEN = 6       # Minimum frames between blinks (~0.4s at 14fps)
+    MIN_OPEN_BETWEEN = 12      # Minimum frames between blinks (~0.8s at 14fps; was 6)
     WARMUP_FRAMES = 45         # 1.5s before scoring (need baseline EAR)
     NORMAL_BLINK_RATE = 17.0   # Expected blinks/min for real person
 
@@ -89,13 +113,23 @@ class BlinkAnalyzer:
         self._states: dict[int, BlinkState] = {}
         self._original_frame: np.ndarray | None = None
         self._last_landmarks: np.ndarray | None = None
+        # Per-frame landmark cache: populated once per set_frame() call so that
+        # if N faces share the same frame, FaceLandmarker.detect() runs once.
+        self._cached_frame_landmarks: list[np.ndarray] | None = None
+        self._cached_frame_id: int | None = None
+        self._frame_seq: int = 0
 
     @property
     def name(self) -> str:
         return "blink"
 
     def set_frame(self, frame: np.ndarray):
+        # New frame → bump sequence and invalidate the landmark cache. The
+        # cache is filled lazily by analyze() on the first face of the frame.
         self._original_frame = frame
+        self._frame_seq += 1
+        self._cached_frame_landmarks = None
+        self._cached_frame_id = None
 
     def _ensure_init(self):
         if self._initialized or self._init_failed:
@@ -141,32 +175,45 @@ class BlinkAnalyzer:
                                   details={"error": "not_initialized"},
                                   elapsed_ms=(time.perf_counter() - start) * 1000)
 
-        # Run FaceLandmarker on full frame for accurate landmarks
-        import mediapipe as mp
-        import cv2
-        rgb = cv2.cvtColor(self._original_frame, cv2.COLOR_BGR2RGB)
-        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
-
-        try:
-            result = self._landmarker.detect(mp_image)
-        except Exception as e:
-            return AnalyzerResult(name=self.name, score=50.0,
-                                  details={"error": str(e)},
-                                  elapsed_ms=(time.perf_counter() - start) * 1000)
-
-        if not result.face_landmarks:
-            return AnalyzerResult(name=self.name, score=50.0,
-                                  details={"no_landmarks": True},
-                                  elapsed_ms=(time.perf_counter() - start) * 1000)
-
-        # Find the landmark set closest to our tracked face
+        # Use the per-frame landmark cache: detect() only runs once even if
+        # the pipeline calls analyze() for several faces on the same frame.
         h, w = self._original_frame.shape[:2]
+        cache_hit = self._cached_frame_id == self._frame_seq
+
+        if not cache_hit:
+            import mediapipe as mp
+            import cv2
+            rgb = cv2.cvtColor(self._original_frame, cv2.COLOR_BGR2RGB)
+            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
+
+            try:
+                result = self._landmarker.detect(mp_image)
+            except Exception as e:
+                return AnalyzerResult(name=self.name, score=50.0,
+                                      details={"error": str(e)},
+                                      elapsed_ms=(time.perf_counter() - start) * 1000)
+
+            # Materialise pixel-space landmark arrays once per frame.
+            self._cached_frame_landmarks = [
+                np.array([[l.x * w, l.y * h, l.z] for l in face_lm])
+                for face_lm in (result.face_landmarks or [])
+            ]
+            self._cached_frame_id = self._frame_seq
+
+        landmark_sets = self._cached_frame_landmarks or []
+
+        if not landmark_sets:
+            return AnalyzerResult(name=self.name, score=50.0,
+                                  details={"no_landmarks": True,
+                                            "cache_hit": cache_hit},
+                                  elapsed_ms=(time.perf_counter() - start) * 1000)
+
+        # Find the landmark set closest to our tracked face.
         best_landmarks = None
         best_dist = float("inf")
         face_cx, face_cy = face_roi.bbox.center
 
-        for face_lm in result.face_landmarks:
-            lm_array = np.array([[l.x * w, l.y * h, l.z] for l in face_lm])
+        for lm_array in landmark_sets:
             cx = float(np.mean(lm_array[:, 0]))
             cy = float(np.mean(lm_array[:, 1]))
             dist = abs(cx - face_cx) + abs(cy - face_cy)
@@ -176,7 +223,8 @@ class BlinkAnalyzer:
 
         if best_landmarks is None or len(best_landmarks) < 468:
             return AnalyzerResult(name=self.name, score=50.0,
-                                  details={"insufficient_landmarks": True},
+                                  details={"insufficient_landmarks": True,
+                                            "cache_hit": cache_hit},
                                   elapsed_ms=(time.perf_counter() - start) * 1000)
 
         # Store landmarks for sharing with LandmarkVarianceAnalyzer
@@ -211,7 +259,8 @@ class BlinkAnalyzer:
             return AnalyzerResult(
                 name=self.name, score=50.0,
                 details={"warmup": True, "frames": state.frame_count,
-                          "ear": round(avg_ear, 3), "blinks": state.blink_count},
+                          "ear": round(avg_ear, 3), "blinks": state.blink_count,
+                          "cache_hit": cache_hit},
                 elapsed_ms=elapsed_ms,
             )
 
@@ -243,6 +292,7 @@ class BlinkAnalyzer:
                 "blink_rate_per_min": round(state.blink_count / max(duration_sec / 60, 0.01), 1),
                 "duration_sec": round(duration_sec, 1),
                 "eyes_open": avg_ear >= self.EAR_THRESHOLD,
+                "cache_hit": cache_hit,
             },
             elapsed_ms=elapsed_ms,
         )
