@@ -47,7 +47,7 @@ Per-frame voting:
 P(category | frame) ∝ exp( Σ_a w_a · evidence_a(category) )
 ```
 
-with weights `w_a` from §5. Final per-frame classification is `argmax P`.
+with weights `w_a` from §5. Final per-frame classification is `argmax P`. Figure 1 (introduced at the head of this section) shows the full data flow from frames through the analyzer ensemble to the fuser output `p_t = P(REAL | frame_t)` consumed by the session aggregator of §4.4.
 
 ## 4.4 Session engine (peak-sensitive verdict)
 
