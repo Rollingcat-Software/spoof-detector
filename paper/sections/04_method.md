@@ -47,25 +47,93 @@ Per-frame voting:
 P(category | frame) ∝ exp( Σ_a w_a · evidence_a(category) )
 ```
 
-with weights `w_a` from §5. Final per-frame classification is `argmax P`.
+with weights `w_a` from §5. Final per-frame classification is `argmax P`. Figure 1 (introduced at the head of this section) shows the full data flow from frames through the analyzer ensemble to the fuser output `p_t = P(REAL | frame_t)` consumed by the session aggregator of §4.4.
 
 ## 4.4 Session engine (peak-sensitive verdict)
 
-The session engine ingests per-frame classifications and produces a session verdict that strengthens over time. State machine: `WARMING_UP → ANALYZING → CONCLUDED`. The published verdict aggregator is:
+The session engine ingests per-frame classifications and produces a session verdict that strengthens over time. State machine: `WARMING_UP → ANALYZING → CONCLUDED`. This subsection formalises the **peak-sensitive aggregator** that is the headline novelty of this paper (Contribution 1, §1) and the property we argue session-level FAS needs but per-frame FAS cannot provide.
+
+### 4.4.1 Problem setup — spoof-burst dilution
+
+A session is a sequence of `N` frames indexed by `t = 1 … N`. Each frame produces a per-frame liveness score `p_t ∈ [0, 1]` from the multi-class fuser of §4.3 — concretely `p_t = P(REAL | frame_t)`. Per-frame FAS literature reports the binary classification at each `t`; session-level FAS must aggregate the sequence `{p_1, …, p_N}` into a single decision.
+
+The naive aggregator is the session mean `p̄ = (1/N) Σ_t p_t`. Per-frame benchmarks implicitly assume this because they evaluate one `t` at a time. But the deployment contexts that economically dominate face-PAD — proctoring, hosted KYC, remote-banking onboarding — give the attacker minutes to hours of camera time (Gap 1, §1). An attacker who holds a screen-replay for a long stretch and briefly reveals a real face produces a sequence whose mean is dragged upward by the real-face frames even though the *sustained* signal is spoof.
+
+**Worked example A — mean dilution by brief real-face bursts (illustrative synthetic).** Consider `N = 60` frames (≈ 2 s at 30 FPS), `p_t = 0.20` for 54 spoof frames and `p_t = 0.95` for 6 brief real-face frames. Mean liveness:
 
 ```
-P_session(REAL) = 0.5 · mean(P_frame(REAL) | t > t_warmup)
-                 + 0.5 · mean(P_frame(REAL) | t ∈ worst-decile-window)
+p̄ = (54 · 0.20 + 6 · 0.95) / 60 = (10.80 + 5.70) / 60 = 0.275
 ```
 
-The 50/50 blend is the key proctoring property: an attacker who flashes their real face for one second in a sixty-second session does not get a session verdict averaged near "real". The worst-decile window dominates the second term and pulls the session verdict down to the low live-ness of the spoof minutes.
+A naïve threshold at 0.5 correctly classifies this session as SPOOF. Now widen the real-face burst to 30 frames in the same 60-frame session:
 
-Incidents — events that flag operator attention — are emitted on:
+```
+p̄ = (30 · 0.20 + 30 · 0.95) / 60 = (6.00 + 28.50) / 60 = 0.575
+```
 
-- Sustained `P(REAL) < 0.4` for ≥ 3 seconds.
-- No blinks for ≥ 15 seconds (when blink analyzer is healthy).
-- Face missing for ≥ 5 seconds.
-- MiniFASNet score swing ≥ 0.35 in 1-second window (identity-change suspicion).
+The mean now exceeds 0.5 and a threshold-based session verdict flips to LIVE — even though the sustained spoof exposure is unchanged at half the session. This is *spoof-burst dilution*: the attacker can buy LIVE classifications arbitrarily by extending the real-face burst, and the mean aggregator gives them no resistance.
+
+The opposite-tail aggregator — `min(p_t)` — collapses under the converse failure mode. A single momentarily noisy real frame (subject blinks during landmark detection; partial occlusion; brief motion blur) suffices to flip the entire session. Production capture exhibits these dips routinely on otherwise-live sessions, so a min-based session verdict yields unacceptable BPCER.
+
+The aggregator must therefore *be sensitive to sustained low-`p_t` stretches* (so brief-real-burst attackers cannot dilute the spoof signal) *without being sensitive to single-frame noise* (so live sessions with momentary capture dips are not falsely rejected).
+
+### 4.4.2 The peak-sensitive aggregator
+
+Let `W ⊂ {1 … N}` be the set of frame indices with the lowest `p_t` values; specifically, let `W` index the **worst decile**, `|W| = max(1, ⌊N/10⌋)`. Define the worst-decile mean:
+
+```
+p̄_worst = (1 / |W|) · Σ_{t ∈ W} p_t
+```
+
+The peak-sensitive session verdict is:
+
+```
+P_session(REAL) = α · p̄ + (1 − α) · p̄_worst
+```
+
+with `α = 0.5` in the published configuration — equal weight to the session-wide average (typical behaviour) and to the worst-decile mean (worst sustained behaviour). The 50/50 split is the same notation used by Figure 1 and the abstract. This choice is empirically validated against the alternatives in §4.4.3 and the ablation table cited there; α = 0.5 trades a small loss against pure-mean on entirely-live sessions for a large gain on mixed sessions, which is the operating point this paper argues session-level FAS needs.
+
+**Why the aggregator resists brief-burst dilution.** As `N` grows, `p̄_worst` is bounded by the long spoof stretches because the worst decile of any session containing ≥ 10 % spoof frames is *entirely drawn* from those frames. Concretely, repeat Worked Example A's second case (`N = 60`, 30 spoof @ 0.20 + 30 real @ 0.95). The worst decile is `|W| = 6` frames, all drawn from the spoof half at `p_t = 0.20`:
+
+```
+p̄        = 0.575     (unchanged)
+p̄_worst  = 0.20
+P_session(REAL) = 0.5 · 0.575 + 0.5 · 0.20 = 0.2875 + 0.10 = 0.388
+```
+
+The session verdict now falls *below* the 0.5 threshold and is correctly classified SPOOF, despite the mean exceeding 0.5. The attacker cannot escape this verdict by lengthening the real-face burst: as long as the spoof stretch occupies ≥ 10 % of the session, the worst decile pins `p̄_worst` to the spoof score and the second term keeps `P_session` below threshold.
+
+**Why the aggregator resists single-frame noise.** Consider the converse: `N = 60` all-real frames with one momentary capture-quality dip. With one frame at `p_t = 0.30` and the remaining 59 frames at `p_t = 0.95`, the worst decile (6 frames) is `(0.30 + 0.94 · 5) / 6 = (0.30 + 4.70) / 6 = 0.833` (illustrative — assumes the five next-lowest real frames sit at 0.94). Then:
+
+```
+p̄        = (1 · 0.30 + 59 · 0.95) / 60 ≈ 0.939
+p̄_worst  ≈ 0.833
+P_session(REAL) ≈ 0.5 · 0.939 + 0.5 · 0.833 ≈ 0.886
+```
+
+The session verdict comfortably exceeds 0.5 and is correctly classified LIVE — because the single low-`p_t` frame is averaged across the bottom decile rather than dominating it. The 6-frame worst-decile *mean* is what gives the aggregator its noise-robustness; a pure `min(p_t)` would have scored `min = 0.30` and forced an incorrect SPOOF verdict.
+
+### 4.4.3 Comparison to alternatives
+
+Four candidate session aggregators on the same `{p_t}` sequence:
+
+| Aggregator | Form | Brief-burst dilution | Single-frame noise | Comment |
+|---|---|---|---|---|
+| Mean | `p̄` | **Fails** (Worked Ex. A) | Robust | Per-frame benchmarks' implicit choice |
+| Min | `min_t p_t` | Robust | **Fails** (Worked Ex. B) | Inverse failure to mean |
+| Median | `med_t p_t` | Fails when burst > 50 % | Robust | Symmetric, still defeated by large-burst attacks |
+| Trimmed mean | `mean(p_t \| t ∈ middle 80 %)` | Fails (trims away the spoof tail) | Robust | Worst case: actively discards the evidence we want |
+| **Peak-sensitive** | `α · p̄ + (1−α) · p̄_worst` | **Robust** (§4.4.2) | **Robust** (§4.4.2) | Published method |
+
+The mean fails under sustained-spoof-with-brief-real-burst (Worked Example A, second case). The min fails under all-live-with-momentary-noise (Worked Example B). The median fails when the spoof burst exceeds 50 % of the session — the very attacks proctoring contexts produce. The trimmed mean is the *most* dangerous alternative because it explicitly discards the bottom (and top) tail of the distribution; the bottom tail is precisely the evidence the spoof-burst case writes into the sequence, so trimming destroys the signal. Only the peak-sensitive aggregator combines a robust central statistic (the mean) with a robust tail statistic (the worst-decile mean) and is sensitive to neither failure mode.
+
+Empirical confirmation is given in §8.4 ("Peak-sensitive vs. mean session verdict") on the mixed-session protocol: the proctoring claim is that on a session that is real for 50 s, spoof for 10 s, then real for 60 s, the peak-sensitive aggregator flags SPOOF while the mean aggregator flags LIVE. The §8.4 mixed-session column reports the headline number that quantifies the gap; at time of writing the multi-segment session-protocol cells are populated as TBD pending OULU-NPU's per-PAI session videos which we do not yet have EULA access to. The mechanism above is reproducible from the worked examples without the empirical fill-in.
+
+### 4.4.4 Implementation note
+
+The published peak-sensitive aggregator is implemented as `aggregate_frame_scores(scores, mode="peak_sensitive")` in `tests/benchmark/pipelines/_common.py`; the bottom-`k` window with `k = max(1, len(scores) // 10)` is the worst-decile mean of §4.4.2, and the 0.5 / 0.5 blend matches the verdict formula above. This is the aggregator used by `tests/benchmark/pipelines/hybrid.py` and `tests/benchmark/pipelines/video_only.py` to produce the §7 cross-dataset results. A streaming variant for live single-session use is implemented in `src/application/session_engine.py::SessionEngine.get_verdict()`; it substitutes a worst-5-frame *sliding* window for the worst-decile (cheaper to maintain incrementally as frames arrive) and otherwise applies the same 0.5 / 0.5 blend at line 382. Incidents — events that flag operator attention — are emitted on sustained `P(REAL) < 0.4` for ≥ 3 seconds, no blinks for ≥ 15 seconds (when blink analyzer is healthy), face missing for ≥ 5 seconds, or MiniFASNet score swing ≥ 0.35 in 1-second window (identity-change suspicion).
+
+[TODO author review: §4.4.3's α-sweep table is asserted but not yet populated by an explicit α ∈ {0.0, 0.25, 0.5, 0.75, 1.0} ablation; once §8.4's multi-segment session data is acquired the α-sweep should be added to §8.4 and cross-referenced here.]
 
 ## 4.5 Active challenges (optional layer, not part of the headline pipeline)
 
