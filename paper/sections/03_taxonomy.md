@@ -26,9 +26,9 @@ The seven categories are defined in `src/domain/models.py:12-30` as the `SpoofCa
 
 **Coverage / metrics.** APCER is undefined for REAL (it is the bona-fide class); the relevant metric is BPCER, reported at 12.67% on the in-house replay sub-protocol (§7.2). Public-benchmark BPCER is TBD pending EULA acquisition.
 
-### PRINT
+### PRINT (a.k.a. STATIC_IMAGE)
 
-**Definition.** A printed photograph (inkjet, laser, photographic) of the target face held in front of the sensor.
+**Definition.** A printed photograph (inkjet, laser, photographic) of the target face held in front of the sensor. The category enum (`src/domain/models.py:12-30`) uses the wider name `STATIC_IMAGE` because the same evidence pattern — zero motion, zero pulse, planar geometry — applies to a digital still rendered on a screen as well as to a paper print; the analyzer routing in `src/domain/taxonomy.py` therefore targets `STATIC_IMAGE`.
 
 **Distinguishing artefacts.**
 - Halftone or dither comb peaks visible under radial-FFT analysis.
@@ -161,3 +161,5 @@ The taxonomy is defined over RGB only — the modality available to every deploy
 - **Infrared** disambiguates REPLAY (screen IR signature differs from skin) and AR_FILTER (skin IR survives; the filter renders to RGB only). An IR-skin-signature analyzer would route evidence away from REAL when the IR signature is incompatible with skin.
 
 Neither extension is exercised in §7 (RGB-only protocol for parity with the published pipeline). They are listed because the 7-class fuser absorbs new modalities as additional analyzers in `src/infrastructure/fusion/multi_class_fuser.py:43-93` without changing the category structure — a property a binary fuser would not have.
+
+The category-to-analyzer mapping defined in this section is realized by the multi-class fuser in §4.3 (`src/infrastructure/fusion/multi_class_fuser.py:43-93` over `src/domain/taxonomy.py:27-114`); see Fig. 1 for the full pipeline.
