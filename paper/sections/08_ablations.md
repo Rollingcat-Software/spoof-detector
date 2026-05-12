@@ -78,9 +78,9 @@ Critical second-order findings on the public dataset:
 
 3. **Micro-tremor adds noise on CASIA-FASD too** (Δ-ACER +3.60 pp by *removing* it = adds when present). Same root cause: calibrated for in-house captures, doesn't transfer.
 
-4. **Background-grid is silently negative** — Δ-ACER 0% but Δ-AUC −0.014 when removed (i.e. removing it tightens the ROC). Same pattern.
+4. **Background-grid is a marginal positive contributor on CASIA-FASD** — Δ-ACER 0% but Δ-AUC −0.014 when removed (i.e. removing it *reduces* AUC by 0.014, so the analyzer is helping the ROC modestly). This is the opposite pattern from device-boundary and micro-tremor: even though `background_grid` was calibrated against in-house captures, its scene-level evidence transfers well enough to CASIA-FASD to contribute net-positively. It is the one in-house-calibrated auxiliary analyzer that survives the cross-dataset transfer intact.
 
-This is the single most-important paper finding from §8: **on cross-dataset evaluation, the auxiliary analyzers don't merely fail to help — three of them actively hurt**. The fuser's calibrated 0.1 weights for texture/moire (§5.4) saved them from this fate; the other auxiliary analyzers carry calibration assumptions that are silent failures on out-of-distribution data. **Recommendation: re-run the calibration sweep (§5.4) per operator dataset.**
+This is the single most-important paper finding from §8: **on cross-dataset evaluation, two of the four meaningfully-active auxiliary analyzers actively hurt**. The fuser's calibrated 0.1 weights for texture/moire (§5.4) saved them from this fate; `device_boundary` and `micro_tremor` carry calibration assumptions that are silent failures on out-of-distribution data, while `background_grid` is the lone in-house-calibrated analyzer that retains its discriminative value out-of-distribution. **Recommendation: re-run the calibration sweep (§5.4) per operator dataset, paying particular attention to the analyzers most sensitive to capture-time priors (bezel patterns, tripod tremor signatures).**
 
 ## 8.3 Calibrated vs. uniform analyzer weights (Table 6)
 
