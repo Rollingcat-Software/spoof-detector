@@ -2,6 +2,8 @@
 
 Figure 1 summarises the engine. A single-camera RGB feed enters at 30 FPS. The face detector (MediaPipe Tasks API) yields bounding boxes and landmarks at ~2 ms per frame. A multi-target IoU tracker assigns persistent IDs so that temporal analyzers operate on the same face across frames. Each frame is then fanned out to two banks of analyzers operating in parallel.
 
+![Figure 1: spoof-detector v0.2.1 pipeline. Per-frame inputs are face-cropped and landmark-extracted, then fanned out to MiniFASNet ONNX (per-frame discriminator) and twelve auxiliary analyzers — four image-level (device_boundary, ar_filter, texture, moire) and eight temporal (blink_ear, rppg, screen_replay, micro_tremor, landmark_variance, temporal_motion, background_grid, screen_flicker); the calibrated MultiClassFuser produces a per-frame liveness score, and the peak-sensitive session verdict (50/50 blend of mean and worst-decile per-frame liveness) yields the final LIVE / SPOOF decision plus incident flags.](../figures/fig01_pipeline_block_diagram.png)
+
 ## 4.1 Image-level analyzers (single-frame)
 
 | Analyzer | Algorithm | Output | Latency (CPU) |
