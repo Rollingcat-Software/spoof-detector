@@ -18,11 +18,13 @@
     "README.md"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json --emitDeclarationOnly && vite build",
+    "build": "vite build && tsc -p tsconfig.json --emitDeclarationOnly",
     "dev": "vite",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "amispoof:bundle": "mkdir -p amispoof/lib amispoof/models && cp dist/spoof-detector.js dist/spoof-detector.js.map amispoof/lib/ && cp public/models/minifasnet_v2.onnx public/models/face_landmarker.task amispoof/models/",
+    "amispoof:serve": "python3 -m http.server --directory amispoof 8791"
   },
   "keywords": [
     "spoof-detection",

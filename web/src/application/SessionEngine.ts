@@ -65,7 +65,6 @@ export class SessionEngine {
   private recentVerdicts = new RingBuffer<SpoofClassification>(300); // 10s
 
   private faceMissingFrames = 0;
-  private lastFaceTime = 0;
   private consecutiveSpoofFrames = 0;
 
   constructor(options: SessionEngineOptions = {}) {
@@ -111,7 +110,6 @@ export class SessionEngine {
     }
     this.recentVerdicts.clear();
     this.faceMissingFrames = 0;
-    this.lastFaceTime = 0;
     this.consecutiveSpoofFrames = 0;
   }
 
@@ -131,7 +129,6 @@ export class SessionEngine {
     if (analysis.faces.length > 0) {
       this.facePresentCount += 1;
       this.faceMissingFrames = 0;
-      this.lastFaceTime = elapsed;
     } else {
       this.faceMissingFrames += 1;
       if (

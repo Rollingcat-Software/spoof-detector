@@ -32,7 +32,6 @@ import {
   SourceImage,
   softmax2,
   toBgrNchwFloat32,
-  toImageData,
 } from "../../utils/imageOps";
 
 export interface MiniFASNetOptions {
