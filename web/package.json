@@ -14,7 +14,6 @@
   },
   "files": [
     "dist",
-    "public/models",
     "README.md"
   ],
   "scripts": {
@@ -23,6 +22,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "prepack": "rm -rf dist/models",
     "amispoof:bundle": "mkdir -p amispoof/lib amispoof/models && cp dist/spoof-detector.js dist/spoof-detector.js.map amispoof/lib/ && cp public/models/minifasnet_v2.onnx public/models/face_landmarker.task amispoof/models/",
     "amispoof:serve": "python3 -m http.server --directory amispoof 8791"
   },
