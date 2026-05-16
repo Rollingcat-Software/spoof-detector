@@ -8,7 +8,9 @@
   <FilesMatch '\.(html|htm)$'>
     Header set Cache-Control 'no-cache, must-revalidate, max-age=0'
   </FilesMatch>
-  Header always set X-Robots-Tag 'noindex, nofollow'
+  # X-Robots-Tag intentionally NOT set — /amispoof/ is now publicly
+  # indexable per the SEO update (2026-05-16). The page-level meta robots
+  # + JSON-LD SoftwareApplication + Open Graph tags are in index.html.
   Header always set Permissions-Policy 'camera=(self), microphone=()'
 </IfModule>
 
