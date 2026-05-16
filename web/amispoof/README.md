@@ -74,13 +74,33 @@ Both are aggressively cacheable via jsdelivr's `Cache-Control: public, max-age=3
 
 - **Verdict** (LIVE / SPOOF) with confidence percentage and peak-sensitive
   session memory — one sustained spoof burst flips and keeps the verdict.
-- **Six analyzers** with live score 0–100: MiniFASNet (w 5.0), Screen
-  Flicker (3.0), Device Boundary (2.5), Micro-Tremor (2.5), Landmark
-  Variance (2.0), Blink (0.5). Together ~95% of the fuser's weight mass.
+- **Twelve analyzers** with live score 0–100, grouped image-track vs
+  video-track per the paper's hybrid architecture:
+  - **Image** — MiniFASNet (w 5.0), Device boundary (0.5),
+    Background grid (1.5), Texture (0.0 by default), Moire (0.0), Screen
+    replay (0.5).
+  - **Video** — Screen flicker (3.0), Micro-tremor (0.5), Landmark
+    variance (2.0), rPPG pulse (0.5), Blink/EAR (0.5), Temporal motion (0.3).
+  Texture + moire default to weight 0.0 per the paper's §5.3
+  anti-correlation finding; consumers can re-enable via constructor
+  `analyzerWeights` override.
+- **Aysenur's face-usability gate** (advisory) — illumination + critical-
+  region-visibility, attached to each FrameAnalysis as a second opinion.
+- **LivenessProver** parallel verdict (`detector.getProof()`) — passive
+  proof score with optional active challenges (BLINK / TURN / NOD / SMILE).
 - **Per-category P(spoof)** for the 7-class taxonomy: static_image,
   video_replay, mask_3d, heavy_makeup, ar_filter, deepfake_injection.
 - **Session counters**: frames, FPS, duration, faces detected, blink
   count, incidents.
-- **Incident ledger** — running list of detected anomalies with timestamp.
+- **Incident ledger** — running list of detected anomalies with timestamp
+  (no-blink incidents fire every 5s after 15s of face-present without a
+  detected blink; 3 incidents flip the verdict).
+- **Copy verdict** — atomic clipboard snapshot of verdict + per-analyzer
+  scores + gate state + UA, so you can paste into a bug report without
+  chasing the live-updating UI.
 - **Download session report** — JSON snapshot of the verdict for sharing
   in bug reports or paper appendices.
+- **Run accuracy bench** — one-click `runCasiaFasdMicroBench` against a
+  micro-mirror of CASIA-FASD samples under `./samples/`. Reports
+  accuracy + per-sample breakdown. Useful for measuring browser-port
+  AUC parity with the Python pipeline on the user's own device.

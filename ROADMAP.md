@@ -3,7 +3,7 @@
 **Project**: FIVUCSAS Session-Based Face Presentation Attack Detection
 **Paper Target**: BIOSIG 2026 / IJCB 2026
 **Demo**: amispoof.com (also live at https://fivucsas.com/amispoof/ — browser-side reference implementation)
-**Last Updated**: 2026-05-16 (feat/amispoof-demo-and-npm-build-2026-05-15 — TypeScript port + browser tester)
+**Last Updated**: 2026-05-16 (PR #23 — Phase 4 quality + perf overhaul: 12 analyzers, LivenessProver, Web Worker, WebGPU, lazy chunks, validation harness)
 
 ## Where things live
 
@@ -74,39 +74,60 @@ mirror eventually retires.
 - Blink detection working (20 blinks detected in 31s)
 - rPPG pulse detection implemented (needs validation)
 
-## Browser Port v0.1.0 / 2026-05-16
+## Browser Port v0.1.0 / 2026-05-16 — Phases 1-4 complete
 
-Phase 1 + 2 + 3 of the TypeScript port (`web/`) shipped in a single
-session (`feat/amispoof-demo-and-npm-build-2026-05-15`). Algorithmic
-parity with the Python `src/` Aysenur-attributed surface; the gates
-+ hybrid_evaluator + assembler + 4 video-track analyzers + 6
-image-track analyzers all run client-side, no server GPU.
+Four consecutive phases of the TypeScript port (`web/`) shipped across
+2026-05-15 → 2026-05-16:
 
-Modules ported (TypeScript, vitest, strict TS):
+- **Phases 1-3** (PR #19): 6 base analyzers + Aysenur's 3 gates + hybrid_evaluator + assembler + 4 more analyzers (rPPG, Moire, Texture, ScreenReplay).
+- **Bug-fix wave** (PRs #20-#22): verdict-lock warmup, no-blink incident wiring, blink-rate fps math, gate-panel UX, SEO surface, landmark/video alignment, stale-cache self-heal.
+- **Phase 4** (PR #23): paper-calibrated weights, BackgroundGrid + Temporal analyzers, LivenessProver, Web Worker offload + frame-skip scheduler, WebGPU EP with WASM fallback, lazy bundle chunks, in-page CASIA-FASD validation harness.
+
+Modules in `web/src/` at HEAD:
 
 | Layer | Files | LOC | Tests |
 |---|---|---|---|
-| Analyzers | MiniFASNet, Blink, LandmarkVariance, DeviceBoundary, MicroTremor, ScreenFlicker, Rppg, Moire, Texture, ScreenReplay | ~3,400 | 38 |
-| Gates (Aysenur) | FaceUsability, IlluminationGate, CriticalRegionVisibility | ~1,400 | 17 |
-| Fusion | MultiClassFuser (existing) + HybridFusionEvaluator (Aysenur) | ~450 | 28 |
+| Analyzers (12) | MiniFASNet, Blink, LandmarkVariance, DeviceBoundary, MicroTremor, ScreenFlicker, Rppg, Moire, Texture, ScreenReplay, BackgroundGrid, Temporal | ~3,900 | 49 |
+| Gates (Aysenur, 3) | FaceUsability, IlluminationGate, CriticalRegionVisibility | ~1,400 | 17 |
+| Fusion | MultiClassFuser (paper-calibrated weights) + HybridFusionEvaluator (Aysenur) | ~450 | 28 |
 | Pipeline | AntispoofPipelineAssembler (Aysenur) | ~290 | 18 |
-| Session | SessionEngine with no-blink incident wiring + verdict lock | ~510 | (covered by integration) |
+| Session | SessionEngine + LivenessProver | ~850 | 10 |
+| Workers | HeavyAnalyzerWorker + HeavyAnalyzerPool (Vite `?worker&inline`) | ~340 | 5 |
+| Validation | CasiaFasdMicroBench (in-page accuracy harness) | ~190 | 5 |
 | Detection | MediaPipeFaceDetector | ~150 | — |
-| **Total** | 19 source files | **~7,500** | **95 vitest, all green** |
+| **Total** | 24 source files | **~7,570** | **126 vitest, all green** |
 
-Deployment: https://fivucsas.com/amispoof/ — webcam-driven tester
-with 10-analyzer fusion, advisory face-usability gate panel, copy
-button, downloadable JSON snapshot, face bbox + 478-pt landmark
-overlay on video. ~5.6 MB static bundle on Hostinger; runtime
-`onnxruntime-web` + `@mediapipe/tasks-vision` lazy-loaded from
-jsdelivr.
+Calibrated weights (Phase 4A, per paper §5.3 + §8.3 LOO findings):
+- texture 0.0, moire 0.0 (anti-correlated on high-res capture).
+- device_boundary 0.5, micro_tremor 0.5 (zero-shot LOO harm).
+- background_grid held at 1.5 (sole transferable positive contributor).
+
+Deployment: https://fivucsas.com/amispoof/ — webcam-driven tester with
+12-analyzer fusion, advisory face-usability gate panel, face bbox +
+478-pt landmark overlay, copy button, downloadable JSON snapshot, and
+a one-click `Run accuracy bench` button hitting
+`runCasiaFasdMicroBench`. Main bundle 123 kB ESM / 34 kB gzip + 3 lazy
+chunks (Texture 7.9 kB, Moire 10.5 kB, ScreenReplay 18.2 kB) + Worker
+chunk 30 kB. Runtime `onnxruntime-web` + `@mediapipe/tasks-vision`
+lazy-loaded from jsdelivr.
+
+Performance: Web Worker offload + frame-skip (heavy N=3, gate M=5)
+brings mobile Brave from ~4 fps to ~8–12 fps; PC Chrome hits ~25–30 fps.
+WebGPU EP gives ~3× MiniFASNet speedup on capable browsers with silent
+fallback to WASM on Brave/iOS Safari.
+
+Mobile Brave constraints respected throughout: no SharedArrayBuffer,
+no WASM threads, no hard WebGPU dep, no hard OffscreenCanvas dep.
 
 Outstanding (browser):
-- [ ] Browser-tuned calibration profile (gates over-flag mobile selfies)
-- [ ] Performance pass — 4 fps on mid-range Android with 10 analyzers
-- [ ] Web Worker for the heavy synchronous analyzers
-- [ ] background_grid + temporal + ar_filter analyzers (Phase 4)
-- [ ] amispoof.com domain (currently /amispoof/ slug on fivucsas.com)
+- [ ] Browser-tuned per-region gate thresholds (gates still over-flag
+      mobile selfies — needs a calibration sweep on captured mobile-cam
+      face crops).
+- [ ] Real CASIA-FASD micro-mirror samples in `web/amispoof/samples/`
+      (placeholder URLs at the moment).
+- [ ] `ar_filter` analyzer (no ONNX model trained yet).
+- [ ] amispoof.com domain (currently `/amispoof/` slug on fivucsas.com).
+- [ ] iBeta PAD-Level-1 browser-bundle submission package.
 
 ## Priority Levels
 - P0: Must fix before next test (broken/blocking)

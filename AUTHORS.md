@@ -35,8 +35,9 @@ If you build on or evaluate against any of these modules in a publication, pleas
 The TypeScript port under `web/` (published as `@rollingcat/spoof-detector` + the `/amispoof/` browser tester) carries the same authorship lineage:
 
 - **Aysenur's full algorithmic surface ported**: `FaceUsabilityGate`, `IlluminationGate`, `CriticalRegionVisibilityGate`, `HybridFusionEvaluator`, `AntispoofPipelineAssembler`, `MoireAnalyzer`, `RppgAnalyzer`, `TextureAnalyzer`, `ScreenReplayAnalyzer`, plus the `MiniFASNetAnalyzer`, `DeviceBoundaryAnalyzer`, and `BlinkAnalyzer` (whose Python originals also trace back to Aysenur's `working_spoof_detection` branch — see `research/COMPARISON_AYSENUR_vs_PRODUCTIZED.md`).
-- **Ahmet's originals ported**: `LandmarkVarianceAnalyzer`, `MicroTremorAnalyzer`, `ScreenFlickerAnalyzer`, `MediaPipeFaceDetector`, `MultiClassFuser`, `SessionEngine`.
-- 95 vitest tests, all green. Hand-rolled equivalents replace cv2 ops (Sobel, Laplacian, Canny, Gabor, CLAHE→histeq, RGB→HSV/YCrCb/Lab). Algorithmic deviations are documented in each file header.
+- **Ahmet's originals ported**: `LandmarkVarianceAnalyzer`, `MicroTremorAnalyzer`, `ScreenFlickerAnalyzer`, `BackgroundGridAnalyzer`, `TemporalAnalyzer`, `MediaPipeFaceDetector`, `MultiClassFuser`, `SessionEngine`, `LivenessProver`, `HeavyAnalyzerWorker` + `HeavyAnalyzerPool` (Vite `?worker&inline`), `runCasiaFasdMicroBench`.
+- 126 vitest tests, all green at HEAD (was 95 at the Phase 3 cut; +31 tests in Phase 4 across BackgroundGrid + Temporal + LivenessProver + HeavyAnalyzerPool + CasiaFasdMicroBench). Hand-rolled equivalents replace cv2 ops (Sobel, Laplacian, Canny, Gabor, CLAHE→histeq, RGB→HSV/YCrCb/Lab). Algorithmic deviations documented in each file header.
+- Paper-calibrated default weights post-Phase-4: texture & moire 0.0 (anti-correlated per §5.3); device_boundary & micro_tremor 0.5 (LOO harm per §8.2); background_grid 1.5 (sole transferable positive contributor +0.014). Per-tenant override via constructor `analyzerWeights`.
 - See `research/COMPARISON_AYSENUR_vs_PRODUCTIZED.md` for the authoritative module map and `web/amispoof/README.md` for the deployment runbook.
 
 If you cite or evaluate against the browser port in a publication, the same attribution rule applies: please credit Aysenur for the algorithmic contributions.
