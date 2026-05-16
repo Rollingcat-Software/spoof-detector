@@ -3,7 +3,10 @@
     Header set Cache-Control 'public, max-age=31536000, immutable'
   </FilesMatch>
   <FilesMatch '\.(js|css|map)$'>
-    Header set Cache-Control 'public, max-age=604800'
+    Header set Cache-Control 'public, max-age=300, must-revalidate'
+  </FilesMatch>
+  <FilesMatch '\.(html|htm)$'>
+    Header set Cache-Control 'no-cache, must-revalidate, max-age=0'
   </FilesMatch>
   Header always set X-Robots-Tag 'noindex, nofollow'
   Header always set Permissions-Policy 'camera=(self), microphone=()'
