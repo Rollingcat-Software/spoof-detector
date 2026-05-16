@@ -11,12 +11,15 @@ import * as ort from "onnxruntime-web";
 // app.js but a stale Phase-2 lib bundle (Texture/Moire/Screen-replay/rPPG
 // rows show "—", gate panel stuck on "waiting…"). The query string
 // gives the import a distinct URL the browser must re-fetch.
-import { createSpoofDetector } from "./lib/spoof-detector.js?v=2026-05-16f";
+import {
+  createSpoofDetector,
+  runCasiaFasdMicroBench,
+} from "./lib/spoof-detector.js?v=2026-05-16-phase4";
 
 // Version handshake — checked by the inline script in index.html.
 // If the user is running a stale cached app.js (no AMISPOOF_VERSION),
 // the HTML triggers a one-shot reload after 4 s.
-window.AMISPOOF_VERSION = "2026-05-16f";
+window.AMISPOOF_VERSION = "2026-05-16-phase4";
 
 const ORT_WASM_BASE =
   "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/";
@@ -117,6 +120,10 @@ const els = {
   stop: $("stop"),
   reset: $("reset"),
   download: $("download"),
+  bench: $("bench"),
+  benchPanel: $("benchPanel"),
+  benchHeadline: $("benchHeadline"),
+  benchRows: $("benchRows"),
   dot: $("dot"),
   status: $("status"),
   verdict: $("verdict"),
@@ -521,6 +528,68 @@ els.start.addEventListener("click", start);
 els.stop.addEventListener("click", stop);
 els.reset.addEventListener("click", reset);
 els.download.addEventListener("click", download);
+
+// ---------- Phase 5E-3: in-page accuracy bench ----------
+// 5 live + 5 spoof placeholder URLs under ./samples/. The actual sample
+// fixtures land in a follow-up commit — until they're shipped the bench
+// will surface a "failed to load" status for each row, which is intentional
+// and harmless (the harness reports the error per-row, not at the top).
+const BENCH_SAMPLE_URLS = [
+  "./samples/live_01.jpg",
+  "./samples/live_02.jpg",
+  "./samples/live_03.jpg",
+  "./samples/live_04.jpg",
+  "./samples/live_05.jpg",
+  "./samples/spoof_01.jpg",
+  "./samples/spoof_02.jpg",
+  "./samples/spoof_03.jpg",
+  "./samples/spoof_04.jpg",
+  "./samples/spoof_05.jpg",
+];
+
+async function runBench() {
+  els.bench.disabled = true;
+  const originalLabel = els.bench.textContent;
+  els.bench.textContent = "running…";
+  els.benchPanel.style.display = "block";
+  els.benchHeadline.textContent = "Bench: running…";
+  els.benchRows.innerHTML = "";
+  try {
+    await ensureDetector();
+    const result = await runCasiaFasdMicroBench(detector, BENCH_SAMPLE_URLS);
+    const pct = Math.round(result.accuracy * 100);
+    els.benchHeadline.textContent = `Bench: ${result.correct}/${result.total} correct (${pct}%)`;
+    els.benchRows.innerHTML = result.perSample
+      .map((row) => {
+        const ok = row.got === row.expected ? "✓" : "✗";
+        const okColor =
+          row.got === row.expected ? "var(--green)" : "var(--red)";
+        const conf = (row.confidence * 100).toFixed(0);
+        const fname = row.url.split("/").pop() ?? row.url;
+        return `<div style="font-size:11px; padding:2px 0">
+          <span style="color:${okColor}; display:inline-block; width:14px">${ok}</span>
+          <code>${fname}</code> — expected <b>${row.expected}</b>, got <b>${row.got}</b>
+          (${conf}% conf)
+        </div>`;
+      })
+      .join("");
+    // After the bench, the SessionEngine sits on the last sample's state —
+    // reset so the user can resume normal live-camera analysis cleanly.
+    detector.reset();
+    smoothedFps = 0;
+    lastTs = 0;
+  } catch (err) {
+    console.error("bench error", err);
+    els.benchHeadline.textContent = `Bench error: ${err.message || err}`;
+  } finally {
+    els.bench.disabled = false;
+    els.bench.textContent = originalLabel;
+  }
+}
+
+if (els.bench) {
+  els.bench.addEventListener("click", runBench);
+}
 
 els.copyVerdict.addEventListener("click", async () => {
   const v = lastVerdict;

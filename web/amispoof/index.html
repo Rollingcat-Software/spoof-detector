@@ -534,6 +534,38 @@
         <button id="stop" class="ghost" disabled>Stop</button>
         <button id="reset" class="ghost" disabled>Reset</button>
         <button id="download" class="ghost" disabled>Download report</button>
+        <button id="bench" class="ghost">Run accuracy bench (~30s)</button>
+      </div>
+
+      <!-- Phase 5E-3: per-sample bench output. Hidden until the user clicks
+           the bench button. The button calls runCasiaFasdMicroBench() with
+           the 10 sample URLs under ./samples/ (placeholders for now; the
+           actual fixtures land in a follow-up commit). -->
+      <div
+        id="benchPanel"
+        style="
+          display: none;
+          width: min(100%, 720px);
+          background: var(--panel);
+          border: 1px solid var(--border);
+          border-radius: 8px;
+          padding: 12px 14px;
+          font-size: 12px;
+          font-variant-numeric: tabular-nums;
+        "
+      >
+        <div
+          id="benchHeadline"
+          style="
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 6px;
+            color: var(--accent);
+          "
+        >
+          Bench: waiting…
+        </div>
+        <div id="benchRows" style="color: var(--muted); line-height: 1.6"></div>
       </div>
 
       <p class="hint">
@@ -681,7 +713,7 @@
       // older cached copy (no AMISPOOF_VERSION export at all), force a
       // one-shot hard reload so the user doesn't get stuck on a broken
       // bundle. Guarded by sessionStorage to avoid infinite loops.
-      window.AMISPOOF_HTML_VERSION = "2026-05-16f";
+      window.AMISPOOF_HTML_VERSION = "2026-05-16-phase4";
       setTimeout(function () {
         if (
           window.AMISPOOF_VERSION !== window.AMISPOOF_HTML_VERSION &&
@@ -692,6 +724,6 @@
         }
       }, 4000);
     </script>
-    <script type="module" src="./app.js?v=2026-05-16f"></script>
+    <script type="module" src="./app.js?v=2026-05-16-phase4"></script>
   </body>
 </html>

@@ -58,11 +58,19 @@ describe("MultiClassFuser", () => {
     expect(Math.abs(total - 1.0)).toBeLessThan(0.01);
   });
 
-  it("low moire score increases screen-attack categories (port of test_moire_low_increases_screen_categories)", () => {
+  it("low screen_replay score increases screen-attack categories (replaces moire test post paper-LOO calibration)", () => {
+    // Pre-Phase-4 the default moire weight was 0.1; we used a low moire
+    // input to push VIDEO_REPLAY + STATIC_IMAGE > 0.3. The paper LOO
+    // finding (§8.3) moved moire to weight 0.0 by default — that route
+    // is now intentionally muted. screen_replay is still weight 0.5 and
+    // routes 0.45 → VIDEO_REPLAY + 0.35 → STATIC_IMAGE per SPOOF_SIGNAL_MAP,
+    // which is the same semantic claim ("screen-attack signal → screen-
+    // attack categories dominate"). Consumers who want the old moire
+    // weight back can pass `{moire: 0.1}` via constructor override.
     const fuser = new MultiClassFuser();
     const cls = fuser.fuse(
       1,
-      results(makeAnalyzerResult("moire", 10.0)),
+      results(makeAnalyzerResult("screen_replay", 10.0)),
     );
     const screenProb =
       cls.probabilities[SpoofCategory.VIDEO_REPLAY] +
