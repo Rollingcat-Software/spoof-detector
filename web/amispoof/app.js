@@ -7,6 +7,11 @@
 import * as ort from "onnxruntime-web";
 import { createSpoofDetector } from "./lib/spoof-detector.js";
 
+// Version handshake — checked by the inline script in index.html.
+// If the user is running a stale cached app.js (no AMISPOOF_VERSION),
+// the HTML triggers a one-shot reload after 4 s.
+window.AMISPOOF_VERSION = "2026-05-16e";
+
 const ORT_WASM_BASE =
   "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/";
 const MEDIAPIPE_WASM_BASE =
@@ -227,6 +232,10 @@ async function start() {
     canvas.height = els.video.videoHeight || 480;
     ctx = canvas.getContext("2d", { willReadFrequently: true });
 
+    // Match overlay pixel buffer to the source canvas so bbox + landmark
+    // coords drawn on the overlay land exactly on the visible face — both
+    // are CSS-stretched identically by the browser, so the pixel-space
+    // math stays correct.
     els.overlay.width = canvas.width;
     els.overlay.height = canvas.height;
 
