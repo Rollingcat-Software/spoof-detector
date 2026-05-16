@@ -66,6 +66,9 @@ export class SessionEngine {
 
   private faceMissingFrames = 0;
   private consecutiveSpoofFrames = 0;
+  private lastBlinkCount = 0;
+  private lastBlinkObservedAt = 0;
+  private lastNoBlinkIncidentAt = -Infinity;
 
   constructor(options: SessionEngineOptions = {}) {
     this.sessionId =
@@ -111,6 +114,9 @@ export class SessionEngine {
     this.recentVerdicts.clear();
     this.faceMissingFrames = 0;
     this.consecutiveSpoofFrames = 0;
+    this.lastBlinkCount = 0;
+    this.lastBlinkObservedAt = 0;
+    this.lastNoBlinkIncidentAt = -Infinity;
   }
 
   /** Ingest a frame analysis into the session. Called every frame. */
@@ -181,7 +187,62 @@ export class SessionEngine {
       this.checkSpoofIncident(cls, analysis.frame_id, elapsed);
       this.checkMotionNaturalness(signals, analysis.frame_id, elapsed);
       this.checkMiniFasNetInstability(signals, analysis.frame_id, elapsed);
+      this.checkNoBlink(cls, analysis.frame_id, elapsed);
     }
+  }
+
+  /**
+   * Raise a STATIC_IMAGE incident if the face has been present for
+   * NO_BLINK_ALERT_SEC without any blink. A printed photo never blinks;
+   * a live human blinks every 4–6 seconds on average. Repeats every
+   * NO_BLINK_ALERT_SEC so a long-running spoof accumulates incidents
+   * fast enough to trigger the >=3-incident override in getVerdict().
+   */
+  private checkNoBlink(
+    cls: SpoofClassification,
+    frame_id: number,
+    elapsed: number,
+  ): void {
+    const blink = cls.analyzer_results["blink"];
+    const currentBlinks =
+      blink && typeof blink.details["blinks"] === "number"
+        ? (blink.details["blinks"] as number)
+        : 0;
+
+    if (currentBlinks > this.lastBlinkCount) {
+      this.lastBlinkCount = currentBlinks;
+      this.lastBlinkObservedAt = elapsed;
+      return;
+    }
+
+    // Only count "no blink" time once the face has been present long enough
+    // that we *should* have seen a blink. The face-present clock is the
+    // ingest-frame counter; convert to seconds at the session FPS.
+    const facePresentSec = this.facePresentCount / 30.0;
+    if (facePresentSec < SessionEngine.NO_BLINK_ALERT_SEC) return;
+
+    const sinceBlink = elapsed - this.lastBlinkObservedAt;
+    if (sinceBlink < SessionEngine.NO_BLINK_ALERT_SEC) return;
+
+    // Throttle: once we've raised the alert, don't repeat for another window.
+    if (
+      elapsed - this.lastNoBlinkIncidentAt <
+      SessionEngine.NO_BLINK_ALERT_SEC
+    )
+      return;
+
+    this.lastNoBlinkIncidentAt = elapsed;
+    this.addIncident(
+      frame_id,
+      Severity.HIGH,
+      SpoofCategory.STATIC_IMAGE,
+      `No blink for ${sinceBlink.toFixed(0)}s — printed or static-image attack suspected`,
+      {
+        elapsed_sec: round(elapsed, 1),
+        face_present_sec: round(facePresentSec, 1),
+        seconds_since_blink: round(sinceBlink, 1),
+      },
+    );
   }
 
   private checkSpoofIncident(

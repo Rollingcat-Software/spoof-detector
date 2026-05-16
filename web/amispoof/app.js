@@ -102,6 +102,7 @@ let running = false;
 let smoothedFps = 0;
 let lastTs = 0;
 let lastVerdict = null;
+let lastAnalyzerScores = null;
 let knownIncidentIds = new Set();
 
 function setStatus(label, kind = "live") {
@@ -222,18 +223,25 @@ function updateUI(analysis, v) {
   // Per-analyzer scores
   const faces = Object.values(analysis.classifications);
   const analyzerResults = faces[0]?.analyzer_results ?? {};
+  const snapshot = {};
   for (const cfg of ANALYZER_ORDER) {
     const r = analyzerResults[cfg.name];
     const ref = analyzerRefs[cfg.name];
     if (!r) {
       ref.fill.style.width = "0%";
       ref.val.textContent = "—";
+      snapshot[cfg.name] = null;
       continue;
     }
     const score = Math.max(0, Math.min(100, r.score));
     ref.fill.style.width = `${score.toFixed(0)}%`;
     ref.val.textContent = score.toFixed(0);
+    snapshot[cfg.name] = {
+      score: Math.round(score * 10) / 10,
+      details: r.details ?? null,
+    };
   }
+  lastAnalyzerScores = snapshot;
 
   // Per-category P(spoof)
   for (const cat of CATEGORIES) {
@@ -288,6 +296,8 @@ function download() {
           generated_at: new Date().toISOString(),
           user_agent: navigator.userAgent,
           verdict,
+          latest_analyzer_scores: lastAnalyzerScores,
+          fps_smoothed: Math.round(smoothedFps * 10) / 10,
         },
         null,
         2,
