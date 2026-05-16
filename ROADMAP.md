@@ -2,8 +2,8 @@
 
 **Project**: FIVUCSAS Session-Based Face Presentation Attack Detection
 **Paper Target**: BIOSIG 2026 / IJCB 2026
-**Demo**: amispoof.com
-**Last Updated**: 2026-05-11 (perf/blink-cache-and-ear-calibration)
+**Demo**: amispoof.com (also live at https://fivucsas.com/amispoof/ — browser-side reference implementation)
+**Last Updated**: 2026-05-16 (feat/amispoof-demo-and-npm-build-2026-05-15 — TypeScript port + browser tester)
 
 ## Where things live
 
@@ -12,8 +12,9 @@ liveness / anti-spoof asset across the FIVUCSAS programme.
 
 | Directory                  | Status     | Audience                                 |
 |----------------------------|------------|------------------------------------------|
-| `src/`                     | production | importable library; v0.2.0 curated.      |
-| `tests/`                   | production | 139 tests, green (perf/blink branch).    |
+| `src/`                     | production | importable Python library; v0.2.0 curated. |
+| `web/`                     | production | TypeScript port published as `@rollingcat/spoof-detector` + `/amispoof/` browser tester. |
+| `tests/`                   | production | 139 Python tests, green.                |
 | `tools/`                   | operator   | offline / desktop scripts.               |
 | `research/aysenur/`        | reference  | Aysenur's 7 FIVUCSAS R&D branches.       |
 | `research/ayse-gulsum-eren/` | reference  | attribution + commit pointers.         |
@@ -72,6 +73,40 @@ mirror eventually retires.
 - Tested accuracy: LIVE session 98% confidence, SPOOF session 63% + 13 incidents
 - Blink detection working (20 blinks detected in 31s)
 - rPPG pulse detection implemented (needs validation)
+
+## Browser Port v0.1.0 / 2026-05-16
+
+Phase 1 + 2 + 3 of the TypeScript port (`web/`) shipped in a single
+session (`feat/amispoof-demo-and-npm-build-2026-05-15`). Algorithmic
+parity with the Python `src/` Aysenur-attributed surface; the gates
++ hybrid_evaluator + assembler + 4 video-track analyzers + 6
+image-track analyzers all run client-side, no server GPU.
+
+Modules ported (TypeScript, vitest, strict TS):
+
+| Layer | Files | LOC | Tests |
+|---|---|---|---|
+| Analyzers | MiniFASNet, Blink, LandmarkVariance, DeviceBoundary, MicroTremor, ScreenFlicker, Rppg, Moire, Texture, ScreenReplay | ~3,400 | 38 |
+| Gates (Aysenur) | FaceUsability, IlluminationGate, CriticalRegionVisibility | ~1,400 | 17 |
+| Fusion | MultiClassFuser (existing) + HybridFusionEvaluator (Aysenur) | ~450 | 28 |
+| Pipeline | AntispoofPipelineAssembler (Aysenur) | ~290 | 18 |
+| Session | SessionEngine with no-blink incident wiring + verdict lock | ~510 | (covered by integration) |
+| Detection | MediaPipeFaceDetector | ~150 | — |
+| **Total** | 19 source files | **~7,500** | **95 vitest, all green** |
+
+Deployment: https://fivucsas.com/amispoof/ — webcam-driven tester
+with 10-analyzer fusion, advisory face-usability gate panel, copy
+button, downloadable JSON snapshot, face bbox + 478-pt landmark
+overlay on video. ~5.6 MB static bundle on Hostinger; runtime
+`onnxruntime-web` + `@mediapipe/tasks-vision` lazy-loaded from
+jsdelivr.
+
+Outstanding (browser):
+- [ ] Browser-tuned calibration profile (gates over-flag mobile selfies)
+- [ ] Performance pass — 4 fps on mid-range Android with 10 analyzers
+- [ ] Web Worker for the heavy synchronous analyzers
+- [ ] background_grid + temporal + ar_filter analyzers (Phase 4)
+- [ ] amispoof.com domain (currently /amispoof/ slug on fivucsas.com)
 
 ## Priority Levels
 - P0: Must fix before next test (broken/blocking)

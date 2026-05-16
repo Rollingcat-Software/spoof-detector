@@ -1,5 +1,15 @@
 # Spoof Detector — Browser Readiness Audit
 
+> **STATUS — 2026-05-16:** This audit's 3-week MVP estimate was executed
+> over a single session. The TypeScript port now lives in `web/`,
+> deployed at https://fivucsas.com/amispoof/ with 10 analyzers + 3 gates
+> + hybrid_evaluator + assembler + face overlay + downloadable JSON
+> reports. 95 vitest tests green. See `ROADMAP.md` "Browser Port v0.1.0"
+> section and `web/amispoof/README.md` for the current state. Sections
+> below are preserved as a historical record of the pre-port analysis.
+
+---
+
 **Date:** 2026-05-09
 **Source revision:** `master` (post real-numbers PR #6 merge, sha `5b9aa6b`)
 **Target deliverable:** a `<script src="spoof-detector.js">` that runs the full

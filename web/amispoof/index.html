@@ -195,13 +195,7 @@
         color: var(--red);
         border-color: var(--red-border);
         background: rgba(218, 54, 51, 0.10);
-        box-shadow: 0 0 24px rgba(248, 81, 73, 0.3),
-          0 0 0 1px rgba(248, 81, 73, 0.45);
-        animation: spoofPulse 1.4s ease-in-out infinite;
-      }
-      @keyframes spoofPulse {
-        0%, 100% { box-shadow: 0 0 16px rgba(248, 81, 73, 0.25), 0 0 0 1px rgba(248, 81, 73, 0.45); }
-        50% { box-shadow: 0 0 32px rgba(248, 81, 73, 0.55), 0 0 0 1px rgba(248, 81, 73, 0.7); }
+        box-shadow: 0 0 0 1px rgba(248, 81, 73, 0.45);
       }
       #verdict.warming {
         color: var(--amber);
@@ -500,7 +494,28 @@
     </main>
 
     <aside>
-      <h2>Verdict</h2>
+      <h2>
+        Verdict
+        <button
+          id="copyVerdict"
+          type="button"
+          title="Copy the current verdict + per-analyzer snapshot to clipboard"
+          style="
+            float: right;
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--accent);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            cursor: pointer;
+            font-weight: normal;
+            margin-top: -2px;
+          "
+        >
+          copy
+        </button>
+      </h2>
       <div id="verdict">
         <span id="verdictText">waiting…</span>
         <span class="conf" id="verdictConf"></span>

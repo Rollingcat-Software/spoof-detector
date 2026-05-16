@@ -124,6 +124,7 @@ const els = {
   details: $("details"),
   gateBanner: $("gateBanner"),
   gateBody: $("gateBody"),
+  copyVerdict: $("copyVerdict"),
 };
 
 const analyzerRefs = {};
@@ -482,3 +483,35 @@ els.start.addEventListener("click", start);
 els.stop.addEventListener("click", stop);
 els.reset.addEventListener("click", reset);
 els.download.addEventListener("click", download);
+
+els.copyVerdict.addEventListener("click", async () => {
+  const v = lastVerdict;
+  if (!v) return;
+  const text = [
+    v.summary,
+    "",
+    "Per-analyzer scores:",
+    ...ANALYZER_ORDER.map((cfg) => {
+      const s = lastAnalyzerScores?.[cfg.name];
+      return s
+        ? `  ${cfg.label.padEnd(20)} ${String(s.score).padStart(5)} (w ${cfg.weight})`
+        : `  ${cfg.label.padEnd(20)} —`;
+    }),
+    "",
+    `Gate: ${lastGateResult ? (lastGateResult.usable ? "usable" : `advisory: ${lastGateResult.reason}`) : "—"}`,
+    "",
+    `Generated: ${new Date().toISOString()}`,
+    `Agent: ${navigator.userAgent}`,
+  ].join("\n");
+  try {
+    await navigator.clipboard.writeText(text);
+    const original = els.copyVerdict.textContent;
+    els.copyVerdict.textContent = "copied ✓";
+    setTimeout(() => {
+      els.copyVerdict.textContent = original;
+    }, 1400);
+  } catch (err) {
+    console.error("clipboard write failed", err);
+    els.copyVerdict.textContent = "copy failed";
+  }
+});

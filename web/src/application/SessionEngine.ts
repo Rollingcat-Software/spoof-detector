@@ -69,6 +69,12 @@ export class SessionEngine {
   private lastBlinkCount = 0;
   private lastBlinkObservedAt = 0;
   private lastNoBlinkIncidentAt = -Infinity;
+  // Once the verdict has locked to SPOOF, it stays SPOOF for the rest of the
+  // session. The fuser/category averages can briefly nudge adjustedReal back
+  // above 0.45 on a single high-confidence MiniFASNet frame even after the
+  // override has fired, which used to be visible to the user as a 250ms
+  // SPOOF → LIVE → SPOOF flicker on the verdict block.
+  private verdictLockedSpoof = false;
 
   constructor(options: SessionEngineOptions = {}) {
     this.sessionId =
@@ -117,6 +123,7 @@ export class SessionEngine {
     this.lastBlinkCount = 0;
     this.lastBlinkObservedAt = 0;
     this.lastNoBlinkIncidentAt = -Infinity;
+    this.verdictLockedSpoof = false;
   }
 
   /** Ingest a frame analysis into the session. Called every frame. */
@@ -448,7 +455,15 @@ export class SessionEngine {
     // Phase-1 simplified decision (no LivenessProver yet):
     //   live IFF analyzer fusion says real AND incidents < 3.
     const incidentOverride = this.incidents.length >= 3;
-    const isLive = adjustedReal > 0.45 && !incidentOverride;
+    let isLive = adjustedReal > 0.45 && !incidentOverride;
+
+    // Once the verdict has locked to SPOOF, it stays SPOOF for the rest of
+    // the session — the peak-sensitive design intentionally rejects later
+    // live-looking frames (e.g. a print attack briefly tilted off-axis
+    // sometimes makes MiniFASNet score real for a frame or two). Latch on
+    // either the incidentOverride or a sustained low-real burst.
+    if (!isLive) this.verdictLockedSpoof = true;
+    if (this.verdictLockedSpoof) isLive = false;
 
     const confidence = Math.min(
       1.0,
