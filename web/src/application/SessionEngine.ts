@@ -215,11 +215,12 @@ export class SessionEngine {
       return;
     }
 
-    // Only count "no blink" time once the face has been present long enough
-    // that we *should* have seen a blink. The face-present clock is the
-    // ingest-frame counter; convert to seconds at the session FPS.
-    const facePresentSec = this.facePresentCount / 30.0;
-    if (facePresentSec < SessionEngine.NO_BLINK_ALERT_SEC) return;
+    // checkNoBlink only runs when a face is in this frame (caller loop
+    // iterates over analysis.faces), so face-presence is implicit. Use
+    // wall-clock elapsed time directly — the previous facePresentCount/30
+    // formula silently assumed 30 fps and under-reported by ~3x on mobile
+    // (11 fps device → 33s real time read as 12s, gate never tripped).
+    if (elapsed < SessionEngine.NO_BLINK_ALERT_SEC) return;
 
     const sinceBlink = elapsed - this.lastBlinkObservedAt;
     if (sinceBlink < SessionEngine.NO_BLINK_ALERT_SEC) return;
@@ -237,7 +238,6 @@ export class SessionEngine {
       `No blink for ${sinceBlink.toFixed(0)}s — printed or static-image attack suspected`,
       {
         elapsed_sec: round(elapsed, 1),
-        face_present_sec: round(facePresentSec, 1),
         seconds_since_blink: round(sinceBlink, 1),
       },
     );
