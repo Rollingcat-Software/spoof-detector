@@ -34,6 +34,7 @@ const els = {
   video: $("video"),
   overlay: $("overlay"),
   start: $("start"),
+  stop: $("stop"),
   reset: $("reset"),
   download: $("download"),
   dot: $("dot"),
@@ -148,6 +149,7 @@ async function start() {
     await ensureDetector();
 
     els.start.style.display = "none";
+    els.stop.disabled = false;
     els.reset.disabled = false;
     els.download.disabled = false;
     els.videoWrap.dataset.state = "running";
@@ -161,6 +163,21 @@ async function start() {
     els.start.disabled = false;
     els.start.textContent = "Start camera";
   }
+}
+
+function stop() {
+  running = false;
+  const stream = els.video.srcObject;
+  if (stream && typeof stream.getTracks === "function") {
+    for (const track of stream.getTracks()) track.stop();
+  }
+  els.video.srcObject = null;
+  els.stop.disabled = true;
+  els.start.style.display = "";
+  els.start.disabled = false;
+  els.start.textContent = "Start camera";
+  els.videoWrap.dataset.state = "idle";
+  setStatus("stopped", "live");
 }
 
 async function loop() {
@@ -287,5 +304,6 @@ function download() {
 }
 
 els.start.addEventListener("click", start);
+els.stop.addEventListener("click", stop);
 els.reset.addEventListener("click", reset);
 els.download.addEventListener("click", download);
