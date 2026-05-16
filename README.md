@@ -214,6 +214,7 @@ python tools/diagnose.py --image path/to/face.jpg
 
 ## Roadmap
 
+Python pipeline:
 - [x] Phase 1 — foundation (detection, tracking, overlay)
 - [x] Phase 2 — analyzer integration (MiniFASNet, texture, moire, screen-replay, temporal)
 - [x] Phase 2.5 — device boundary, calibrated fusion, session engine
@@ -221,10 +222,21 @@ python tools/diagnose.py --image path/to/face.jpg
 - [x] Phase 3.5 — "guilty until proven innocent" liveness architecture
 - [x] Phase 3.6 — three-layer detection (screen flicker, micro-tremor, background grid)
 - [x] Phase 3.7 — ISO 30107-3 first measurement (Grade C, 2026-05-02)
-- [ ] Phase 4 — data collection (AR-filter dataset)
+- [x] Paper v0.2.1 — bootstrap-CI CASIA-FASD + CelebA-Spoof zero-shot eval, anti-correlation finding (§5.3), zero-shot harm LOO findings (§8.2-8.3)
 - [ ] Phase 5 — AR-filter detector training (MobileNetV3-Small)
 - [ ] Phase 6 — expanded evaluation, target Grade B (APCER < 15 %)
 - [ ] Phase 7 — production integration into FIVUCSAS `biometric-processor`
+
+Browser TypeScript port (`web/`, published as `@rollingcat/spoof-detector`):
+- [x] **Phases 1-3** (PR #19) — 6 base analyzers + Aysenur's 3 gates + hybrid_evaluator + assembler + 4 more analyzers (rPPG, Moire, Texture, ScreenReplay).
+- [x] **Bug-fix wave** (PRs #20-#22) — verdict-lock warmup, no-blink incident wiring, blink-rate fps math, gate UX, SEO surface, landmark/video alignment, stale-cache self-heal.
+- [x] **Phase 4** (PR #23) — paper-calibrated weights, BackgroundGrid + Temporal analyzers, LivenessProver, Web Worker offload + frame-skip scheduler, WebGPU EP with WASM fallback, lazy bundle chunks, in-page CASIA-FASD validation harness.
+- [ ] Browser-tuned per-region gate thresholds (mobile-cam calibration sweep).
+- [ ] Real CASIA-FASD micro-mirror samples in `web/amispoof/samples/`.
+- [ ] amispoof.com domain (currently `/amispoof/` slug on fivucsas.com).
+- [ ] iBeta PAD-Level-1 browser-bundle submission package.
+
+Live tester: https://fivucsas.com/amispoof/ — 12 analyzers + 3 gates running entirely client-side. See `web/amispoof/README.md` for the deployment runbook and `ROADMAP.md` "Browser Port v0.1.0" for the full module inventory.
 
 ## Academic paper
 

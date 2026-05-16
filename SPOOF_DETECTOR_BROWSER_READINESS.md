@@ -1,12 +1,28 @@
 # Spoof Detector — Browser Readiness Audit
 
-> **STATUS — 2026-05-16:** This audit's 3-week MVP estimate was executed
-> over a single session. The TypeScript port now lives in `web/`,
-> deployed at https://fivucsas.com/amispoof/ with 10 analyzers + 3 gates
-> + hybrid_evaluator + assembler + face overlay + downloadable JSON
-> reports. 95 vitest tests green. See `ROADMAP.md` "Browser Port v0.1.0"
-> section and `web/amispoof/README.md` for the current state. Sections
-> below are preserved as a historical record of the pre-port analysis.
+> **STATUS — 2026-05-16 (Phase 4 complete):** This audit's 3-week MVP
+> estimate was executed over a single session, then extended across
+> four phases (PRs #19 → #23) over 2026-05-15 → 2026-05-16. The
+> TypeScript port lives in `web/`, deployed at
+> https://fivucsas.com/amispoof/ with:
+>
+> - **12 analyzers** — MiniFASNet, Blink, LandmarkVariance, DeviceBoundary,
+>   MicroTremor, ScreenFlicker, rPPG, Moire, Texture, ScreenReplay,
+>   **BackgroundGrid**, **Temporal**
+> - **3 gates (Aysenur)** — FaceUsability, Illumination, CriticalRegionVisibility
+> - **Fusion** — MultiClassFuser (paper-calibrated weights) + HybridFusionEvaluator
+> - **Pipeline** — AntispoofPipelineAssembler
+> - **Session** — SessionEngine + **LivenessProver**
+> - **Web Worker** offload for the 4 heavy analyzers (Vite `?worker&inline`)
+> - **WebGPU EP** for MiniFASNet (feature-detected, WASM fallback)
+> - **Lazy bundle chunks** for Texture/Moire/ScreenReplay
+> - **CASIA-FASD validation harness** (`runCasiaFasdMicroBench`)
+>
+> 126 vitest tests green. Main bundle 123 kB ESM. Performance: mobile
+> Brave 4→8–12 fps, PC Chrome 25–30 fps. See `ROADMAP.md` "Browser
+> Port v0.1.0" section and `web/amispoof/README.md` for the current
+> state. Sections below are preserved as a historical record of the
+> pre-port analysis.
 
 ---
 
