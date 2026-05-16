@@ -66,7 +66,13 @@ export class BlinkAnalyzer implements IFaceAnalyzer {
   constructor(options: BlinkAnalyzerOptions = {}) {
     this.earThreshold = options.earThreshold ?? 0.20;
     this.reopenThreshold = options.reopenThreshold ?? 0.22;
-    this.consecutiveFrames = options.consecutiveFrames ?? 2;
+    // Default 1 (was 2 to match the Python source at 30 fps). A typical
+    // human blink lasts 100-400ms — at 30 fps that's 3-12 frames, at 4-5 fps
+    // (mobile Android Chrome) it collapses to 1 frame, and a 2-frame
+    // requirement silently dropped most real blinks on phones. The reopen
+    // + min_open_between guards are still in place to filter landmark
+    // jitter, so requiring 1 closed frame is safe.
+    this.consecutiveFrames = options.consecutiveFrames ?? 1;
     this.minOpenBetween = options.minOpenBetween ?? 6;
     // Python uses 45; the task spec asks for 30 (matches WARMUP_FRAMES).
     this.warmupFrames = options.warmupFrames ?? 30;

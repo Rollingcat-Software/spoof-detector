@@ -215,11 +215,18 @@ export class SessionEngine {
       return;
     }
 
+    // Liveness contract: a printed photo NEVER blinks, ever. A live person
+    // produces at least one blink within ~15s under normal conditions. So
+    // once we've observed ANY blink in this session, we know the subject
+    // is alive — stop firing no-blink incidents on top of normal slow
+    // blinking. This was a real bug: a 78-second session with 4 real
+    // blinks (mobile camera at 4 fps drops some blinks) was flipping to
+    // SPOOF because each gap between detected blinks crossed 15s.
+    if (this.lastBlinkCount > 0) return;
+
     // checkNoBlink only runs when a face is in this frame (caller loop
     // iterates over analysis.faces), so face-presence is implicit. Use
-    // wall-clock elapsed time directly — the previous facePresentCount/30
-    // formula silently assumed 30 fps and under-reported by ~3x on mobile
-    // (11 fps device → 33s real time read as 12s, gate never tripped).
+    // wall-clock elapsed time directly.
     if (elapsed < SessionEngine.NO_BLINK_ALERT_SEC) return;
 
     const sinceBlink = elapsed - this.lastBlinkObservedAt;
