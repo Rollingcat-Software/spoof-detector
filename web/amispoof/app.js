@@ -14,12 +14,12 @@ import * as ort from "onnxruntime-web";
 import {
   createSpoofDetector,
   runCasiaFasdMicroBench,
-} from "./lib/spoof-detector.js?v=2026-05-16-confnorm";
+} from "./lib/spoof-detector.js?v=2026-05-16-confnorm2";
 
 // Version handshake — checked by the inline script in index.html.
 // If the user is running a stale cached app.js (no AMISPOOF_VERSION),
 // the HTML triggers a one-shot reload after 4 s.
-window.AMISPOOF_VERSION = "2026-05-16-confnorm";
+window.AMISPOOF_VERSION = "2026-05-16-confnorm2";
 
 // SessionEngine.getVerdict() returns a confidence in [0, 0.88] when the
 // LivenessProver is wired (structural ceiling — see SessionEngine.ts
@@ -32,6 +32,21 @@ function displayConfPct(rawConfidence) {
   const normalized = (rawConfidence ?? 0) / RAW_CONFIDENCE_CEILING;
   const clamped = Math.max(0, Math.min(1, normalized));
   return Math.round(clamped * 100);
+}
+
+// Build the human-facing summary line. Used by the on-screen verdict text,
+// the badge, and the Copy-to-clipboard surface — all read the SAME string
+// so the page can't show a normalized 91% in one place and the engine's
+// raw 80% in another. v.summary from the engine is left untouched so
+// SDK consumers keep the raw scale.
+function displaySummary(v) {
+  const verdictWord = v.is_live ? "LIVE" : "SPOOF";
+  const threat = v.dominant_threat ? ` (${v.dominant_threat})` : "";
+  return (
+    `${verdictWord}${threat} | conf=${displayConfPct(v.confidence)}% | ` +
+    `${v.session_duration_sec.toFixed(1)}s | ${v.frames_analyzed} frames | ` +
+    `blinks=${v.blink_count ?? 0} | incidents=${v.incidents.length}`
+  );
 }
 
 const ORT_WASM_BASE =
@@ -373,7 +388,7 @@ function updateUI(analysis, v) {
   }
   lastTs = now;
 
-  els.verdictText.textContent = v.summary;
+  els.verdictText.textContent = displaySummary(v);
   els.verdictConf.textContent = `${displayConfPct(v.confidence)}% conf`;
   const warming = v.frames_analyzed < 30;
   els.verdict.classList.toggle("live", !warming && v.is_live);
@@ -607,18 +622,8 @@ if (els.bench) {
 els.copyVerdict.addEventListener("click", async () => {
   const v = lastVerdict;
   if (!v) return;
-  // Rebuild the summary line locally so the copied text uses the same
-  // normalized confidence as the on-screen badge. v.summary from the
-  // engine carries the raw confidence (correct for SDK consumers, but
-  // would contradict the UI on the human-facing copy surface).
-  const verdictWord = v.is_live ? "LIVE" : "SPOOF";
-  const threat = v.dominant_threat ? ` (${v.dominant_threat})` : "";
-  const summary =
-    `${verdictWord}${threat} | conf=${displayConfPct(v.confidence)}% | ` +
-    `${v.session_duration_sec.toFixed(1)}s | ${v.frames_analyzed} frames | ` +
-    `blinks=${v.blink_count ?? 0} | incidents=${v.incidents.length}`;
   const text = [
-    summary,
+    displaySummary(v),
     "",
     "Per-analyzer scores:",
     ...ANALYZER_ORDER.map((cfg) => {
