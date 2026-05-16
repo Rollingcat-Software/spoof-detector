@@ -15,6 +15,7 @@
 // for callers who want the alternate fusion + advisory verdict shape — they
 // are NOT wired into this facade (which sticks with MultiClassFuser).
 
+import { LivenessProver } from "./application/LivenessProver";
 import { SessionEngine } from "./application/SessionEngine";
 import {
   AnalyzerResult,
@@ -25,19 +26,31 @@ import {
 import type { IFaceAnalyzer } from "./domain/models";
 import { SessionVerdict } from "./domain/session";
 import { FaceUsabilityGate } from "./gates/FaceUsabilityGate";
+import { BackgroundGridAnalyzer } from "./infrastructure/analyzers/BackgroundGridAnalyzer";
 import { BlinkAnalyzer } from "./infrastructure/analyzers/BlinkAnalyzer";
 import { DeviceBoundaryAnalyzer } from "./infrastructure/analyzers/DeviceBoundaryAnalyzer";
 import { LandmarkVarianceAnalyzer } from "./infrastructure/analyzers/LandmarkVarianceAnalyzer";
 import { MicroTremorAnalyzer } from "./infrastructure/analyzers/MicroTremorAnalyzer";
 import { MiniFASNetAnalyzer } from "./infrastructure/analyzers/MiniFASNetAnalyzer";
-import { MoireAnalyzer } from "./infrastructure/analyzers/MoireAnalyzer";
 import { RppgAnalyzer } from "./infrastructure/analyzers/RppgAnalyzer";
 import { ScreenFlickerAnalyzer } from "./infrastructure/analyzers/ScreenFlickerAnalyzer";
-import { ScreenReplayAnalyzer } from "./infrastructure/analyzers/ScreenReplayAnalyzer";
-import { TextureAnalyzer } from "./infrastructure/analyzers/TextureAnalyzer";
+import { TemporalAnalyzer } from "./infrastructure/analyzers/TemporalAnalyzer";
 import { MediaPipeFaceDetector } from "./infrastructure/detection/MediaPipeFaceDetector";
 import { MultiClassFuser } from "./infrastructure/fusion/MultiClassFuser";
+import { HeavyAnalyzerPool } from "./infrastructure/workers/HeavyAnalyzerPool";
 import { GateBBox, toImageData } from "./utils/imageOps";
+
+// Type-only imports for the lazy-loaded heavy analyzers (Phase 5E-1). The
+// runtime modules are loaded via dynamic `import()` inside the ensure*()
+// helpers below, which lets the bundler emit each as its own chunk that
+// the browser can defer until the first frame the corresponding analyzer
+// actually fires on. Mobile Brave / Safari benefit most: JS-parse cost
+// dominates time-to-interactive on the /amispoof/ page, and these three
+// (Texture Laplacian+DFT, Moire Gabor+2D-FFT, ScreenReplay CLAHE+skin-mask)
+// carry the heaviest per-frame code.
+import type { MoireAnalyzer } from "./infrastructure/analyzers/MoireAnalyzer";
+import type { ScreenReplayAnalyzer } from "./infrastructure/analyzers/ScreenReplayAnalyzer";
+import type { TextureAnalyzer } from "./infrastructure/analyzers/TextureAnalyzer";
 
 export * from "./domain/models";
 export * from "./domain/session";
@@ -50,9 +63,38 @@ export { DeviceBoundaryAnalyzer } from "./infrastructure/analyzers/DeviceBoundar
 export { MicroTremorAnalyzer } from "./infrastructure/analyzers/MicroTremorAnalyzer";
 export { ScreenFlickerAnalyzer } from "./infrastructure/analyzers/ScreenFlickerAnalyzer";
 export { RppgAnalyzer } from "./infrastructure/analyzers/RppgAnalyzer";
-export { MoireAnalyzer } from "./infrastructure/analyzers/MoireAnalyzer";
-export { TextureAnalyzer } from "./infrastructure/analyzers/TextureAnalyzer";
-export { ScreenReplayAnalyzer } from "./infrastructure/analyzers/ScreenReplayAnalyzer";
+export { BackgroundGridAnalyzer } from "./infrastructure/analyzers/BackgroundGridAnalyzer";
+export { TemporalAnalyzer } from "./infrastructure/analyzers/TemporalAnalyzer";
+export { LivenessProver } from "./application/LivenessProver";
+// MoireAnalyzer / TextureAnalyzer / ScreenReplayAnalyzer are intentionally
+// NOT re-exported eagerly here (Phase 5E-1) so Vite/Rollup emits each as
+// its own lazy chunk under dist/. Callers that need the constructors can
+// either: (a) deep-import the module path, or (b) call `loadHeavyAnalyzers()`
+// to resolve all three concurrently.
+export type { MoireAnalyzer } from "./infrastructure/analyzers/MoireAnalyzer";
+export type { TextureAnalyzer } from "./infrastructure/analyzers/TextureAnalyzer";
+export type { ScreenReplayAnalyzer } from "./infrastructure/analyzers/ScreenReplayAnalyzer";
+/**
+ * Lazily resolve the three heavy-analyzer constructors as a single batch.
+ * Useful for "preload heavy chunks while the camera permission dialog is
+ * up" callers, or for unit-tests that need synchronous instantiation.
+ */
+export async function loadHeavyAnalyzers(): Promise<{
+  MoireAnalyzer: typeof import("./infrastructure/analyzers/MoireAnalyzer").MoireAnalyzer;
+  TextureAnalyzer: typeof import("./infrastructure/analyzers/TextureAnalyzer").TextureAnalyzer;
+  ScreenReplayAnalyzer: typeof import("./infrastructure/analyzers/ScreenReplayAnalyzer").ScreenReplayAnalyzer;
+}> {
+  const [moire, texture, screenReplay] = await Promise.all([
+    import("./infrastructure/analyzers/MoireAnalyzer"),
+    import("./infrastructure/analyzers/TextureAnalyzer"),
+    import("./infrastructure/analyzers/ScreenReplayAnalyzer"),
+  ]);
+  return {
+    MoireAnalyzer: moire.MoireAnalyzer,
+    TextureAnalyzer: texture.TextureAnalyzer,
+    ScreenReplayAnalyzer: screenReplay.ScreenReplayAnalyzer,
+  };
+}
 export { MediaPipeFaceDetector } from "./infrastructure/detection/MediaPipeFaceDetector";
 export { SessionEngine } from "./application/SessionEngine";
 export { FaceUsabilityGate } from "./gates/FaceUsabilityGate";
@@ -60,6 +102,18 @@ export { IlluminationGate } from "./gates/IlluminationGate";
 export { CriticalRegionVisibilityGate } from "./gates/CriticalRegionVisibilityGate";
 export { HybridFusionEvaluator } from "./fusion/HybridEvaluator";
 export { AntispoofPipelineAssembler } from "./pipeline/Assembler";
+export { HeavyAnalyzerPool } from "./infrastructure/workers/HeavyAnalyzerPool";
+// Phase 5E-3 — in-page accuracy harness against a tiny CASIA-FASD micro
+// mirror. Same-origin only (no third-party CDN — strict-origin-when-cross-origin
+// would break the canvas readback on mobile Brave).
+export {
+  runCasiaFasdMicroBench,
+} from "./validation/CasiaFasdMicroBench";
+export type {
+  CasiaFasdBenchSample,
+  CasiaFasdBenchResult,
+  CasiaFasdBenchRow,
+} from "./validation/CasiaFasdMicroBench";
 
 export interface SpoofDetectorOptions {
   /** URL to minifasnet_v2.onnx (1.7 MB). */
@@ -94,8 +148,43 @@ export interface SpoofDetectorOptions {
   enableMoire?: boolean;
   enableTexture?: boolean;
   enableScreenReplay?: boolean;
+  // Phase 4 (parity with Python `src/`).
+  enableBackgroundGrid?: boolean;
+  enableTemporal?: boolean;
   /** Run Aysenur's face-usability gate. Result attached to each FrameAnalysis. Default true. */
   enableFaceUsabilityGate?: boolean;
+  /** Run the LivenessProver passive proof scorer alongside the SessionEngine. Default true. */
+  enableLivenessProver?: boolean;
+  /**
+   * Offload the 4 heavy synchronous analyzers (Texture, Moire,
+   * ScreenReplay, DeviceBoundary) to a Web Worker so they stop
+   * blocking the main thread. Default true.
+   *
+   * Worker is built from an inline blob URL — no extra file to serve.
+   * If `typeof Worker === "undefined"` or worker boot fails, the pool
+   * transparently falls back to running them on the main thread.
+   *
+   * SAB-free: payloads cross the postMessage boundary as Transferable
+   * ImageData (zero-copy). No COOP/COEP needed.
+   */
+  enableHeavyWorker?: boolean;
+  /**
+   * Frame-skip schedule for the 4 heavy analyzers (whether on the
+   * worker pool or the inline fallback). Default 3 — i.e. heavy
+   * analyzers run on frames 1, 4, 7, … Skipped frames REUSE the
+   * previous-frame result per face from `heavyCache`.
+   *
+   * Tradeoff: lower N = sharper temporal resolution, more CPU. The
+   * fast analyzers (MiniFASNet, MediaPipe, Blink, etc.) still run
+   * every frame — only the slow ones are skipped.
+   */
+  heavyAnalyzerFrameSkip?: number;
+  /**
+   * Frame-skip schedule for the FaceUsabilityGate. Default 5 — the
+   * gate is advisory and its inputs change slowly (lighting, occlusion).
+   * Skipped frames reuse the previous gate result from `gateCache`.
+   */
+  gateFrameSkip?: number;
 }
 
 /**
@@ -116,7 +205,10 @@ export class SpoofDetector {
   private moire: MoireAnalyzer | null = null;
   private texture: TextureAnalyzer | null = null;
   private screenReplay: ScreenReplayAnalyzer | null = null;
+  private backgroundGrid: BackgroundGridAnalyzer | null = null;
+  private temporal: TemporalAnalyzer | null = null;
   private faceUsabilityGate: FaceUsabilityGate | null = null;
+  private livenessProver: LivenessProver | null = null;
 
   private readonly fuser: MultiClassFuser;
   private readonly engine: SessionEngine;
@@ -130,10 +222,23 @@ export class SpoofDetector {
     moire: boolean;
     texture: boolean;
     screenReplay: boolean;
+    backgroundGrid: boolean;
+    temporal: boolean;
     faceUsabilityGate: boolean;
+    livenessProver: boolean;
   }>;
   private frameId = 0;
   private started = false;
+
+  // === Worker offload + frame-skip scheduler state. ===
+  private readonly enableHeavyWorker: boolean;
+  private readonly heavyAnalyzerFrameSkip: number;
+  private readonly gateFrameSkip: number;
+  private heavyPool: HeavyAnalyzerPool | null = null;
+  /** Cached heavy-analyzer results per face_id (reused on skipped frames). */
+  private readonly heavyCache = new Map<number, Record<string, AnalyzerResult>>();
+  /** Cached FaceUsabilityGate result (reused on skipped frames). */
+  private gateCache: FrameAnalysis["gate_result"] = undefined;
 
   constructor(opts: SpoofDetectorOptions) {
     this.detector = new MediaPipeFaceDetector({
@@ -159,8 +264,18 @@ export class SpoofDetector {
       moire: opts.enableMoire !== false,
       texture: opts.enableTexture !== false,
       screenReplay: opts.enableScreenReplay !== false,
+      backgroundGrid: opts.enableBackgroundGrid !== false,
+      temporal: opts.enableTemporal !== false,
       faceUsabilityGate: opts.enableFaceUsabilityGate !== false,
+      livenessProver: opts.enableLivenessProver !== false,
     };
+    this.enableHeavyWorker = opts.enableHeavyWorker !== false;
+    // Clamp to >= 1: a value of 0 or 1 means "run every frame" (no skip).
+    this.heavyAnalyzerFrameSkip = Math.max(
+      1,
+      Math.floor(opts.heavyAnalyzerFrameSkip ?? 3),
+    );
+    this.gateFrameSkip = Math.max(1, Math.floor(opts.gateFrameSkip ?? 5));
   }
 
   /** Lazy-load both heavy models. Phase 2/3 analyzers don't need a warmup. */
@@ -197,17 +312,36 @@ export class SpoofDetector {
       faces = await this.detector.detect(stage, tsMs, width, height);
     }
 
+    // Frame-skip schedule. Pattern: run on frames 1, 1+N, 1+2N, …
+    // i.e. the very first frame and every Nth frame thereafter. This
+    // guarantees a fresh result on the first call (so the cache is
+    // never empty when consumed) AND a steady-state period of N.
+    const runHeavy =
+      ((this.frameId - 1) % this.heavyAnalyzerFrameSkip) === 0;
+    const runGate =
+      ((this.frameId - 1) % this.gateFrameSkip) === 0;
+
     // 2) Set the original frame on analyzers that need surroundings.
+    //    The 4 heavy analyzers (Texture/Moire/ScreenReplay/DeviceBoundary)
+    //    are only fed here when the worker is DISABLED — when the worker
+    //    is on, the pool owns its own analyzer instances and ships the
+    //    full frame across the postMessage boundary. We also skip the
+    //    setFrame calls on frames where runHeavy is false: no point
+    //    paying the chunk-download cost for an analyzer we won't call.
     this.minifasnet.setFrame(input);
-    if (this.toggles.deviceBoundary) this.ensureDeviceBoundary().setFrame(input);
     if (this.toggles.screenFlicker) this.ensureScreenFlicker().setFrame(input);
-    if (this.toggles.screenReplay) this.ensureScreenReplay().setFrame(input);
-    if (this.toggles.texture) this.ensureTexture().setFrame(input);
     if (this.toggles.rppg) this.ensureRppg().setFrame(input);
+    if (this.toggles.backgroundGrid) this.ensureBackgroundGrid().setFrame(input);
+    if (runHeavy && !this.enableHeavyWorker) {
+      if (this.toggles.deviceBoundary) this.ensureDeviceBoundary().setFrame(input);
+      if (this.toggles.screenReplay) (await this.ensureScreenReplay()).setFrame(input);
+      if (this.toggles.texture) (await this.ensureTexture()).setFrame(input);
+    }
 
     // 3) Run Aysenur's face-usability gate (advisory — never blocks).
-    let gateResult: FrameAnalysis["gate_result"] = undefined;
-    if (this.toggles.faceUsabilityGate) {
+    //    Frame-skipped: skipped frames reuse `this.gateCache`.
+    let gateResult: FrameAnalysis["gate_result"] = this.gateCache;
+    if (this.toggles.faceUsabilityGate && runGate) {
       try {
         const primary = faces[0];
         const fullImageData = toImageData(input);
@@ -231,16 +365,66 @@ export class SpoofDetector {
           underexposedRegions: g.underexposedRegions,
           overexposedRegions: g.overexposedRegions,
         };
+        this.gateCache = gateResult;
       } catch {
         // Gate failures are silent — the analyzer pipeline must keep working.
       }
     }
 
-    // 4) Per-face analysis. Run every enabled analyzer.
+    // 4) Per-face analysis. Heavy analyzers may be:
+    //    (a) running on the worker pool (Promise.all-concurrent with the
+    //        main-thread fast analyzers), OR
+    //    (b) running inline on the main thread, OR
+    //    (c) skipped this tick — cached results are reused.
+    //
+    //    The fast analyzers (MiniFASNet, Blink, LandmarkVar, MicroTremor,
+    //    ScreenFlicker, Rppg) always run every frame; each is <2 ms and
+    //    several depend on per-frame landmarks that don't compress
+    //    across skips.
     const classifications: Record<number, SpoofClassification> = {};
+
+    // Pre-compute the full-frame ImageData once if we'll need it for
+    // the worker hand-off — avoids re-converting per face.
+    const needsFullFrameImageData =
+      runHeavy && this.enableHeavyWorker && faces.length > 0;
+    const fullFrameImageData = needsFullFrameImageData
+      ? toImageData(input)
+      : null;
+
+    // Stage A: kick off the heavy-analyzer worker promises (parallel
+    // across faces). The worker runs concurrently with the synchronous
+    // main-thread analyzers below.
+    type HeavyTask = Promise<{
+      face_id: number;
+      results: Record<string, AnalyzerResult>;
+    }>;
+    const heavyTasks: HeavyTask[] = [];
+    const heavyCropMap = new Map<number, ImageData | null>();
+    if (runHeavy) {
+      for (const face of faces) {
+        const crop = toFaceCropOrNull(input, face);
+        heavyCropMap.set(face.face_id, crop);
+        if (this.enableHeavyWorker) {
+          const pool = this.ensureHeavyPool();
+          heavyTasks.push(
+            pool
+              .analyze(crop, face, fullFrameImageData)
+              .then((results) => ({ face_id: face.face_id, results })),
+          );
+        }
+      }
+    }
+
+    // Stage B: main-thread per-face work — fast analyzers always run,
+    // plus the inline heavy path when the worker is disabled.
     for (const face of faces) {
       const results: Record<string, AnalyzerResult> = {};
-      const crop = toFaceCropOrNull(input, face);
+      // Heavy-skipped frames still need a crop (the fast analyzers below
+      // consume it). We can't reuse heavyCropMap unconditionally because
+      // it's only populated when runHeavy is true.
+      const crop = heavyCropMap.has(face.face_id)
+        ? (heavyCropMap.get(face.face_id) ?? null)
+        : toFaceCropOrNull(input, face);
 
       // MiniFASNet first (highest weight).
       const mfn = await this.minifasnet.analyze(crop, face);
@@ -248,10 +432,6 @@ export class SpoofDetector {
 
       if (this.toggles.screenFlicker) {
         const a = this.ensureScreenFlicker();
-        results[a.name] = await asyncify(a.analyze(crop, face));
-      }
-      if (this.toggles.deviceBoundary) {
-        const a = this.ensureDeviceBoundary();
         results[a.name] = await asyncify(a.analyze(crop, face));
       }
       if (this.toggles.microTremor) {
@@ -266,26 +446,78 @@ export class SpoofDetector {
         const a = this.ensureBlink();
         results[a.name] = await asyncify(a.analyze(crop, face));
       }
-      // Phase 3 (Aysenur).
       if (this.toggles.rppg) {
         const a = this.ensureRppg();
         results[a.name] = await asyncify(a.analyze(crop, face));
       }
-      if (this.toggles.screenReplay) {
-        const a = this.ensureScreenReplay();
+      if (this.toggles.backgroundGrid) {
+        const a = this.ensureBackgroundGrid();
         results[a.name] = await asyncify(a.analyze(crop, face));
       }
-      if (this.toggles.texture) {
-        const a = this.ensureTexture();
-        results[a.name] = await asyncify(a.analyze(crop, face));
-      }
-      if (this.toggles.moire) {
-        const a = this.ensureMoire();
+      if (this.toggles.temporal) {
+        const a = this.ensureTemporal();
         results[a.name] = await asyncify(a.analyze(crop, face));
       }
 
-      const cls = this.fuser.fuse(face.face_id, results);
-      classifications[face.face_id] = cls;
+      // Heavy analyzers — inline path. (Worker path is awaited in Stage C.)
+      if (runHeavy && !this.enableHeavyWorker) {
+        if (this.toggles.deviceBoundary) {
+          const a = this.ensureDeviceBoundary();
+          results[a.name] = await asyncify(a.analyze(crop, face));
+        }
+        if (this.toggles.screenReplay) {
+          const a = await this.ensureScreenReplay();
+          results[a.name] = await asyncify(a.analyze(crop, face));
+        }
+        if (this.toggles.texture) {
+          const a = await this.ensureTexture();
+          results[a.name] = await asyncify(a.analyze(crop, face));
+        }
+        if (this.toggles.moire) {
+          const a = await this.ensureMoire();
+          results[a.name] = await asyncify(a.analyze(crop, face));
+        }
+      }
+
+      classifications[face.face_id] = this.fuser.fuse(face.face_id, results);
+    }
+
+    // Stage C: await the worker pool (if it was kicked off in Stage A),
+    // then fold the heavy results into each face's classification.
+    if (heavyTasks.length > 0) {
+      const heavyOutputs = await Promise.all(heavyTasks);
+      for (const { face_id, results: heavyResults } of heavyOutputs) {
+        const filtered = this.filterHeavyByToggle(heavyResults);
+        this.heavyCache.set(face_id, filtered);
+        const cls = classifications[face_id];
+        if (cls) {
+          // Re-fuse with the heavy results merged in.
+          const merged = { ...cls.analyzer_results, ...filtered };
+          classifications[face_id] = this.fuser.fuse(face_id, merged);
+        }
+      }
+    } else if (runHeavy && !this.enableHeavyWorker) {
+      // Inline path already merged the heavies into each face's results
+      // above. Cache the heavy subset now so skipped frames can reuse it.
+      for (const face of faces) {
+        const cls = classifications[face.face_id];
+        if (!cls) continue;
+        const heavy = this.filterHeavyByToggle(cls.analyzer_results);
+        if (Object.keys(heavy).length > 0) {
+          this.heavyCache.set(face.face_id, heavy);
+        }
+      }
+    } else {
+      // Frame skipped — replay the previous heavy results from cache.
+      for (const face of faces) {
+        const cached = this.heavyCache.get(face.face_id);
+        if (!cached) continue;
+        const cls = classifications[face.face_id];
+        if (cls) {
+          const merged = { ...cls.analyzer_results, ...cached };
+          classifications[face.face_id] = this.fuser.fuse(face.face_id, merged);
+        }
+      }
     }
 
     const total_ms = performance.now() - start;
@@ -299,7 +531,19 @@ export class SpoofDetector {
     };
 
     this.engine.ingest(analysis);
+    // Run the optional LivenessProver alongside the SessionEngine — it
+    // produces its own peak-sensitive passive-proof verdict, exposed via
+    // getProof() for callers that want a second authoritative score.
+    if (this.toggles.livenessProver) {
+      this.ensureLivenessProver().ingest(analysis);
+    }
     return analysis;
+  }
+
+  /** Get the current LivenessProver passive-proof score (Phase 4C). */
+  getProof(): ReturnType<LivenessProver["getProof"]> | null {
+    if (!this.toggles.livenessProver || !this.livenessProver) return null;
+    return this.livenessProver.getProof();
   }
 
   /** Get current (interim) verdict. */
@@ -325,13 +569,24 @@ export class SpoofDetector {
     this.rppg?.reset();
     this.screenReplay?.reset();
     this.texture?.reset();
+    this.backgroundGrid?.reset();
+    this.temporal?.reset();
+    this.livenessProver?.reset();
     // MoireAnalyzer has no reset() — it's stateless per-frame.
     // Gates are stateful (streak counters) — replace with a fresh instance.
     this.faceUsabilityGate = null;
+    // Frame-skip + worker offload caches must be flushed too, otherwise
+    // a fresh session would inherit the previous session's heavy scores.
+    this.heavyCache.clear();
+    this.gateCache = undefined;
   }
 
   /** Release native resources. */
   async close(): Promise<void> {
+    if (this.heavyPool) {
+      this.heavyPool.dispose();
+      this.heavyPool = null;
+    }
     await this.detector.close();
   }
 
@@ -360,21 +615,87 @@ export class SpoofDetector {
     if (!this.rppg) this.rppg = new RppgAnalyzer();
     return this.rppg;
   }
-  private ensureMoire(): MoireAnalyzer {
-    if (!this.moire) this.moire = new MoireAnalyzer();
+  private ensureBackgroundGrid(): BackgroundGridAnalyzer {
+    if (!this.backgroundGrid) this.backgroundGrid = new BackgroundGridAnalyzer();
+    return this.backgroundGrid;
+  }
+  private ensureTemporal(): TemporalAnalyzer {
+    if (!this.temporal) this.temporal = new TemporalAnalyzer();
+    return this.temporal;
+  }
+  private ensureLivenessProver(): LivenessProver {
+    if (!this.livenessProver) {
+      this.livenessProver = new LivenessProver();
+      this.livenessProver.start();
+    }
+    return this.livenessProver;
+  }
+  // === Lazy-import helpers for heavy analyzers (Phase 5E-1) ===
+  // Returning Promise<T> instead of T forces every call site to `await`,
+  // which is what makes Vite emit each of these modules as its own
+  // dist/spoof-detector-*.js chunk (verifiable via `npm run build`).
+  private async ensureMoire(): Promise<MoireAnalyzer> {
+    if (!this.moire) {
+      const mod = await import("./infrastructure/analyzers/MoireAnalyzer");
+      this.moire = new mod.MoireAnalyzer();
+    }
     return this.moire;
   }
-  private ensureTexture(): TextureAnalyzer {
-    if (!this.texture) this.texture = new TextureAnalyzer();
+  private async ensureTexture(): Promise<TextureAnalyzer> {
+    if (!this.texture) {
+      const mod = await import("./infrastructure/analyzers/TextureAnalyzer");
+      this.texture = new mod.TextureAnalyzer();
+    }
     return this.texture;
   }
-  private ensureScreenReplay(): ScreenReplayAnalyzer {
-    if (!this.screenReplay) this.screenReplay = new ScreenReplayAnalyzer();
+  private async ensureScreenReplay(): Promise<ScreenReplayAnalyzer> {
+    if (!this.screenReplay) {
+      const mod = await import(
+        "./infrastructure/analyzers/ScreenReplayAnalyzer"
+      );
+      this.screenReplay = new mod.ScreenReplayAnalyzer();
+    }
     return this.screenReplay;
   }
   private ensureFaceUsabilityGate(): FaceUsabilityGate {
     if (!this.faceUsabilityGate) this.faceUsabilityGate = new FaceUsabilityGate();
     return this.faceUsabilityGate;
+  }
+
+  /**
+   * Lazy-create the heavy-analyzer worker pool. The pool itself defers
+   * Worker construction until its first call, so importing SpoofDetector
+   * with `enableHeavyWorker: false` (or in a no-Worker environment) does
+   * NOT spin up a thread.
+   */
+  private ensureHeavyPool(): HeavyAnalyzerPool {
+    if (!this.heavyPool) this.heavyPool = new HeavyAnalyzerPool();
+    return this.heavyPool;
+  }
+
+  /**
+   * Strip the worker-pool result down to ONLY the heavy analyzers
+   * currently enabled via toggles. The worker always runs all four for
+   * simplicity; the gate at this layer is cheap and keeps the fusion
+   * results identical to the inline path.
+   */
+  private filterHeavyByToggle(
+    results: Record<string, AnalyzerResult>,
+  ): Record<string, AnalyzerResult> {
+    const out: Record<string, AnalyzerResult> = {};
+    if (this.toggles.deviceBoundary && results.device_boundary) {
+      out.device_boundary = results.device_boundary;
+    }
+    if (this.toggles.screenReplay && results.screen_replay) {
+      out.screen_replay = results.screen_replay;
+    }
+    if (this.toggles.texture && results.texture) {
+      out.texture = results.texture;
+    }
+    if (this.toggles.moire && results.moire) {
+      out.moire = results.moire;
+    }
+    return out;
   }
 }
 

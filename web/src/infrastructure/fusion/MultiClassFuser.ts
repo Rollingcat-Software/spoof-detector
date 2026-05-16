@@ -28,22 +28,35 @@ import { SPOOF_SIGNAL_MAP } from "../../domain/taxonomy";
  * Calibrated weights based on measured discrimination power.
  * Higher weight = analyzer score has more influence on final classification.
  *
- * Mirrors `DEFAULT_ANALYZER_WEIGHTS` in multi_class_fuser.py exactly.
+ * Mirrors `DEFAULT_ANALYZER_WEIGHTS` in multi_class_fuser.py — and now
+ * incorporates the paper's leave-one-out findings (`paper/sections/00_abstract.md`):
+ *   (i) Laplacian-texture & Gabor-moire are *anti-correlated* on modern
+ *       high-resolution capture — re-weighting them from 1.0 to 0.1
+ *       recovered 0.017 of the 0.019 AUC gap; here we ship them at 0.0
+ *       (skipped by the fuser's `weight <= 0` short-circuit).
+ *   (ii) device_boundary & micro_tremor were calibrated on in-house data
+ *        and HURT zero-shot CASIA-FASD AUC (−0.027, −0.021). Reduced
+ *        from 2.5 → 0.5 so they still contribute but no longer dominate.
+ *   (iii) background_grid is the sole positive transferable contributor
+ *         (+0.014 LOO AUC). Held at 1.5.
+ * Consumers can re-enable texture/moire at their original 1.0 via
+ * constructor `analyzerWeights` override for use on lower-resolution
+ * capture or for ablation studies.
  */
 export const DEFAULT_ANALYZER_WEIGHTS: Readonly<Record<string, number>> = {
   minifasnet: 5.0,        // PROVEN: +94.7 gap
-  screen_flicker: 3.0,    // NEW: 50/60Hz temporal detection — catches ANY screen
-  device_boundary: 2.5,   // GOOD: physical bezel detection
-  micro_tremor: 2.5,      // NEW: 8-12Hz oscillation — catches video replay
+  screen_flicker: 3.0,    // 50/60Hz temporal detection — catches ANY screen
   landmark_variance: 2.0, // STRONG: zero variance = photo
-  background_grid: 1.5,   // NEW: background stability for proctoring
-  rppg: 0.5,              // ACTIVE in browser bundle (2026-05-16): pulse from green channel
-  blink: 0.5,             // MODERATE: blink count
+  background_grid: 1.5,   // PAPER LOO: +0.014 AUC, sole positive transfer
+  device_boundary: 0.5,   // PAPER LOO: -0.027 AUC zero-shot, reduced 2.5→0.5
+  micro_tremor: 0.5,      // PAPER LOO: -0.021 AUC zero-shot, reduced 2.5→0.5
+  rppg: 0.5,              // green-channel pulse
+  blink: 0.5,             // EAR over time
   screen_replay: 0.5,     // WEAK: +9.6 gap
-  ar_filter: 0.3,         // MODERATE: heuristic mode
-  temporal: 0.3,          // NEUTRAL: micro-motion
-  texture: 0.1,           // ANTI-CORRELATED: suppressed
-  moire: 0.1,             // ANTI-CORRELATED: suppressed
+  ar_filter: 0.3,         // heuristic mode
+  temporal: 0.3,          // micro-motion
+  texture: 0.0,           // PAPER ANTI-CORRELATED — disabled by default
+  moire: 0.0,             // PAPER ANTI-CORRELATED — disabled by default
 };
 
 /**

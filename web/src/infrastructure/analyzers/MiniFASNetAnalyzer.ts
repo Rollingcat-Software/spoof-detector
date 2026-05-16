@@ -99,12 +99,49 @@ export class MiniFASNetAnalyzer {
     // Dynamic import keeps onnxruntime-web out of the synchronous bundle —
     // mirrors the lazy-load pattern used in web-app's CardDetector.ts.
     const ort = await import("onnxruntime-web");
-    const providers =
-      this.options.executionProviders ?? (["wasm"] as const);
 
-    this.session = await ort.InferenceSession.create(this.options.modelUrl, {
-      executionProviders: providers as unknown as string[],
-    });
+    // Phase 5E-2: try WebGPU first, fall back to WASM. The caller can opt
+    // out by pinning `executionProviders: ['wasm']` in MiniFASNetOptions.
+    //
+    // Mobile-Brave safety: Brave on Android may block WebGPU for fingerprint
+    // resistance, and Safari iOS WebGPU is still flag-gated. We feature-detect
+    // `navigator.gpu` AND try-catch the InferenceSession.create() call. Any
+    // failure (no `gpu`, no adapter, ORT shader-compile failure, etc.) falls
+    // back to WASM silently — the analyzer still works, just slower.
+    const callerProviders = this.options.executionProviders;
+    const providers: ReadonlyArray<"wasm" | "webgpu" | "webgl" | "cpu"> =
+      callerProviders ?? (await tryWebGpuProviders());
+
+    try {
+      this.session = await ort.InferenceSession.create(this.options.modelUrl, {
+        executionProviders: providers as unknown as string[],
+      });
+      // ORT-Web doesn't expose which EP actually bound the kernels, but the
+      // creation call would have rejected if NONE in the list worked. Log
+      // the negotiated list so devtools shows whether the upgrade landed.
+      // eslint-disable-next-line no-console
+      console.info(
+        `[MiniFASNet] ORT session created with EP order: [${providers.join(", ")}]`,
+      );
+    } catch (primaryErr) {
+      // Belt-and-suspenders: if WebGPU made it into the EP list and the
+      // create call still threw (some Brave builds advertise `navigator.gpu`
+      // but reject WGSL compile), retry with WASM-only.
+      if (providers.length > 0 && providers[0] !== "wasm") {
+        // eslint-disable-next-line no-console
+        console.info(
+          `[MiniFASNet] WebGPU EP failed (${
+            (primaryErr as Error).message
+          }), retrying with WASM-only fallback`,
+        );
+        this.session = await ort.InferenceSession.create(
+          this.options.modelUrl,
+          { executionProviders: ["wasm"] as unknown as string[] },
+        );
+      } else {
+        throw primaryErr;
+      }
+    }
 
     const inputCfg = this.session.inputNames[0];
     const outputCfg = this.session.outputNames[0];
@@ -295,4 +332,33 @@ function dimsOf(src: SourceImage): { w: number; h: number } {
 function errorMessage(e: unknown): string {
   if (e instanceof Error) return e.message;
   return String(e);
+}
+
+/**
+ * Phase 5E-2: Probe `navigator.gpu` (no actual `requestAdapter()` call —
+ * that would burn time on browsers that DO expose `gpu` but block adapters,
+ * notably some Brave-mobile builds). Returning `['webgpu', 'wasm']` lets
+ * ORT-Web 1.18+ negotiate the fallback chain itself, which is cheaper than
+ * us racing the adapter probe.
+ *
+ * Returns the WASM-only list on:
+ *   - any non-browser runtime (Node, ssr)
+ *   - browsers that lack `navigator.gpu` (Firefox stable, Brave-mobile with
+ *     fingerprint shield, Safari iOS < 18, all in-app webviews on older OS)
+ */
+async function tryWebGpuProviders(): Promise<
+  ReadonlyArray<"wasm" | "webgpu" | "webgl" | "cpu">
+> {
+  try {
+    if (
+      typeof navigator !== "undefined" &&
+      "gpu" in navigator &&
+      (navigator as Navigator & { gpu?: unknown }).gpu != null
+    ) {
+      return ["webgpu", "wasm"];
+    }
+  } catch {
+    // navigator access can throw under unusual sandboxing — fall through.
+  }
+  return ["wasm"];
 }
