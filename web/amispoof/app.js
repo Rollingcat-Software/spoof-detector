@@ -398,24 +398,28 @@ function updateUI(analysis, v) {
   );
   els.details.textContent = JSON.stringify(detailDump, null, 2);
 
-  // Aysenur's face-usability gate result.
+  // Aysenur's face-usability gate result. Advisory only — never blocks
+  // the main verdict. On mobile cameras at low FPS the per-region pixel
+  // thresholds (calibrated for the Python desktop pipeline) tend to
+  // false-positive on a perfectly live face, so the labels here are
+  // softened and the gate's verdict is presented as a "second opinion"
+  // rather than a hard block.
   const gate = analysis.gate_result;
   lastGateResult = gate ?? null;
   if (gate && els.gateBody) {
-    const lines = [];
-    lines.push(
-      `<div class="row"><span>State</span><span>${gate.state}</span></div>`,
-      `<div class="row"><span>Usable</span><span class="${gate.usable ? "ok" : "bad"}">${
-        gate.usable ? "yes" : "no"
-      }</span></div>`,
-      `<div class="row"><span>Quality OK</span><span>${gate.qualityOk ? "yes" : "no"}</span></div>`,
-      `<div class="row"><span>Occluded</span><span>${gate.occluded ? "yes" : "no"}</span></div>`,
+    const headlineText = gate.usable
+      ? "Face usable"
+      : `Advisory: ${gate.reason.replace(/_/g, " ")}`;
+    const headlineClass = gate.usable ? "ok" : "warn";
+    const lines = [
+      `<div class="gate-headline ${headlineClass}">${headlineText}</div>`,
+      `<div class="row"><span>State</span><span>${gate.state.replace(/_/g, " ").toLowerCase()}</span></div>`,
       `<div class="row"><span>Occlusion score</span><span>${(gate.occlusionScore * 100).toFixed(0)}%</span></div>`,
       `<div class="row"><span>Illumination score</span><span>${(gate.illuminationScore * 100).toFixed(0)}%</span></div>`,
-    );
+    ];
     if (gate.occludedRegions.length > 0) {
       lines.push(
-        `<div class="row"><span>Occluded regions</span><span>${gate.occludedRegions.join(", ")}</span></div>`,
+        `<div class="row"><span>Flagged regions</span><span>${gate.occludedRegions.join(", ")}</span></div>`,
       );
     }
     if (gate.underexposedRegions.length > 0) {
@@ -426,11 +430,6 @@ function updateUI(analysis, v) {
     if (gate.overexposedRegions.length > 0) {
       lines.push(
         `<div class="row"><span>Over-exposed</span><span>${gate.overexposedRegions.join(", ")}</span></div>`,
-      );
-    }
-    if (!gate.usable && gate.reason) {
-      lines.push(
-        `<div class="row"><span>Blocking reason</span><span>${gate.reason}</span></div>`,
       );
     }
     els.gateBody.innerHTML = lines.join("");

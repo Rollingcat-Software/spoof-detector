@@ -331,6 +331,19 @@
       #gateBanner .bad {
         color: var(--red);
       }
+      .gate-headline {
+        font-weight: 600;
+        font-size: 13px;
+        margin-bottom: 6px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid var(--border);
+      }
+      .gate-headline.ok {
+        color: var(--green);
+      }
+      .gate-headline.warn {
+        color: var(--amber);
+      }
       .attack-guide {
         display: flex;
         flex-wrap: wrap;
@@ -491,10 +504,10 @@
       <h2>Analyzers — live score (higher = more live)</h2>
       <div id="analyzers"></div>
 
-      <h2>
+      <h2 title="Independent second-opinion check. Calibrated against Python; the browser port may flag live faces at low mobile FPS — the main verdict above is the authoritative signal.">
         Face usability gate
         <span style="font-size: 9px; color: #58a6ff; font-weight: normal"
-          >Ayşenur — illumination + region visibility</span
+          >Ayşenur — advisory, second opinion</span
         >
       </h2>
       <div id="gateBanner"><div id="gateBody">waiting…</div></div>
