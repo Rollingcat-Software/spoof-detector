@@ -14,12 +14,25 @@ import * as ort from "onnxruntime-web";
 import {
   createSpoofDetector,
   runCasiaFasdMicroBench,
-} from "./lib/spoof-detector.js?v=2026-05-16-phase4";
+} from "./lib/spoof-detector.js?v=2026-05-16-confnorm";
 
 // Version handshake — checked by the inline script in index.html.
 // If the user is running a stale cached app.js (no AMISPOOF_VERSION),
 // the HTML triggers a one-shot reload after 4 s.
-window.AMISPOOF_VERSION = "2026-05-16-phase4";
+window.AMISPOOF_VERSION = "2026-05-16-confnorm";
+
+// SessionEngine.getVerdict() returns a confidence in [0, 0.88] when the
+// LivenessProver is wired (structural ceiling — see SessionEngine.ts
+// confidence formula: 0.3 floor + 0.3 prover-max + 0.28 fusion-max).
+// Human-facing surfaces (the verdict badge and copy-to-clipboard text)
+// normalize to [0, 100] so users don't read 81% as "still uncertain".
+// Machine surfaces (downloaded JSON, bench rows) keep the raw value.
+const RAW_CONFIDENCE_CEILING = 0.88;
+function displayConfPct(rawConfidence) {
+  const normalized = (rawConfidence ?? 0) / RAW_CONFIDENCE_CEILING;
+  const clamped = Math.max(0, Math.min(1, normalized));
+  return Math.round(clamped * 100);
+}
 
 const ORT_WASM_BASE =
   "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/";
@@ -361,7 +374,7 @@ function updateUI(analysis, v) {
   lastTs = now;
 
   els.verdictText.textContent = v.summary;
-  els.verdictConf.textContent = `${(v.confidence * 100).toFixed(0)}% conf`;
+  els.verdictConf.textContent = `${displayConfPct(v.confidence)}% conf`;
   const warming = v.frames_analyzed < 30;
   els.verdict.classList.toggle("live", !warming && v.is_live);
   els.verdict.classList.toggle("spoof", !warming && !v.is_live);
@@ -594,8 +607,18 @@ if (els.bench) {
 els.copyVerdict.addEventListener("click", async () => {
   const v = lastVerdict;
   if (!v) return;
+  // Rebuild the summary line locally so the copied text uses the same
+  // normalized confidence as the on-screen badge. v.summary from the
+  // engine carries the raw confidence (correct for SDK consumers, but
+  // would contradict the UI on the human-facing copy surface).
+  const verdictWord = v.is_live ? "LIVE" : "SPOOF";
+  const threat = v.dominant_threat ? ` (${v.dominant_threat})` : "";
+  const summary =
+    `${verdictWord}${threat} | conf=${displayConfPct(v.confidence)}% | ` +
+    `${v.session_duration_sec.toFixed(1)}s | ${v.frames_analyzed} frames | ` +
+    `blinks=${v.blink_count ?? 0} | incidents=${v.incidents.length}`;
   const text = [
-    v.summary,
+    summary,
     "",
     "Per-analyzer scores:",
     ...ANALYZER_ORDER.map((cfg) => {
