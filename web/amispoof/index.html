@@ -166,16 +166,26 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
+        transition: color 280ms ease, background 280ms ease,
+          border-color 280ms ease, box-shadow 280ms ease;
       }
       #verdict.live {
         color: var(--green);
         border-color: var(--green-border);
         background: rgba(35, 134, 54, 0.08);
+        box-shadow: 0 0 0 1px rgba(63, 185, 80, 0.25);
       }
       #verdict.spoof {
         color: var(--red);
         border-color: var(--red-border);
-        background: rgba(218, 54, 51, 0.08);
+        background: rgba(218, 54, 51, 0.10);
+        box-shadow: 0 0 24px rgba(248, 81, 73, 0.3),
+          0 0 0 1px rgba(248, 81, 73, 0.45);
+        animation: spoofPulse 1.4s ease-in-out infinite;
+      }
+      @keyframes spoofPulse {
+        0%, 100% { box-shadow: 0 0 16px rgba(248, 81, 73, 0.25), 0 0 0 1px rgba(248, 81, 73, 0.45); }
+        50% { box-shadow: 0 0 32px rgba(248, 81, 73, 0.55), 0 0 0 1px rgba(248, 81, 73, 0.7); }
       }
       #verdict.warming {
         color: var(--amber);
@@ -184,6 +194,7 @@
         font-size: 13px;
         font-weight: 500;
         color: var(--muted);
+        font-variant-numeric: tabular-nums;
       }
       .row {
         display: flex;
@@ -203,6 +214,25 @@
         margin: 6px 0;
         font-size: 12px;
         font-variant-numeric: tabular-nums;
+        cursor: help;
+        transition: background 120ms ease;
+        padding: 2px 4px;
+        border-radius: 4px;
+      }
+      .analyzer-row:hover {
+        background: rgba(255, 255, 255, 0.03);
+      }
+      .analyzer-group-title {
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        color: var(--accent);
+        margin: 12px 0 4px 0;
+        font-weight: 600;
+        opacity: 0.8;
+      }
+      .analyzer-group-title:first-child {
+        margin-top: 0;
       }
       .analyzer-row .name {
         color: var(--muted);
@@ -231,7 +261,7 @@
           #d29922 50%,
           #3fb950 100%
         );
-        transition: width 80ms linear;
+        transition: width 220ms cubic-bezier(0.22, 0.61, 0.36, 1);
       }
       .analyzer-row .val {
         text-align: right;
@@ -281,6 +311,52 @@
         max-height: 200px;
         font-size: 10px;
       }
+      #gateBanner {
+        border: 1px solid var(--border);
+        background: #21262d;
+        border-radius: 6px;
+        padding: 8px 10px;
+        font-size: 11px;
+      }
+      #gateBanner.warn {
+        border-color: var(--amber);
+        background: rgba(210, 153, 34, 0.08);
+      }
+      #gateBanner .row {
+        font-size: 11px;
+      }
+      #gateBanner .ok {
+        color: var(--green);
+      }
+      #gateBanner .bad {
+        color: var(--red);
+      }
+      .attack-guide {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        justify-content: center;
+        max-width: 720px;
+        font-size: 12px;
+      }
+      .attack-guide .ag-title {
+        color: var(--muted);
+        font-weight: 500;
+      }
+      .attack-guide .ag-chip {
+        background: rgba(88, 166, 255, 0.08);
+        color: var(--accent);
+        border: 1px solid rgba(88, 166, 255, 0.25);
+        padding: 4px 10px;
+        border-radius: 999px;
+        cursor: help;
+        transition: background 120ms ease, transform 120ms ease;
+      }
+      .attack-guide .ag-chip:hover {
+        background: rgba(88, 166, 255, 0.16);
+        transform: translateY(-1px);
+      }
       .incident-list {
         max-height: 140px;
         overflow-y: auto;
@@ -318,13 +394,20 @@
         border-radius: 50%;
         background: var(--muted);
         margin-right: 6px;
+        vertical-align: 1px;
       }
       .status-dot.live {
         background: var(--green);
         box-shadow: 0 0 6px var(--green);
+        animation: livePulse 1.6s ease-in-out infinite;
+      }
+      @keyframes livePulse {
+        0%, 100% { opacity: 1; box-shadow: 0 0 4px var(--green); }
+        50% { opacity: 0.7; box-shadow: 0 0 10px var(--green); }
       }
       .status-dot.error {
         background: var(--red);
+        animation: none;
       }
     </style>
 
@@ -371,6 +454,22 @@
         keeps it flipped, even if a live face follows. Everything below runs
         entirely client-side — no frames leave your browser.
       </p>
+
+      <div class="attack-guide">
+        <span class="ag-title">Try a spoof attack:</span>
+        <span class="ag-chip" title="Most photos take 15–25s to flip — needs the no-blink incident detector to fire 3 times">
+          Printed photo
+        </span>
+        <span class="ag-chip" title="Screen flicker (50/60 Hz) + moire + screen-replay should drop within a few seconds">
+          Phone showing your face
+        </span>
+        <span class="ag-chip" title="Triggers occluded regions in the face-usability gate">
+          Cover your mouth/nose
+        </span>
+        <span class="ag-chip" title="Live light off and stay still — illumination gate flags it">
+          Dark room
+        </span>
+      </div>
     </main>
 
     <aside>
@@ -391,6 +490,14 @@
 
       <h2>Analyzers — live score (higher = more live)</h2>
       <div id="analyzers"></div>
+
+      <h2>
+        Face usability gate
+        <span style="font-size: 9px; color: #58a6ff; font-weight: normal"
+          >Ayşenur — illumination + region visibility</span
+        >
+      </h2>
+      <div id="gateBanner"><div id="gateBody">waiting…</div></div>
 
       <h2>P(spoof) by attack category</h2>
       <div id="cats"></div>
