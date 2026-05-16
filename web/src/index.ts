@@ -253,7 +253,6 @@ export class SpoofDetector {
       executionProviders: opts.ortExecutionProviders,
     });
     this.fuser = new MultiClassFuser(opts.analyzerWeights);
-    this.engine = new SessionEngine({ sessionId: opts.sessionId });
     this.toggles = {
       landmarkVariance: opts.enableLandmarkVariance !== false,
       blink: opts.enableBlink !== false,
@@ -269,6 +268,16 @@ export class SpoofDetector {
       faceUsabilityGate: opts.enableFaceUsabilityGate !== false,
       livenessProver: opts.enableLivenessProver !== false,
     };
+    // LivenessProver is owned by the SessionEngine so its `isProvenLive` gate
+    // joins the verdict AND-condition (matches Python design). When the
+    // toggle is off we pass null and the engine falls back to fusion-only.
+    if (this.toggles.livenessProver) {
+      this.livenessProver = new LivenessProver();
+    }
+    this.engine = new SessionEngine({
+      sessionId: opts.sessionId,
+      prover: this.livenessProver,
+    });
     this.enableHeavyWorker = opts.enableHeavyWorker !== false;
     // Clamp to >= 1: a value of 0 or 1 means "run every frame" (no skip).
     this.heavyAnalyzerFrameSkip = Math.max(
@@ -530,13 +539,9 @@ export class SpoofDetector {
       gate_result: gateResult,
     };
 
+    // LivenessProver is now driven inside SessionEngine.ingest() so the
+    // two stay in lockstep — single source of truth for prover lifecycle.
     this.engine.ingest(analysis);
-    // Run the optional LivenessProver alongside the SessionEngine — it
-    // produces its own peak-sensitive passive-proof verdict, exposed via
-    // getProof() for callers that want a second authoritative score.
-    if (this.toggles.livenessProver) {
-      this.ensureLivenessProver().ingest(analysis);
-    }
     return analysis;
   }
 
@@ -571,7 +576,7 @@ export class SpoofDetector {
     this.texture?.reset();
     this.backgroundGrid?.reset();
     this.temporal?.reset();
-    this.livenessProver?.reset();
+    // LivenessProver is reset inside SessionEngine.reset() (single source of truth).
     // MoireAnalyzer has no reset() — it's stateless per-frame.
     // Gates are stateful (streak counters) — replace with a fresh instance.
     this.faceUsabilityGate = null;
@@ -623,13 +628,9 @@ export class SpoofDetector {
     if (!this.temporal) this.temporal = new TemporalAnalyzer();
     return this.temporal;
   }
-  private ensureLivenessProver(): LivenessProver {
-    if (!this.livenessProver) {
-      this.livenessProver = new LivenessProver();
-      this.livenessProver.start();
-    }
-    return this.livenessProver;
-  }
+  // LivenessProver is constructed eagerly in the constructor when the toggle
+  // is on and injected into the SessionEngine — no lazy helper needed.
+
   // === Lazy-import helpers for heavy analyzers (Phase 5E-1) ===
   // Returning Promise<T> instead of T forces every call site to `await`,
   // which is what makes Vite emit each of these modules as its own
