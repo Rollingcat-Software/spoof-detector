@@ -208,4 +208,24 @@ export interface FrameAnalysis {
   classifications: Record<number, SpoofClassification>;
   frame_signals: Record<string, number>;
   total_ms: number;
+  /**
+   * Optional usability gate result (Aysenur's FaceUsabilityGate). Present
+   * when the SpoofDetector is constructed with enableFaceUsabilityGate
+   * (default true). Inspect `gate_result.usable` for the boolean verdict
+   * and `gate_result.reason` for the blocking reason. The fusion pipeline
+   * runs regardless — gates are advisory.
+   */
+  gate_result?: {
+    usable: boolean;
+    blocked: boolean;
+    reason: string;
+    state: string;
+    occluded: boolean;
+    qualityOk: boolean;
+    occlusionScore: number;
+    illuminationScore: number;
+    occludedRegions: readonly string[];
+    underexposedRegions: readonly string[];
+    overexposedRegions: readonly string[];
+  };
 }

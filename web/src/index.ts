@@ -3,18 +3,17 @@
 // Phase 1 shipped:
 //   * MediaPipeFaceDetector + MiniFASNetAnalyzer + MultiClassFuser + SessionEngine
 //
-// Phase 2 (this commit) adds the next 5 analyzers — covering ~88% of the
-// fuser's weight mass after Phase 1's MiniFASNet:
+// Phase 2 added 5 video-track analyzers:
+//   * LandmarkVariance / DeviceBoundary / Blink / MicroTremor / ScreenFlicker
 //
-//   * LandmarkVarianceAnalyzer  (weight 2.0)
-//   * DeviceBoundaryAnalyzer    (weight 2.5)
-//   * BlinkAnalyzer             (weight 0.5 — high-impact for incidents)
-//   * MicroTremorAnalyzer       (weight 2.5)
-//   * ScreenFlickerAnalyzer     (weight 3.0)
-//
-// All Phase 2 analyzers are LAZY: the constructor only allocates state;
-// no models are loaded. Only MiniFASNet (ONNX) and MediaPipe (WASM)
-// require an explicit warmup() round-trip.
+// Phase 3 (this commit) lands Aysenur's full algorithmic surface:
+//   * 4 new analyzers — Rppg, Moire, Texture, ScreenReplay
+//   * 1 orchestrating gate  — FaceUsabilityGate (wraps Illumination +
+//     CriticalRegionVisibility), result attached to every FrameAnalysis
+//     as an advisory signal (we never block the analyzer pipeline on it).
+// HybridEvaluator + Assembler are also ported under src/fusion / src/pipeline
+// for callers who want the alternate fusion + advisory verdict shape — they
+// are NOT wired into this facade (which sticks with MultiClassFuser).
 
 import { SessionEngine } from "./application/SessionEngine";
 import {
@@ -25,15 +24,20 @@ import {
 } from "./domain/models";
 import type { IFaceAnalyzer } from "./domain/models";
 import { SessionVerdict } from "./domain/session";
+import { FaceUsabilityGate } from "./gates/FaceUsabilityGate";
 import { BlinkAnalyzer } from "./infrastructure/analyzers/BlinkAnalyzer";
 import { DeviceBoundaryAnalyzer } from "./infrastructure/analyzers/DeviceBoundaryAnalyzer";
 import { LandmarkVarianceAnalyzer } from "./infrastructure/analyzers/LandmarkVarianceAnalyzer";
 import { MicroTremorAnalyzer } from "./infrastructure/analyzers/MicroTremorAnalyzer";
 import { MiniFASNetAnalyzer } from "./infrastructure/analyzers/MiniFASNetAnalyzer";
+import { MoireAnalyzer } from "./infrastructure/analyzers/MoireAnalyzer";
+import { RppgAnalyzer } from "./infrastructure/analyzers/RppgAnalyzer";
 import { ScreenFlickerAnalyzer } from "./infrastructure/analyzers/ScreenFlickerAnalyzer";
+import { ScreenReplayAnalyzer } from "./infrastructure/analyzers/ScreenReplayAnalyzer";
+import { TextureAnalyzer } from "./infrastructure/analyzers/TextureAnalyzer";
 import { MediaPipeFaceDetector } from "./infrastructure/detection/MediaPipeFaceDetector";
 import { MultiClassFuser } from "./infrastructure/fusion/MultiClassFuser";
-import { toImageData } from "./utils/imageOps";
+import { GateBBox, toImageData } from "./utils/imageOps";
 
 export * from "./domain/models";
 export * from "./domain/session";
@@ -45,8 +49,17 @@ export { BlinkAnalyzer } from "./infrastructure/analyzers/BlinkAnalyzer";
 export { DeviceBoundaryAnalyzer } from "./infrastructure/analyzers/DeviceBoundaryAnalyzer";
 export { MicroTremorAnalyzer } from "./infrastructure/analyzers/MicroTremorAnalyzer";
 export { ScreenFlickerAnalyzer } from "./infrastructure/analyzers/ScreenFlickerAnalyzer";
+export { RppgAnalyzer } from "./infrastructure/analyzers/RppgAnalyzer";
+export { MoireAnalyzer } from "./infrastructure/analyzers/MoireAnalyzer";
+export { TextureAnalyzer } from "./infrastructure/analyzers/TextureAnalyzer";
+export { ScreenReplayAnalyzer } from "./infrastructure/analyzers/ScreenReplayAnalyzer";
 export { MediaPipeFaceDetector } from "./infrastructure/detection/MediaPipeFaceDetector";
 export { SessionEngine } from "./application/SessionEngine";
+export { FaceUsabilityGate } from "./gates/FaceUsabilityGate";
+export { IlluminationGate } from "./gates/IlluminationGate";
+export { CriticalRegionVisibilityGate } from "./gates/CriticalRegionVisibilityGate";
+export { HybridFusionEvaluator } from "./fusion/HybridEvaluator";
+export { AntispoofPipelineAssembler } from "./pipeline/Assembler";
 
 export interface SpoofDetectorOptions {
   /** URL to minifasnet_v2.onnx (1.7 MB). */
@@ -66,31 +79,44 @@ export interface SpoofDetectorOptions {
   /** Optional explicit session id. */
   sessionId?: string;
   /**
-   * Phase-2 analyzer toggles. All default to ENABLED. Disabling an
-   * analyzer skips its `analyze()` call AND removes its weight from the
-   * fusion total — safer than setting weight to 0 because the score
-   * never enters the evidence calculation.
+   * Analyzer toggles. All default to ENABLED. Disabling an analyzer skips
+   * its `analyze()` call AND removes its weight from the fusion total —
+   * safer than setting weight to 0 because the score never enters the
+   * evidence calculation.
    */
   enableLandmarkVariance?: boolean;
   enableBlink?: boolean;
   enableDeviceBoundary?: boolean;
   enableMicroTremor?: boolean;
   enableScreenFlicker?: boolean;
+  // Phase 3 (Aysenur's additional analyzers).
+  enableRppg?: boolean;
+  enableMoire?: boolean;
+  enableTexture?: boolean;
+  enableScreenReplay?: boolean;
+  /** Run Aysenur's face-usability gate. Result attached to each FrameAnalysis. Default true. */
+  enableFaceUsabilityGate?: boolean;
 }
 
 /**
- * SpoofDetector — facade combining detection, all 6 ported analyzers,
- * fusion and session aggregation.
+ * SpoofDetector — facade combining detection, all 10 ported analyzers,
+ * the face-usability gate, fusion and session aggregation.
  */
 export class SpoofDetector {
   private readonly detector: MediaPipeFaceDetector;
   private readonly minifasnet: MiniFASNetAnalyzer;
-  // Phase 2 analyzers (lazy-init on first analyzeFrame; nothing to load).
+
+  // Lazy-init analyzers (no models to load).
   private landmarkVariance: LandmarkVarianceAnalyzer | null = null;
   private blink: BlinkAnalyzer | null = null;
   private deviceBoundary: DeviceBoundaryAnalyzer | null = null;
   private microTremor: MicroTremorAnalyzer | null = null;
   private screenFlicker: ScreenFlickerAnalyzer | null = null;
+  private rppg: RppgAnalyzer | null = null;
+  private moire: MoireAnalyzer | null = null;
+  private texture: TextureAnalyzer | null = null;
+  private screenReplay: ScreenReplayAnalyzer | null = null;
+  private faceUsabilityGate: FaceUsabilityGate | null = null;
 
   private readonly fuser: MultiClassFuser;
   private readonly engine: SessionEngine;
@@ -100,6 +126,11 @@ export class SpoofDetector {
     deviceBoundary: boolean;
     microTremor: boolean;
     screenFlicker: boolean;
+    rppg: boolean;
+    moire: boolean;
+    texture: boolean;
+    screenReplay: boolean;
+    faceUsabilityGate: boolean;
   }>;
   private frameId = 0;
   private started = false;
@@ -124,10 +155,15 @@ export class SpoofDetector {
       deviceBoundary: opts.enableDeviceBoundary !== false,
       microTremor: opts.enableMicroTremor !== false,
       screenFlicker: opts.enableScreenFlicker !== false,
+      rppg: opts.enableRppg !== false,
+      moire: opts.enableMoire !== false,
+      texture: opts.enableTexture !== false,
+      screenReplay: opts.enableScreenReplay !== false,
+      faceUsabilityGate: opts.enableFaceUsabilityGate !== false,
     };
   }
 
-  /** Lazy-load both heavy models. Phase 2 analyzers don't need a warmup. */
+  /** Lazy-load both heavy models. Phase 2/3 analyzers don't need a warmup. */
   async warmup(): Promise<void> {
     await Promise.all([this.detector.warmup(), this.minifasnet.warmup()]);
   }
@@ -163,16 +199,44 @@ export class SpoofDetector {
 
     // 2) Set the original frame on analyzers that need surroundings.
     this.minifasnet.setFrame(input);
-    if (this.toggles.deviceBoundary) {
-      const a = this.ensureDeviceBoundary();
-      a.setFrame(input);
-    }
-    if (this.toggles.screenFlicker) {
-      const a = this.ensureScreenFlicker();
-      a.setFrame(input);
+    if (this.toggles.deviceBoundary) this.ensureDeviceBoundary().setFrame(input);
+    if (this.toggles.screenFlicker) this.ensureScreenFlicker().setFrame(input);
+    if (this.toggles.screenReplay) this.ensureScreenReplay().setFrame(input);
+    if (this.toggles.texture) this.ensureTexture().setFrame(input);
+    if (this.toggles.rppg) this.ensureRppg().setFrame(input);
+
+    // 3) Run Aysenur's face-usability gate (advisory — never blocks).
+    let gateResult: FrameAnalysis["gate_result"] = undefined;
+    if (this.toggles.faceUsabilityGate) {
+      try {
+        const primary = faces[0];
+        const fullImageData = toImageData(input);
+        const gateBbox: GateBBox | null = primary
+          ? [primary.bbox.x1, primary.bbox.y1, primary.bbox.x2, primary.bbox.y2]
+          : null;
+        const g = this.ensureFaceUsabilityGate().evaluate(
+          fullImageData,
+          gateBbox,
+        );
+        gateResult = {
+          usable: g.usable,
+          blocked: g.blocked,
+          reason: g.reason,
+          state: g.state,
+          occluded: g.occluded,
+          qualityOk: g.qualityOk,
+          occlusionScore: g.occlusionScore,
+          illuminationScore: g.illuminationScore,
+          occludedRegions: g.occludedRegions,
+          underexposedRegions: g.underexposedRegions,
+          overexposedRegions: g.overexposedRegions,
+        };
+      } catch {
+        // Gate failures are silent — the analyzer pipeline must keep working.
+      }
     }
 
-    // 3) Per-face analysis. Run every enabled analyzer.
+    // 4) Per-face analysis. Run every enabled analyzer.
     const classifications: Record<number, SpoofClassification> = {};
     for (const face of faces) {
       const results: Record<string, AnalyzerResult> = {};
@@ -182,7 +246,6 @@ export class SpoofDetector {
       const mfn = await this.minifasnet.analyze(crop, face);
       results[mfn.name] = mfn;
 
-      // Phase 2 analyzers — order matches DEFAULT_ANALYZER_WEIGHTS desc.
       if (this.toggles.screenFlicker) {
         const a = this.ensureScreenFlicker();
         results[a.name] = await asyncify(a.analyze(crop, face));
@@ -203,6 +266,23 @@ export class SpoofDetector {
         const a = this.ensureBlink();
         results[a.name] = await asyncify(a.analyze(crop, face));
       }
+      // Phase 3 (Aysenur).
+      if (this.toggles.rppg) {
+        const a = this.ensureRppg();
+        results[a.name] = await asyncify(a.analyze(crop, face));
+      }
+      if (this.toggles.screenReplay) {
+        const a = this.ensureScreenReplay();
+        results[a.name] = await asyncify(a.analyze(crop, face));
+      }
+      if (this.toggles.texture) {
+        const a = this.ensureTexture();
+        results[a.name] = await asyncify(a.analyze(crop, face));
+      }
+      if (this.toggles.moire) {
+        const a = this.ensureMoire();
+        results[a.name] = await asyncify(a.analyze(crop, face));
+      }
 
       const cls = this.fuser.fuse(face.face_id, results);
       classifications[face.face_id] = cls;
@@ -215,6 +295,7 @@ export class SpoofDetector {
       classifications,
       frame_signals: {},
       total_ms,
+      gate_result: gateResult,
     };
 
     this.engine.ingest(analysis);
@@ -241,6 +322,12 @@ export class SpoofDetector {
     this.deviceBoundary?.reset();
     this.microTremor?.reset();
     this.screenFlicker?.reset();
+    this.rppg?.reset();
+    this.screenReplay?.reset();
+    this.texture?.reset();
+    // MoireAnalyzer has no reset() — it's stateless per-frame.
+    // Gates are stateful (streak counters) — replace with a fresh instance.
+    this.faceUsabilityGate = null;
   }
 
   /** Release native resources. */
@@ -248,11 +335,9 @@ export class SpoofDetector {
     await this.detector.close();
   }
 
-  // === Phase 2 lazy-init helpers ===
+  // === Lazy-init helpers ===
   private ensureLandmarkVariance(): LandmarkVarianceAnalyzer {
-    if (!this.landmarkVariance) {
-      this.landmarkVariance = new LandmarkVarianceAnalyzer();
-    }
+    if (!this.landmarkVariance) this.landmarkVariance = new LandmarkVarianceAnalyzer();
     return this.landmarkVariance;
   }
   private ensureBlink(): BlinkAnalyzer {
@@ -260,9 +345,7 @@ export class SpoofDetector {
     return this.blink;
   }
   private ensureDeviceBoundary(): DeviceBoundaryAnalyzer {
-    if (!this.deviceBoundary) {
-      this.deviceBoundary = new DeviceBoundaryAnalyzer();
-    }
+    if (!this.deviceBoundary) this.deviceBoundary = new DeviceBoundaryAnalyzer();
     return this.deviceBoundary;
   }
   private ensureMicroTremor(): MicroTremorAnalyzer {
@@ -272,6 +355,26 @@ export class SpoofDetector {
   private ensureScreenFlicker(): ScreenFlickerAnalyzer {
     if (!this.screenFlicker) this.screenFlicker = new ScreenFlickerAnalyzer();
     return this.screenFlicker;
+  }
+  private ensureRppg(): RppgAnalyzer {
+    if (!this.rppg) this.rppg = new RppgAnalyzer();
+    return this.rppg;
+  }
+  private ensureMoire(): MoireAnalyzer {
+    if (!this.moire) this.moire = new MoireAnalyzer();
+    return this.moire;
+  }
+  private ensureTexture(): TextureAnalyzer {
+    if (!this.texture) this.texture = new TextureAnalyzer();
+    return this.texture;
+  }
+  private ensureScreenReplay(): ScreenReplayAnalyzer {
+    if (!this.screenReplay) this.screenReplay = new ScreenReplayAnalyzer();
+    return this.screenReplay;
+  }
+  private ensureFaceUsabilityGate(): FaceUsabilityGate {
+    if (!this.faceUsabilityGate) this.faceUsabilityGate = new FaceUsabilityGate();
+    return this.faceUsabilityGate;
   }
 }
 

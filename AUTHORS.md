@@ -30,6 +30,17 @@ The accompanying unit-test suite (46 tests across `tests/unit/gates/`, `tests/un
 
 If you build on or evaluate against any of these modules in a publication, please credit Aysenur.
 
+### Browser port — `web/` (2026-05-16)
+
+The TypeScript port under `web/` (published as `@rollingcat/spoof-detector` + the `/amispoof/` browser tester) carries the same authorship lineage:
+
+- **Aysenur's full algorithmic surface ported**: `FaceUsabilityGate`, `IlluminationGate`, `CriticalRegionVisibilityGate`, `HybridFusionEvaluator`, `AntispoofPipelineAssembler`, `MoireAnalyzer`, `RppgAnalyzer`, `TextureAnalyzer`, `ScreenReplayAnalyzer`, plus the `MiniFASNetAnalyzer`, `DeviceBoundaryAnalyzer`, and `BlinkAnalyzer` (whose Python originals also trace back to Aysenur's `working_spoof_detection` branch — see `research/COMPARISON_AYSENUR_vs_PRODUCTIZED.md`).
+- **Ahmet's originals ported**: `LandmarkVarianceAnalyzer`, `MicroTremorAnalyzer`, `ScreenFlickerAnalyzer`, `MediaPipeFaceDetector`, `MultiClassFuser`, `SessionEngine`.
+- 95 vitest tests, all green. Hand-rolled equivalents replace cv2 ops (Sobel, Laplacian, Canny, Gabor, CLAHE→histeq, RGB→HSV/YCrCb/Lab). Algorithmic deviations are documented in each file header.
+- See `research/COMPARISON_AYSENUR_vs_PRODUCTIZED.md` for the authoritative module map and `web/amispoof/README.md` for the deployment runbook.
+
+If you cite or evaluate against the browser port in a publication, the same attribution rule applies: please credit Aysenur for the algorithmic contributions.
+
 ### Research consolidation (2026-05-09)
 
 In addition to the production-ported v0.2.0 modules above, the consolidation

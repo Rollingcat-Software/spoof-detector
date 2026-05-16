@@ -6,3 +6,8 @@ coverage
 public/models/*.onnx
 public/models/*.task
 !public/models/.gitkeep
+
+# /amispoof/ static-deploy bundle — derived from `npm run build` + model staging.
+# Keep only the source (index.html, app.js, README, .gitkeep) checked in.
+amispoof/lib/
+amispoof/models/

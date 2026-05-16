@@ -1,0 +1,16 @@
+<IfModule mod_headers.c>
+  <FilesMatch '\.(onnx|task)$'>
+    Header set Cache-Control 'public, max-age=31536000, immutable'
+  </FilesMatch>
+  <FilesMatch '\.(js|css|map)$'>
+    Header set Cache-Control 'public, max-age=604800'
+  </FilesMatch>
+  Header always set X-Robots-Tag 'noindex, nofollow'
+  Header always set Permissions-Policy 'camera=(self), microphone=()'
+</IfModule>
+
+<IfModule mod_mime.c>
+  AddType application/wasm .wasm
+  AddType application/octet-stream .onnx
+  AddType application/octet-stream .task
+</IfModule>

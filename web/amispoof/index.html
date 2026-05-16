@@ -1,0 +1,612 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>amispoof — FIVUCSAS browser anti-spoof tester</title>
+    <meta
+      name="description"
+      content="Browser-side liveness and anti-spoof tester. Runs the FIVUCSAS spoof-detector pipeline (MiniFASNet + 5 supporting analyzers) entirely client-side; no server GPU, no upload. Hold up a phone or printed photo and watch the verdict change in seconds."
+    />
+    <meta name="robots" content="noindex,nofollow" />
+    <link rel="icon" href="data:," />
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0e1116;
+        --panel: #161b22;
+        --border: #30363d;
+        --text: #e6edf3;
+        --muted: #8b949e;
+        --green: #3fb950;
+        --green-border: #238636;
+        --red: #f85149;
+        --red-border: #da3633;
+        --amber: #d29922;
+        --accent: #58a6ff;
+        font-family:
+          system-ui, -apple-system, "Segoe UI", Roboto, Inter, sans-serif;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 420px;
+        min-height: 100vh;
+      }
+      @media (max-width: 1000px) {
+        body {
+          grid-template-columns: 1fr;
+        }
+        aside {
+          border-left: 0 !important;
+          border-top: 1px solid var(--border);
+        }
+      }
+      header {
+        grid-column: 1 / -1;
+        padding: 18px 28px;
+        border-bottom: 1px solid var(--border);
+        background: #0d1117;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      header h1 {
+        font-size: 17px;
+        margin: 0;
+        font-weight: 600;
+        letter-spacing: 0.2px;
+      }
+      header h1 .tag {
+        color: var(--accent);
+      }
+      header .meta {
+        font-size: 12px;
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+      }
+      main {
+        padding: 28px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 18px;
+      }
+      .video-wrap {
+        position: relative;
+        width: min(100%, 720px);
+        aspect-ratio: 4 / 3;
+        background: #000;
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid var(--border);
+      }
+      video,
+      canvas.overlay {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+      canvas.overlay {
+        pointer-events: none;
+      }
+      .video-wrap[data-state="idle"]::before {
+        content: "Click Start to enable camera";
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        color: var(--muted);
+        font-size: 14px;
+        z-index: 2;
+      }
+      .controls {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        justify-content: center;
+        flex-wrap: wrap;
+        max-width: 100%;
+      }
+      button {
+        background: var(--green-border);
+        color: white;
+        border: 0;
+        padding: 8px 14px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 500;
+        white-space: nowrap;
+        flex: 0 0 auto;
+      }
+      button.ghost {
+        background: transparent;
+        color: var(--text);
+        border: 1px solid var(--border);
+      }
+      button:disabled {
+        background: #30363d;
+        color: var(--muted);
+        cursor: not-allowed;
+      }
+      @media (max-width: 480px) {
+        .controls {
+          gap: 6px;
+        }
+        button {
+          padding: 7px 10px;
+          font-size: 12px;
+          flex: 1 1 calc(50% - 6px);
+          min-width: 0;
+        }
+      }
+      .hint {
+        font-size: 12px;
+        color: var(--muted);
+        max-width: 640px;
+        line-height: 1.6;
+        text-align: center;
+      }
+      aside {
+        background: var(--panel);
+        padding: 24px;
+        border-left: 1px solid var(--border);
+        overflow-y: auto;
+        max-height: calc(100vh - 60px);
+      }
+      h2 {
+        font-size: 12px;
+        margin: 20px 0 10px 0;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        font-weight: 600;
+      }
+      h2:first-child {
+        margin-top: 0;
+      }
+      #verdict {
+        font-size: 22px;
+        font-weight: 600;
+        padding: 14px 16px;
+        border-radius: 8px;
+        background: #21262d;
+        border: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: color 280ms ease, background 280ms ease,
+          border-color 280ms ease, box-shadow 280ms ease;
+      }
+      #verdict.live {
+        color: var(--green);
+        border-color: var(--green-border);
+        background: rgba(35, 134, 54, 0.08);
+        box-shadow: 0 0 0 1px rgba(63, 185, 80, 0.25);
+      }
+      #verdict.spoof {
+        color: var(--red);
+        border-color: var(--red-border);
+        background: rgba(218, 54, 51, 0.10);
+        box-shadow: 0 0 0 1px rgba(248, 81, 73, 0.45);
+      }
+      #verdict.warming {
+        color: var(--amber);
+      }
+      #verdict .conf {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+      }
+      .row {
+        display: flex;
+        justify-content: space-between;
+        font-variant-numeric: tabular-nums;
+        margin: 4px 0;
+        font-size: 13px;
+      }
+      .row span:first-child {
+        color: var(--muted);
+      }
+      .analyzer-row {
+        display: grid;
+        grid-template-columns: 130px 1fr 56px;
+        align-items: center;
+        gap: 10px;
+        margin: 6px 0;
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+        cursor: help;
+        transition: background 120ms ease;
+        padding: 2px 4px;
+        border-radius: 4px;
+      }
+      .analyzer-row:hover {
+        background: rgba(255, 255, 255, 0.03);
+      }
+      .analyzer-group-title {
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        color: var(--accent);
+        margin: 12px 0 4px 0;
+        font-weight: 600;
+        opacity: 0.8;
+      }
+      .analyzer-group-title:first-child {
+        margin-top: 0;
+      }
+      .analyzer-row .name {
+        color: var(--muted);
+        display: flex;
+        gap: 4px;
+        align-items: center;
+      }
+      .analyzer-row .weight {
+        color: var(--accent);
+        font-size: 10px;
+        background: rgba(88, 166, 255, 0.12);
+        padding: 1px 5px;
+        border-radius: 3px;
+      }
+      .analyzer-row .bar {
+        height: 8px;
+        background: #21262d;
+        border-radius: 4px;
+        overflow: hidden;
+      }
+      .analyzer-row .fill {
+        height: 100%;
+        background: linear-gradient(
+          90deg,
+          #f85149 0%,
+          #d29922 50%,
+          #3fb950 100%
+        );
+        transition: width 220ms cubic-bezier(0.22, 0.61, 0.36, 1);
+      }
+      .analyzer-row .val {
+        text-align: right;
+        font-weight: 600;
+      }
+      .cat-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr 56px;
+        align-items: center;
+        gap: 10px;
+        margin: 4px 0;
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+        text-transform: capitalize;
+      }
+      .cat-row .bar {
+        height: 6px;
+        background: #21262d;
+        border-radius: 3px;
+        overflow: hidden;
+      }
+      .cat-row .fill {
+        height: 100%;
+        background: var(--red);
+        transition: width 120ms linear;
+      }
+      .cat-row .val {
+        text-align: right;
+        color: var(--red);
+        font-weight: 600;
+      }
+      details {
+        font-size: 11px;
+        color: var(--muted);
+        margin-top: 6px;
+      }
+      details summary {
+        cursor: pointer;
+        margin: 4px 0;
+        user-select: none;
+      }
+      details pre {
+        background: #0d1117;
+        padding: 8px;
+        border-radius: 4px;
+        overflow-x: auto;
+        max-height: 200px;
+        font-size: 10px;
+      }
+      #gateBanner {
+        border: 1px solid var(--border);
+        background: #21262d;
+        border-radius: 6px;
+        padding: 8px 10px;
+        font-size: 11px;
+      }
+      #gateBanner.warn {
+        border-color: var(--amber);
+        background: rgba(210, 153, 34, 0.08);
+      }
+      #gateBanner .row {
+        font-size: 11px;
+      }
+      #gateBanner .ok {
+        color: var(--green);
+      }
+      #gateBanner .bad {
+        color: var(--red);
+      }
+      .gate-headline {
+        font-weight: 600;
+        font-size: 13px;
+        margin-bottom: 6px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid var(--border);
+      }
+      .gate-headline.ok {
+        color: var(--green);
+      }
+      .gate-headline.warn {
+        color: var(--amber);
+      }
+      .attack-guide {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        justify-content: center;
+        max-width: 720px;
+        font-size: 12px;
+      }
+      .attack-guide .ag-title {
+        color: var(--muted);
+        font-weight: 500;
+      }
+      .attack-guide .ag-chip {
+        background: rgba(88, 166, 255, 0.08);
+        color: var(--accent);
+        border: 1px solid rgba(88, 166, 255, 0.25);
+        padding: 4px 10px;
+        border-radius: 999px;
+        cursor: help;
+        transition: background 120ms ease, transform 120ms ease;
+      }
+      .attack-guide .ag-chip:hover {
+        background: rgba(88, 166, 255, 0.16);
+        transform: translateY(-1px);
+      }
+      .incident-list {
+        max-height: 140px;
+        overflow-y: auto;
+        font-size: 11px;
+        font-variant-numeric: tabular-nums;
+      }
+      .incident-list .incident {
+        padding: 4px 0;
+        border-bottom: 1px solid var(--border);
+        color: var(--muted);
+      }
+      .incident-list .incident b {
+        color: var(--red);
+        font-weight: 600;
+      }
+      footer {
+        grid-column: 1 / -1;
+        padding: 14px 28px;
+        border-top: 1px solid var(--border);
+        font-size: 11px;
+        color: var(--muted);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #0d1117;
+      }
+      footer a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+      .status-dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--muted);
+        margin-right: 6px;
+        vertical-align: 1px;
+      }
+      .status-dot.live {
+        background: var(--green);
+        box-shadow: 0 0 6px var(--green);
+        animation: livePulse 1.6s ease-in-out infinite;
+      }
+      @keyframes livePulse {
+        0%, 100% { opacity: 1; box-shadow: 0 0 4px var(--green); }
+        50% { opacity: 0.7; box-shadow: 0 0 10px var(--green); }
+      }
+      .status-dot.error {
+        background: var(--red);
+        animation: none;
+      }
+    </style>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "onnxruntime-web": "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/+esm",
+          "@mediapipe/tasks-vision": "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/+esm"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <header>
+      <h1>
+        <span class="tag">amispoof</span> — FIVUCSAS browser anti-spoof tester
+      </h1>
+      <div class="meta">
+        <span class="status-dot" id="dot"></span><span id="status"
+          >idle</span
+        >
+      </div>
+    </header>
+
+    <main>
+      <div class="video-wrap" id="videoWrap" data-state="idle">
+        <video id="video" autoplay playsinline muted></video>
+        <canvas class="overlay" id="overlay"></canvas>
+      </div>
+
+      <div class="controls">
+        <button id="start">Start</button>
+        <button id="stop" class="ghost" disabled>Stop</button>
+        <button id="reset" class="ghost" disabled>Reset</button>
+        <button id="download" class="ghost" disabled>Download report</button>
+      </div>
+
+      <p class="hint">
+        Hold a printed photo or another screen showing a face up to the camera
+        and watch the per-analyzer scores drop. The session verdict is
+        peak-sensitive: a single sustained spoof burst flips the verdict and
+        keeps it flipped, even if a live face follows. Everything below runs
+        entirely client-side — no frames leave your browser.
+      </p>
+
+      <div class="attack-guide">
+        <span class="ag-title">Try a spoof attack:</span>
+        <span class="ag-chip" title="Most photos take 15–25s to flip — needs the no-blink incident detector to fire 3 times">
+          Printed photo
+        </span>
+        <span class="ag-chip" title="Screen flicker (50/60 Hz) + moire + screen-replay should drop within a few seconds">
+          Phone showing your face
+        </span>
+        <span class="ag-chip" title="Triggers occluded regions in the face-usability gate">
+          Cover your mouth/nose
+        </span>
+        <span class="ag-chip" title="Live light off and stay still — illumination gate flags it">
+          Dark room
+        </span>
+      </div>
+    </main>
+
+    <aside>
+      <h2>
+        Verdict
+        <button
+          id="copyVerdict"
+          type="button"
+          title="Copy the current verdict + per-analyzer snapshot to clipboard"
+          style="
+            float: right;
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--accent);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            cursor: pointer;
+            font-weight: normal;
+            margin-top: -2px;
+          "
+        >
+          copy
+        </button>
+      </h2>
+      <div id="verdict">
+        <span id="verdictText">waiting…</span>
+        <span class="conf" id="verdictConf"></span>
+      </div>
+
+      <h2>Session</h2>
+      <div class="row"><span>State</span><span id="state">idle</span></div>
+      <div class="row"><span>Frames</span><span id="frames">0</span></div>
+      <div class="row"><span>FPS</span><span id="fps">0.0</span></div>
+      <div class="row"><span>Duration</span><span id="duration">0.0s</span></div>
+      <div class="row"><span>Faces detected</span><span id="faces">0</span></div>
+      <div class="row"><span>Blinks</span><span id="blinks">0</span></div>
+      <div class="row"><span>Incidents</span><span id="incidents">0</span></div>
+
+      <h2>Analyzers — live score (higher = more live)</h2>
+      <div id="analyzers"></div>
+
+      <h2 title="Independent second-opinion check. Calibrated against Python; the browser port may flag live faces at low mobile FPS — the main verdict above is the authoritative signal.">
+        Face usability gate
+        <span style="font-size: 9px; color: #58a6ff; font-weight: normal"
+          >Ayşenur — advisory, second opinion</span
+        >
+      </h2>
+      <div id="gateBanner"><div id="gateBody">waiting…</div></div>
+
+      <h2>P(spoof) by attack category</h2>
+      <div id="cats"></div>
+
+      <h2>Incident ledger</h2>
+      <div class="incident-list" id="incidentList">
+        <div class="incident">No incidents yet.</div>
+      </div>
+
+      <details>
+        <summary>Latest analyzer details (JSON)</summary>
+        <pre id="details">-</pre>
+      </details>
+    </aside>
+
+    <footer>
+      <span
+        ><a href="https://github.com/Rollingcat-Software/spoof-detector"
+          >Rollingcat-Software/spoof-detector</a
+        >
+        · package <code>@rollingcat/spoof-detector</code> ·
+        runs in browser via onnxruntime-web (WASM) + @mediapipe/tasks-vision</span
+      >
+      <span>FIVUCSAS · CSE4297 Marmara University</span>
+    </footer>
+
+    <div
+      id="banner"
+      style="
+        display: none;
+        position: fixed;
+        top: 12px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #da3633;
+        color: white;
+        padding: 10px 16px;
+        border-radius: 6px;
+        z-index: 999;
+        max-width: 90vw;
+        font-size: 13px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+      "
+    ></div>
+    <script>
+      // Surface any uncaught error so a broken module load doesn't silently
+      // brick the page (which is what happened on the first deploy when the
+      // importmap URL 404'd before the click handler could attach).
+      function showBanner(msg) {
+        var b = document.getElementById("banner");
+        if (!b) return;
+        b.textContent = msg;
+        b.style.display = "block";
+      }
+      window.addEventListener("error", function (e) {
+        showBanner(
+          "Page error: " + (e.message || e.error || "unknown") +
+            (e.filename ? " @ " + e.filename : ""),
+        );
+      });
+      window.addEventListener("unhandledrejection", function (e) {
+        showBanner(
+          "Unhandled promise: " +
+            (e.reason && e.reason.message ? e.reason.message : e.reason),
+        );
+      });
+    </script>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

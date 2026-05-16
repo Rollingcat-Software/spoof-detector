@@ -65,8 +65,16 @@ export class SessionEngine {
   private recentVerdicts = new RingBuffer<SpoofClassification>(300); // 10s
 
   private faceMissingFrames = 0;
-  private lastFaceTime = 0;
   private consecutiveSpoofFrames = 0;
+  private lastBlinkCount = 0;
+  private lastBlinkObservedAt = 0;
+  private lastNoBlinkIncidentAt = -Infinity;
+  // Once the verdict has locked to SPOOF, it stays SPOOF for the rest of the
+  // session. The fuser/category averages can briefly nudge adjustedReal back
+  // above 0.45 on a single high-confidence MiniFASNet frame even after the
+  // override has fired, which used to be visible to the user as a 250ms
+  // SPOOF → LIVE → SPOOF flicker on the verdict block.
+  private verdictLockedSpoof = false;
 
   constructor(options: SessionEngineOptions = {}) {
     this.sessionId =
@@ -111,8 +119,11 @@ export class SessionEngine {
     }
     this.recentVerdicts.clear();
     this.faceMissingFrames = 0;
-    this.lastFaceTime = 0;
     this.consecutiveSpoofFrames = 0;
+    this.lastBlinkCount = 0;
+    this.lastBlinkObservedAt = 0;
+    this.lastNoBlinkIncidentAt = -Infinity;
+    this.verdictLockedSpoof = false;
   }
 
   /** Ingest a frame analysis into the session. Called every frame. */
@@ -131,7 +142,6 @@ export class SessionEngine {
     if (analysis.faces.length > 0) {
       this.facePresentCount += 1;
       this.faceMissingFrames = 0;
-      this.lastFaceTime = elapsed;
     } else {
       this.faceMissingFrames += 1;
       if (
@@ -184,7 +194,67 @@ export class SessionEngine {
       this.checkSpoofIncident(cls, analysis.frame_id, elapsed);
       this.checkMotionNaturalness(signals, analysis.frame_id, elapsed);
       this.checkMiniFasNetInstability(signals, analysis.frame_id, elapsed);
+      this.checkNoBlink(cls, analysis.frame_id, elapsed);
     }
+  }
+
+  /**
+   * Raise a STATIC_IMAGE incident if the face has been present for
+   * NO_BLINK_ALERT_SEC without any blink. A printed photo never blinks;
+   * a live human blinks every 4–6 seconds on average. Repeats every
+   * NO_BLINK_ALERT_SEC so a long-running spoof accumulates incidents
+   * fast enough to trigger the >=3-incident override in getVerdict().
+   */
+  private checkNoBlink(
+    cls: SpoofClassification,
+    frame_id: number,
+    elapsed: number,
+  ): void {
+    const blink = cls.analyzer_results["blink"];
+    const currentBlinks =
+      blink && typeof blink.details["blinks"] === "number"
+        ? (blink.details["blinks"] as number)
+        : 0;
+
+    if (currentBlinks > this.lastBlinkCount) {
+      this.lastBlinkCount = currentBlinks;
+      this.lastBlinkObservedAt = elapsed;
+      return;
+    }
+
+    // Liveness contract: a printed photo NEVER blinks, ever. A live person
+    // produces at least one blink within ~15s under normal conditions. So
+    // once we've observed ANY blink in this session, we know the subject
+    // is alive — stop firing no-blink incidents on top of normal slow
+    // blinking. This was a real bug: a 78-second session with 4 real
+    // blinks (mobile camera at 4 fps drops some blinks) was flipping to
+    // SPOOF because each gap between detected blinks crossed 15s.
+    if (this.lastBlinkCount > 0) return;
+
+    // checkNoBlink only runs when a face is in this frame (caller loop
+    // iterates over analysis.faces), so face-presence is implicit. Use
+    // wall-clock elapsed time directly.
+    if (elapsed < SessionEngine.NO_BLINK_ALERT_SEC) return;
+
+    const sinceBlink = elapsed - this.lastBlinkObservedAt;
+    if (sinceBlink < SessionEngine.NO_BLINK_ALERT_SEC) return;
+
+    // Throttle: once we've raised the alert, re-raise every 5s so a steady
+    // print attack accumulates enough incidents to trip the >=3 override
+    // around the 25-second mark (15s first alert, 20s second, 25s third).
+    if (elapsed - this.lastNoBlinkIncidentAt < 5.0) return;
+
+    this.lastNoBlinkIncidentAt = elapsed;
+    this.addIncident(
+      frame_id,
+      Severity.HIGH,
+      SpoofCategory.STATIC_IMAGE,
+      `No blink for ${sinceBlink.toFixed(0)}s — printed or static-image attack suspected`,
+      {
+        elapsed_sec: round(elapsed, 1),
+        seconds_since_blink: round(sinceBlink, 1),
+      },
+    );
   }
 
   private checkSpoofIncident(
@@ -385,7 +455,15 @@ export class SessionEngine {
     // Phase-1 simplified decision (no LivenessProver yet):
     //   live IFF analyzer fusion says real AND incidents < 3.
     const incidentOverride = this.incidents.length >= 3;
-    const isLive = adjustedReal > 0.45 && !incidentOverride;
+    let isLive = adjustedReal > 0.45 && !incidentOverride;
+
+    // Once the verdict has locked to SPOOF, it stays SPOOF for the rest of
+    // the session — the peak-sensitive design intentionally rejects later
+    // live-looking frames (e.g. a print attack briefly tilted off-axis
+    // sometimes makes MiniFASNet score real for a frame or two). Latch on
+    // either the incidentOverride or a sustained low-real burst.
+    if (!isLive) this.verdictLockedSpoof = true;
+    if (this.verdictLockedSpoof) isLive = false;
 
     const confidence = Math.min(
       1.0,

@@ -243,8 +243,8 @@
         ctx = canvas.getContext("2d");
 
         detector = await createSpoofDetector({
-          miniFasNetModelUrl: "/public/models/minifasnet_v2.onnx",
-          faceLandmarkerTaskUrl: "/public/models/face_landmarker.task",
+          miniFasNetModelUrl: "/models/minifasnet_v2.onnx",
+          faceLandmarkerTaskUrl: "/models/face_landmarker.task",
         });
 
         startBtn.textContent = "Running";

@@ -32,7 +32,6 @@ import {
   SourceImage,
   softmax2,
   toBgrNchwFloat32,
-  toImageData,
 } from "../../utils/imageOps";
 
 export interface MiniFASNetOptions {
@@ -290,7 +289,6 @@ export class MiniFASNetAnalyzer {
 }
 
 function dimsOf(src: SourceImage): { w: number; h: number } {
-  if (src instanceof ImageData) return { w: src.width, h: src.height };
   return { w: src.width, h: src.height };
 }
 

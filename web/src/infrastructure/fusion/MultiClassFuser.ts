@@ -37,7 +37,7 @@ export const DEFAULT_ANALYZER_WEIGHTS: Readonly<Record<string, number>> = {
   micro_tremor: 2.5,      // NEW: 8-12Hz oscillation — catches video replay
   landmark_variance: 2.0, // STRONG: zero variance = photo
   background_grid: 1.5,   // NEW: background stability for proctoring
-  rppg: 0.0,              // DISABLED: needs notch filter fix first
+  rppg: 0.5,              // ACTIVE in browser bundle (2026-05-16): pulse from green channel
   blink: 0.5,             // MODERATE: blink count
   screen_replay: 0.5,     // WEAK: +9.6 gap
   ar_filter: 0.3,         // MODERATE: heuristic mode

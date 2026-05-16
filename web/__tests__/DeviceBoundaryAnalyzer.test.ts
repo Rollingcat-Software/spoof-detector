@@ -79,7 +79,11 @@ describe("DeviceBoundaryAnalyzer", () => {
   });
 
   it("rectangular bezel around face → boundary_score > 0", () => {
-    const a = new DeviceBoundaryAnalyzer();
+    // Bezel sits at (40,30)-(216,226); face is at (96,96)-(160,160).
+    // Default paddingRatio 0.55 only stretches the ROI to ±35 px around
+    // the face — that misses the bezel. paddingRatio: 2.5 gives a
+    // 64+160=224-px-wide ROI per axis, fully enclosing the bezel.
+    const a = new DeviceBoundaryAnalyzer({ paddingRatio: 2.5 });
     a.setFrame(withBezel());
     const r = a.analyze(null, face);
     // The downsampled-Sobel approximation can't always reach the 0.50

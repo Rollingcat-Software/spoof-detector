@@ -82,8 +82,11 @@ describe("MultiClassFuser", () => {
     expect(cls.dominant_category).toBe(SpoofCategory.REAL);
   });
 
-  it("zero-weight analyzer (rppg) does not contribute", () => {
-    const fuser = new MultiClassFuser();
+  it("explicit zero-weight override prevents an analyzer from contributing", () => {
+    // rppg was weight 0 in the original calibration; as of 2026-05-16 it is
+    // active in the browser bundle at weight 0.5 (see DEFAULT_ANALYZER_WEIGHTS).
+    // Pin the zero-weight contract by passing an explicit override.
+    const fuser = new MultiClassFuser({ minifasnet: 5.0, rppg: 0.0 });
     const withRppg = fuser.fuse(
       1,
       results(
@@ -95,7 +98,6 @@ describe("MultiClassFuser", () => {
       1,
       results(makeAnalyzerResult("minifasnet", 80.0)),
     );
-    // rppg is weight 0 in DEFAULT_ANALYZER_WEIGHTS — adding it must not move probs.
     for (const cat of Object.keys(withRppg.probabilities) as SpoofCategory[]) {
       expect(
         Math.abs(withRppg.probabilities[cat] - withoutRppg.probabilities[cat]),
