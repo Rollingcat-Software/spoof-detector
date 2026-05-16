@@ -8,7 +8,7 @@
     <!-- Primary SEO -->
     <meta
       name="description"
-      content="amispoof is an open, browser-side face anti-spoof and liveness tester. It runs the FIVUCSAS / Rollingcat spoof-detector pipeline (10 analyzers: MiniFASNet, screen flicker, micro-tremor, blink, rPPG pulse, device boundary, moire, texture, screen replay, landmark variance) plus Ayşenur's face-usability gate fully client-side. No server, no GPU, no upload — point your camera at a printed photo or another screen and watch the verdict in seconds."
+      content="amispoof is an open, browser-side face anti-spoof and liveness tester. It runs the FIVUCSAS / Rollingcat spoof-detector pipeline (12 analyzers: MiniFASNet, screen flicker, micro-tremor, blink, rPPG pulse, device boundary, moire, texture, screen replay, landmark variance, face motion, background grid) plus a passive+active liveness-proof scorer (blink/landmark/head-rotation/expression/challenge points) and Ayşenur's face-usability gate, fully client-side. No server, no GPU, no upload — point your camera at a printed photo or another screen and watch the verdict in seconds."
     />
     <meta
       name="keywords"
@@ -27,7 +27,7 @@
     <meta property="og:title" content="amispoof — Live face anti-spoof tester (browser, no server)" />
     <meta
       property="og:description"
-      content="Open browser tester for the FIVUCSAS spoof-detector pipeline. 10 analyzers + 3 gates run client-side via onnxruntime-web + MediaPipe. Test printed-photo, screen-replay, occlusion and dark-room attacks against a session verdict in seconds."
+      content="Open browser tester for the FIVUCSAS spoof-detector pipeline. 12 analyzers + 3 gates + passive/active liveness-proof scorer run client-side via onnxruntime-web + MediaPipe. Test printed-photo, screen-replay, occlusion and dark-room attacks against a session verdict in seconds."
     />
     <meta property="og:locale" content="en_US" />
 
@@ -422,6 +422,112 @@
       .gate-headline.warn {
         color: var(--amber);
       }
+      #proofPanel {
+        border: 1px solid var(--border);
+        background: #21262d;
+        border-radius: 6px;
+        padding: 10px 12px;
+        font-size: 11px;
+        font-variant-numeric: tabular-nums;
+      }
+      .proof-headline {
+        font-weight: 600;
+        font-size: 13px;
+        margin-bottom: 8px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 8px;
+      }
+      .proof-headline.pending {
+        color: var(--muted);
+      }
+      .proof-headline.proven {
+        color: var(--green);
+      }
+      .proof-headline .total {
+        font-size: 16px;
+        font-variant-numeric: tabular-nums;
+      }
+      .proof-headline .total .max {
+        color: var(--muted);
+        font-weight: 400;
+        font-size: 11px;
+      }
+      .proof-challenge {
+        background: rgba(88, 166, 255, 0.1);
+        border: 1px solid rgba(88, 166, 255, 0.35);
+        color: var(--accent);
+        border-radius: 4px;
+        padding: 8px 10px;
+        margin-bottom: 8px;
+        font-size: 12px;
+        font-weight: 600;
+        text-align: center;
+        animation: proof-pulse 1.4s ease-in-out infinite;
+      }
+      @keyframes proof-pulse {
+        0%, 100% { background: rgba(88, 166, 255, 0.1); }
+        50%      { background: rgba(88, 166, 255, 0.2); }
+      }
+      .proof-row {
+        display: grid;
+        grid-template-columns: 110px 1fr 60px;
+        align-items: center;
+        gap: 10px;
+        margin: 5px 0;
+        font-size: 11px;
+      }
+      .proof-row .name {
+        color: var(--muted);
+      }
+      .proof-row .sub {
+        color: var(--muted);
+        font-size: 10px;
+        margin-left: 4px;
+      }
+      .proof-row .bar {
+        height: 6px;
+        background: #0d1117;
+        border-radius: 3px;
+        overflow: hidden;
+      }
+      .proof-row .fill {
+        height: 100%;
+        background: var(--green);
+        opacity: 0.85;
+        transition: width 220ms cubic-bezier(0.22, 0.61, 0.36, 1);
+      }
+      .proof-row .val {
+        text-align: right;
+        font-weight: 600;
+      }
+      .proof-row .val .max {
+        color: var(--muted);
+        font-weight: 400;
+        font-size: 10px;
+      }
+      .proof-divider {
+        font-size: 9px;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        color: var(--accent);
+        margin: 10px 0 4px 0;
+        opacity: 0.65;
+        font-weight: 600;
+      }
+      .proof-summary {
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px solid var(--border);
+        font-size: 10px;
+        color: var(--muted);
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+      }
       .attack-guide {
         display: flex;
         flex-wrap: wrap;
@@ -633,6 +739,17 @@
       <h2>Analyzers — live score (higher = more live)</h2>
       <div id="analyzers"></div>
 
+      <h2 title="LivenessProver passive + active proof scoring. The user accumulates points from blinks, head motion, facial expression, and (when surfaced) active challenges. >=60 points crosses the proven-live threshold; the engine confidence formula gives this score a 30% weight.">
+        Liveness proof — passive + active scoring
+      </h2>
+      <div id="proofPanel">
+        <div id="proofHeadline" class="proof-headline pending">
+          waiting for evidence…
+        </div>
+        <div id="proofChallenge" class="proof-challenge" style="display: none"></div>
+        <div id="proofRows"></div>
+      </div>
+
       <h2 title="Independent second-opinion check. Calibrated against Python; the browser port may flag live faces at low mobile FPS — the main verdict above is the authoritative signal.">
         Face usability gate
         <span style="font-size: 9px; color: #58a6ff; font-weight: normal"
@@ -713,7 +830,7 @@
       // older cached copy (no AMISPOOF_VERSION export at all), force a
       // one-shot hard reload so the user doesn't get stuck on a broken
       // bundle. Guarded by sessionStorage to avoid infinite loops.
-      window.AMISPOOF_HTML_VERSION = "2026-05-16-confnorm2";
+      window.AMISPOOF_HTML_VERSION = "2026-05-16-proofpanel";
       setTimeout(function () {
         if (
           window.AMISPOOF_VERSION !== window.AMISPOOF_HTML_VERSION &&
@@ -724,6 +841,6 @@
         }
       }, 4000);
     </script>
-    <script type="module" src="./app.js?v=2026-05-16-confnorm2"></script>
+    <script type="module" src="./app.js?v=2026-05-16-proofpanel"></script>
   </body>
 </html>
