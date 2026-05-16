@@ -6,9 +6,16 @@
 /** Image source we accept from callers. */
 export type SourceImage = HTMLCanvasElement | OffscreenCanvas | ImageData;
 
+/** Duck-type ImageData. `instanceof ImageData` blows up in node, where the
+ *  global doesn't exist; canvas-likes always expose getContext(), ImageData
+ *  never does, so this is unambiguous. */
+function isImageDataLike(src: SourceImage): src is ImageData {
+  return typeof (src as { getContext?: unknown }).getContext !== "function";
+}
+
 /** Get an ImageData snapshot from any supported input, no scaling. */
 export function toImageData(src: SourceImage): ImageData {
-  if (src instanceof ImageData) return src;
+  if (isImageDataLike(src)) return src;
   const ctx = (
     src as HTMLCanvasElement | OffscreenCanvas
   ).getContext("2d") as CanvasRenderingContext2D | null;
@@ -71,7 +78,7 @@ export function cropAndResize(
 ): OffscreenCanvas {
   // Stage 1: ensure source is a Canvas-backed image so drawImage() can resize.
   let stage: HTMLCanvasElement | OffscreenCanvas;
-  if (src instanceof ImageData) {
+  if (isImageDataLike(src)) {
     const c = new OffscreenCanvas(src.width, src.height);
     const cctx = c.getContext("2d");
     if (!cctx) throw new Error("cropAndResize: stage canvas has no 2D ctx");

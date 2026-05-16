@@ -204,6 +204,10 @@ function sobelBinary(
     }
   }
   // Threshold at ~Otsu-lite: 0.35 * max. Calibrated against Canny(45,140).
+  // Guard against the uniform-image degeneracy: with maxMag≈0, a 0.35*max
+  // threshold of 0 would mark every pixel as an edge. Require some absolute
+  // gradient before any pixel can be on.
+  if (maxMag < 1.0) return out;
   const thresh = 0.35 * maxMag;
   for (let i = 0; i < mag.length; i++) {
     out[i] = mag[i] >= thresh ? 255 : 0;

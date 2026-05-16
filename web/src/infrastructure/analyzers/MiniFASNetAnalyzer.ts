@@ -289,7 +289,6 @@ export class MiniFASNetAnalyzer {
 }
 
 function dimsOf(src: SourceImage): { w: number; h: number } {
-  if (src instanceof ImageData) return { w: src.width, h: src.height };
   return { w: src.width, h: src.height };
 }
 

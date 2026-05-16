@@ -73,7 +73,13 @@ export class MicroTremorAnalyzer implements IFaceAnalyzer {
       const dt =
         (this.frameTimes[this.frameTimes.length - 1] - this.frameTimes[0]) /
         1000.0;
-      if (dt > 0) this.fps = (this.frameTimes.length - 1) / dt;
+      if (dt > 0) {
+        // Real browser frame rates land in 1-120 fps; anything outside
+        // means synthetic test loop (too fast) or background-tab throttle
+        // (too slow) — both garbage signals for our FFT band math.
+        const measured = (this.frameTimes.length - 1) / dt;
+        if (measured >= 1 && measured <= 120) this.fps = measured;
+      }
     }
 
     const fid = face.face_id;
