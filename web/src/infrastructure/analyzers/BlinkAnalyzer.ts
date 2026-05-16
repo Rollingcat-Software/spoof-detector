@@ -48,6 +48,11 @@ export interface BlinkAnalyzerOptions {
   normalBlinkRate?: number;
   /** Per-track ear_history ring buffer length. Default 90 (3s @ 30fps). */
   historyLen?: number;
+  /**
+   * Explicit fps. When set, overrides the runtime fps measurement —
+   * used by tests that simulate frames in a tight loop.
+   */
+  fps?: number;
 }
 
 export class BlinkAnalyzer implements IFaceAnalyzer {
@@ -60,6 +65,9 @@ export class BlinkAnalyzer implements IFaceAnalyzer {
   private readonly warmupFrames: number;
   private readonly normalBlinkRate: number;
   private readonly historyLen: number;
+  private readonly fps: number | undefined;
+  private measuredFps = 30;
+  private frameTimes: number[] = [];
 
   private states: Map<number, BlinkState> = new Map();
 
@@ -78,6 +86,7 @@ export class BlinkAnalyzer implements IFaceAnalyzer {
     this.warmupFrames = options.warmupFrames ?? 30;
     this.normalBlinkRate = options.normalBlinkRate ?? 17.0;
     this.historyLen = options.historyLen ?? 90;
+    this.fps = options.fps;
   }
 
   analyze(_faceCrop: ImageData | null, face: FaceROI): AnalyzerResult {
@@ -95,6 +104,22 @@ export class BlinkAnalyzer implements IFaceAnalyzer {
       this.states.set(fid, state);
     }
     state.frame_count += 1;
+
+    // === Measure fps for accurate blink-rate math (same clamp pattern
+    // used in MicroTremor / ScreenFlicker — see those files). Without
+    // this, mobile @ 10 fps would record 146s of capture as 50s and
+    // inflate blink_rate_per_min ~3x. ===
+    this.frameTimes.push(start);
+    if (this.frameTimes.length > 60) this.frameTimes.shift();
+    if (this.frameTimes.length > 10) {
+      const dt =
+        (this.frameTimes[this.frameTimes.length - 1] - this.frameTimes[0]) /
+        1000.0;
+      if (dt > 0) {
+        const measured = (this.frameTimes.length - 1) / dt;
+        if (measured >= 1 && measured <= 120) this.measuredFps = measured;
+      }
+    }
 
     const lm = face.landmarks;
     if (!lm || lm.length < 388 * 2) {
@@ -141,8 +166,15 @@ export class BlinkAnalyzer implements IFaceAnalyzer {
       );
     }
 
-    // Score: blink presence relative to expected rate (assume 30 fps).
-    const durationSec = state.frame_count / 30.0;
+    // Score: blink presence relative to expected rate. Use MEASURED
+    // fps (was hard-coded /30 — at 10 fps mobile that read 146s as 50s
+    // and inflated blink_rate_per_min ~3x). When the constructor was
+    // given an explicit `fps`, that value is honored as a hard floor —
+    // synthetic test loops with ~120 fps measurement keep using the
+    // configured `fps` so the long-form score tests don't depend on
+    // the wall clock.
+    const fpsForDuration = this.fps ?? this.measuredFps;
+    const durationSec = state.frame_count / Math.max(1, fpsForDuration);
     const expectedBlinks = this.normalBlinkRate * (durationSec / 60.0);
 
     let score: number;
@@ -158,6 +190,14 @@ export class BlinkAnalyzer implements IFaceAnalyzer {
     }
     score = Math.max(0.0, Math.min(100.0, score));
 
+    // Smooth `eyes_open`: report closed only after 2+ consecutive low-EAR
+    // frames, so a single sideways glance with a perspective-shrunk eye
+    // doesn't flip the indicator to "closed" mid-session. The internal
+    // eyes_closed_frames counter is already tracked for blink validation
+    // — we read it here.
+    const eyesOpen =
+      avgEar >= this.earThreshold || state.eyes_closed_frames < 2;
+
     return makeAnalyzerResult(
       this.name,
       score,
@@ -169,7 +209,7 @@ export class BlinkAnalyzer implements IFaceAnalyzer {
           1,
         ),
         duration_sec: round(durationSec, 1),
-        eyes_open: avgEar >= this.earThreshold,
+        eyes_open: eyesOpen,
       },
       performance.now() - start,
     );
@@ -182,6 +222,8 @@ export class BlinkAnalyzer implements IFaceAnalyzer {
 
   reset(): void {
     this.states.clear();
+    this.frameTimes = [];
+    this.measuredFps = 30;
   }
 }
 

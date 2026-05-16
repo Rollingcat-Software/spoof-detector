@@ -93,7 +93,10 @@ describe("BlinkAnalyzer", () => {
   });
 
   it("no blinks for >5s → low score", () => {
-    const a = new BlinkAnalyzer({ warmupFrames: 30 });
+    // Pin fps so the synthetic-loop frames produce a real duration_sec
+    // (otherwise the measured-fps path would clamp to 120 and a 180-frame
+    // burst would only count as 1.5s — under the 5s threshold).
+    const a = new BlinkAnalyzer({ warmupFrames: 30, fps: 30 });
     const open = makeLandmarks(4);
     let last = a.analyze(null, makeFace(open));
     // 31 + 150 frames @ 30fps = 6 seconds — Python source thresholds:
