@@ -75,6 +75,10 @@ export class SessionEngine {
   // override has fired, which used to be visible to the user as a 250ms
   // SPOOF → LIVE → SPOOF flicker on the verdict block.
   private verdictLockedSpoof = false;
+  // Consecutive-frame counter for the post-warmup low-real latch. Reset
+  // whenever a live frame is observed, incremented when low-real, and
+  // only flips verdictLockedSpoof at >= 15 in a row (~1.5s at 10 fps).
+  private lowRealStreak = 0;
 
   constructor(options: SessionEngineOptions = {}) {
     this.sessionId =
@@ -124,6 +128,7 @@ export class SessionEngine {
     this.lastBlinkObservedAt = 0;
     this.lastNoBlinkIncidentAt = -Infinity;
     this.verdictLockedSpoof = false;
+    this.lowRealStreak = 0;
   }
 
   /** Ingest a frame analysis into the session. Called every frame. */
@@ -457,12 +462,30 @@ export class SessionEngine {
     const incidentOverride = this.incidents.length >= 3;
     let isLive = adjustedReal > 0.45 && !incidentOverride;
 
-    // Once the verdict has locked to SPOOF, it stays SPOOF for the rest of
-    // the session — the peak-sensitive design intentionally rejects later
-    // live-looking frames (e.g. a print attack briefly tilted off-axis
-    // sometimes makes MiniFASNet score real for a frame or two). Latch on
-    // either the incidentOverride or a sustained low-real burst.
-    if (!isLive) this.verdictLockedSpoof = true;
+    // Once the verdict has *legitimately* locked to SPOOF, latch it for the
+    // rest of the session — peak-sensitive by design.
+    //
+    // Latch ONLY when one of the following is sustained:
+    //   a) incidentOverride fired (>=3 incidents — a hard signal)
+    //   b) we're past warmup AND adjustedReal stayed below 0.45 for
+    //      >=15 consecutive frames (≈ 1.5s at 10 fps).
+    //
+    // The earlier "latch on any single non-live frame" rule fired during
+    // warmup — dataConfidence < 1.0 collapses adjustedReal even on a
+    // perfectly live face, causing a permanent SPOOF lock from the first
+    // frame. Bug surfaced in the 2026-05-16 incognito test (live face,
+    // 7 blinks, 0 incidents, MiniFASNet 1.0, verdict SPOOF).
+    const past_warmup =
+      this.state !== SessionState.WARMING_UP &&
+      this.frameCount > SessionEngine.WARMUP_FRAMES;
+    if (incidentOverride) {
+      this.verdictLockedSpoof = true;
+    } else if (past_warmup && !isLive) {
+      this.lowRealStreak = (this.lowRealStreak ?? 0) + 1;
+      if (this.lowRealStreak >= 15) this.verdictLockedSpoof = true;
+    } else {
+      this.lowRealStreak = 0;
+    }
     if (this.verdictLockedSpoof) isLive = false;
 
     const confidence = Math.min(
