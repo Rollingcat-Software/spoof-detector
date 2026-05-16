@@ -5,12 +5,18 @@
 // peer deps from jsdelivr via the importmap declared in index.html.
 
 import * as ort from "onnxruntime-web";
-import { createSpoofDetector } from "./lib/spoof-detector.js";
+// Cache-bust the lib bundle too — the bare ./lib/spoof-detector.js URL
+// was a 7-day cached resource on mobile browsers when the .htaccess used
+// max-age=604800, so users with that old cache header would load a fresh
+// app.js but a stale Phase-2 lib bundle (Texture/Moire/Screen-replay/rPPG
+// rows show "—", gate panel stuck on "waiting…"). The query string
+// gives the import a distinct URL the browser must re-fetch.
+import { createSpoofDetector } from "./lib/spoof-detector.js?v=2026-05-16f";
 
 // Version handshake — checked by the inline script in index.html.
 // If the user is running a stale cached app.js (no AMISPOOF_VERSION),
 // the HTML triggers a one-shot reload after 4 s.
-window.AMISPOOF_VERSION = "2026-05-16e";
+window.AMISPOOF_VERSION = "2026-05-16f";
 
 const ORT_WASM_BASE =
   "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/";
@@ -192,6 +198,14 @@ let lastVerdict = null;
 let lastAnalyzerScores = null;
 let lastGateResult = null;
 let knownIncidentIds = new Set();
+// Gate-stability smoother — the per-frame gate state oscillates between
+// CLEAR and OCCLUDED_PENDING under modest landmark jitter. We keep the
+// "usable" flag visible to the user only after it's held for >=5 frames,
+// so transient single-frame flips don't flash the advisory banner.
+const GATE_STABILITY_FRAMES = 5;
+let gatePendingUsable = null;
+let gatePendingFrames = 0;
+let gateStableUsable = null;
 
 function setStatus(label, kind = "live") {
   els.status.textContent = label;
@@ -417,10 +431,25 @@ function updateUI(analysis, v) {
   const gate = analysis.gate_result;
   lastGateResult = gate ?? null;
   if (gate && els.gateBody) {
-    const headlineText = gate.usable
+    // Stability smoother: only flip the displayed headline after the
+    // raw gate verdict holds for GATE_STABILITY_FRAMES frames.
+    if (gate.usable === gatePendingUsable) {
+      gatePendingFrames += 1;
+    } else {
+      gatePendingUsable = gate.usable;
+      gatePendingFrames = 1;
+    }
+    if (
+      gateStableUsable === null ||
+      gatePendingFrames >= GATE_STABILITY_FRAMES
+    ) {
+      gateStableUsable = gatePendingUsable;
+    }
+    const displayUsable = gateStableUsable;
+    const headlineText = displayUsable
       ? "Face usable"
       : `Advisory: ${gate.reason.replace(/_/g, " ")}`;
-    const headlineClass = gate.usable ? "ok" : "warn";
+    const headlineClass = displayUsable ? "ok" : "warn";
     const lines = [
       `<div class="gate-headline ${headlineClass}">${headlineText}</div>`,
       `<div class="row"><span>State</span><span>${gate.state.replace(/_/g, " ").toLowerCase()}</span></div>`,
@@ -444,7 +473,7 @@ function updateUI(analysis, v) {
     }
     els.gateBody.innerHTML = lines.join("");
     if (els.gateBanner) {
-      els.gateBanner.classList.toggle("warn", !gate.usable);
+      els.gateBanner.classList.toggle("warn", !displayUsable);
     }
   }
 }
