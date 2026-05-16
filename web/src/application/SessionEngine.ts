@@ -224,12 +224,10 @@ export class SessionEngine {
     const sinceBlink = elapsed - this.lastBlinkObservedAt;
     if (sinceBlink < SessionEngine.NO_BLINK_ALERT_SEC) return;
 
-    // Throttle: once we've raised the alert, don't repeat for another window.
-    if (
-      elapsed - this.lastNoBlinkIncidentAt <
-      SessionEngine.NO_BLINK_ALERT_SEC
-    )
-      return;
+    // Throttle: once we've raised the alert, re-raise every 5s so a steady
+    // print attack accumulates enough incidents to trip the >=3 override
+    // around the 25-second mark (15s first alert, 20s second, 25s third).
+    if (elapsed - this.lastNoBlinkIncidentAt < 5.0) return;
 
     this.lastNoBlinkIncidentAt = elapsed;
     this.addIncident(
