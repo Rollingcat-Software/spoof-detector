@@ -108,18 +108,23 @@
       }
       .controls {
         display: flex;
-        gap: 10px;
+        gap: 8px;
         align-items: center;
+        justify-content: center;
+        flex-wrap: wrap;
+        max-width: 100%;
       }
       button {
         background: var(--green-border);
         color: white;
         border: 0;
-        padding: 9px 18px;
+        padding: 8px 14px;
         border-radius: 6px;
         cursor: pointer;
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 500;
+        white-space: nowrap;
+        flex: 0 0 auto;
       }
       button.ghost {
         background: transparent;
@@ -130,6 +135,17 @@
         background: #30363d;
         color: var(--muted);
         cursor: not-allowed;
+      }
+      @media (max-width: 480px) {
+        .controls {
+          gap: 6px;
+        }
+        button {
+          padding: 7px 10px;
+          font-size: 12px;
+          flex: 1 1 calc(50% - 6px);
+          min-width: 0;
+        }
       }
       .hint {
         font-size: 12px;
@@ -452,12 +468,10 @@
       </div>
 
       <div class="controls">
-        <button id="start">Start camera</button>
-        <button id="stop" class="ghost" disabled>Stop camera</button>
-        <button id="reset" class="ghost" disabled>Reset session</button>
-        <button id="download" class="ghost" disabled>
-          Download session report
-        </button>
+        <button id="start">Start</button>
+        <button id="stop" class="ghost" disabled>Stop</button>
+        <button id="reset" class="ghost" disabled>Reset</button>
+        <button id="download" class="ghost" disabled>Download report</button>
       </div>
 
       <p class="hint">

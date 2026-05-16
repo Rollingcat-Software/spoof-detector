@@ -196,7 +196,7 @@ async function ensureDetector() {
   if (detector) return detector;
   setStatus("loading models…");
   els.start.disabled = true;
-  els.start.textContent = "loading models…";
+  els.start.textContent = "loading…";
 
   detector = await createSpoofDetector({
     miniFasNetModelUrl: "./models/minifasnet_v2.onnx",
@@ -244,7 +244,7 @@ async function start() {
     console.error(err);
     setStatus(`error: ${err.message || err}`, "error");
     els.start.disabled = false;
-    els.start.textContent = "Start camera";
+    els.start.textContent = "Start";
   }
 }
 
@@ -258,7 +258,7 @@ function stop() {
   els.stop.disabled = true;
   els.start.style.display = "";
   els.start.disabled = false;
-  els.start.textContent = "Start camera";
+  els.start.textContent = "Start";
   els.videoWrap.dataset.state = "idle";
   setStatus("stopped", "live");
 }
