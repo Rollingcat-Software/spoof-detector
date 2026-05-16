@@ -739,8 +739,8 @@
       <h2>Analyzers — live score (higher = more live)</h2>
       <div id="analyzers"></div>
 
-      <h2 title="LivenessProver passive + active proof scoring. The user accumulates points from blinks, head motion, facial expression, and (when surfaced) active challenges. >=60 points crosses the proven-live threshold; the engine confidence formula gives this score a 30% weight.">
-        Liveness proof — passive + active scoring
+      <h2 title="Passive liveness scoring (proctoring profile — no active challenges). Every observed movement contributes: blinks, mesh drift, head rotation, expression, per-region eye/mouth motion, and overall face sway. ≥60 of 110 passive points crosses the proven-live threshold; the engine confidence formula gives this score a 30% weight.">
+        Liveness proof — passive observation
       </h2>
       <div id="proofPanel">
         <div id="proofHeadline" class="proof-headline pending">
@@ -830,7 +830,7 @@
       // older cached copy (no AMISPOOF_VERSION export at all), force a
       // one-shot hard reload so the user doesn't get stuck on a broken
       // bundle. Guarded by sessionStorage to avoid infinite loops.
-      window.AMISPOOF_HTML_VERSION = "2026-05-16-proofpanel";
+      window.AMISPOOF_HTML_VERSION = "2026-05-16-passive";
       setTimeout(function () {
         if (
           window.AMISPOOF_VERSION !== window.AMISPOOF_HTML_VERSION &&
@@ -841,6 +841,6 @@
         }
       }, 4000);
     </script>
-    <script type="module" src="./app.js?v=2026-05-16-proofpanel"></script>
+    <script type="module" src="./app.js?v=2026-05-16-passive"></script>
   </body>
 </html>

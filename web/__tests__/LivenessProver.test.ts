@@ -449,4 +449,74 @@ describe("LivenessProver", () => {
     expect(LivenessProver.YAW_DELTA_TURN_DEG).toBe(8.0);
     expect(LivenessProver.PITCH_DELTA_NOD_DEG).toBe(6.0);
   });
+
+  // ---- Passive movement axes (additive over Python) -----------------------
+
+  describe("passive movement axes (eye / mouth / face motion)", () => {
+    it("awards eye_motion_points when eye_var crosses threshold", () => {
+      const prover = new LivenessProver({ enableChallenges: false });
+      prover.start();
+      // eye_var = 6.0 → min(12, 6*0.5) = 3.0
+      prover.update(makeLandmarks(), 0, 0, 0, 1, 6.0, 0, 0);
+      const proof = prover.getProof();
+      expect(proof.details.eye_motion_points).toBe(3.0);
+      expect(proof.details.mouth_motion_points).toBe(0);
+      expect(proof.details.face_motion_points).toBe(0);
+    });
+
+    it("awards mouth_motion_points when mouth_var crosses threshold", () => {
+      const prover = new LivenessProver({ enableChallenges: false });
+      prover.start();
+      // mouth_var = 30 → min(10, 30*0.5) = 10 (cap)
+      prover.update(makeLandmarks(), 0, 0, 0, 1, 0, 30, 0);
+      expect(prover.getProof().details.mouth_motion_points).toBe(10);
+    });
+
+    it("awards face_motion_points when temporal motion crosses threshold", () => {
+      const prover = new LivenessProver({ enableChallenges: false });
+      prover.start();
+      // motion = 0.2 → min(8, 0.2*20) = 4
+      prover.update(makeLandmarks(), 0, 0, 0, 1, 0, 0, 0.2);
+      expect(prover.getProof().details.face_motion_points).toBe(4);
+    });
+
+    it("stays at 0 below thresholds (no false credit on static photo)", () => {
+      const prover = new LivenessProver({ enableChallenges: false });
+      prover.start();
+      prover.update(makeLandmarks(), 0, 0, 0, 1, 0.5, 0.5, 0.01);
+      const d = prover.getProof().details;
+      expect(d.eye_motion_points).toBe(0);
+      expect(d.mouth_motion_points).toBe(0);
+      expect(d.face_motion_points).toBe(0);
+    });
+  });
+
+  // ---- Configurable thresholds + proctoring profile -----------------------
+
+  describe("configurable thresholds", () => {
+    it("default thresholds match Python parity values", () => {
+      const prover = new LivenessProver();
+      prover.start();
+      // expressionRatio 1.0 < default gate 1.2 → no expression_points
+      prover.update(makeLandmarks(), 0, 0, 1.0, 1);
+      expect(prover.getProof().details.expression_points).toBe(0);
+    });
+
+    it("proctoring profile (gates lowered) credits sub-Python movement", () => {
+      // expressionRatioGate 0.4, rotationThreshold 2.0, landmarkVarThreshold 0.5.
+      const prover = new LivenessProver({
+        enableChallenges: false,
+        expressionRatioGate: 0.4,
+        rotationThreshold: 2.0,
+        landmarkVarThreshold: 0.5,
+      });
+      prover.start();
+      // expressionRatio 1.0 > 0.4 → expression_points = min(15, 1.0*3) = 3
+      // landmarkVariance 0.8 > 0.5 → landmark_points = min(20, 0.8*4) = 3.2
+      prover.update(makeLandmarks(), 0, 0.8, 1.0, 1);
+      const d = prover.getProof().details;
+      expect(d.expression_points).toBeCloseTo(3, 1);
+      expect(d.landmark_points).toBeCloseTo(3.2, 1);
+    });
+  });
 });

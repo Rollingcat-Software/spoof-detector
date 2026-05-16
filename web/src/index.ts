@@ -156,6 +156,27 @@ export interface SpoofDetectorOptions {
   /** Run the LivenessProver passive proof scorer alongside the SessionEngine. Default true. */
   enableLivenessProver?: boolean;
   /**
+   * Enable LivenessProver active challenges (turn head, nod, blink-on-cue).
+   * Default true (Python parity). Proctoring use cases should pass `false`
+   * — challenges mid-exam are disruptive. With challenges off the prover
+   * still scores passively from observed movement (blinks, head rotation,
+   * eye/mouth/face motion, landmark variance, expression), and the new
+   * passive axes are sized so a natural live face reaches the 60-point
+   * proven-live threshold without any prompts.
+   */
+  enableLivenessChallenges?: boolean;
+  /**
+   * Override LivenessProver passive gates. Defaults are Python-parity
+   * values (1.2 / 3.0° / 1.0). Proctoring typically passes more permissive
+   * values (e.g. 0.4 / 2.0° / 0.5) so natural-observation evidence
+   * accumulates without forcing the user to perform.
+   */
+  livenessProverThresholds?: {
+    expressionRatioGate?: number;
+    rotationThreshold?: number;
+    landmarkVarThreshold?: number;
+  };
+  /**
    * Offload the 4 heavy synchronous analyzers (Texture, Moire,
    * ScreenReplay, DeviceBoundary) to a Web Worker so they stop
    * blocking the main thread. Default true.
@@ -272,7 +293,13 @@ export class SpoofDetector {
     // joins the verdict AND-condition (matches Python design). When the
     // toggle is off we pass null and the engine falls back to fusion-only.
     if (this.toggles.livenessProver) {
-      this.livenessProver = new LivenessProver();
+      const t = opts.livenessProverThresholds ?? {};
+      this.livenessProver = new LivenessProver({
+        enableChallenges: opts.enableLivenessChallenges !== false,
+        expressionRatioGate: t.expressionRatioGate,
+        rotationThreshold: t.rotationThreshold,
+        landmarkVarThreshold: t.landmarkVarThreshold,
+      });
     }
     this.engine = new SessionEngine({
       sessionId: opts.sessionId,
