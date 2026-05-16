@@ -14,12 +14,12 @@ import * as ort from "onnxruntime-web";
 import {
   createSpoofDetector,
   runCasiaFasdMicroBench,
-} from "./lib/spoof-detector.js?v=2026-05-16-proofpanel";
+} from "./lib/spoof-detector.js?v=2026-05-16-passive";
 
 // Version handshake — checked by the inline script in index.html.
 // If the user is running a stale cached app.js (no AMISPOOF_VERSION),
 // the HTML triggers a one-shot reload after 4 s.
-window.AMISPOOF_VERSION = "2026-05-16-proofpanel";
+window.AMISPOOF_VERSION = "2026-05-16-passive";
 
 // SessionEngine.getVerdict() returns a confidence in [0, 0.88] when the
 // LivenessProver is wired (structural ceiling — see SessionEngine.ts
@@ -108,12 +108,13 @@ function renderProofPanel(proof) {
     els.proofChallenge.style.display = "none";
     for (const axis of PROOF_AXES) {
       const ref = proofRefs[axis.name];
+      if (!ref) continue;
       ref.fill.style.width = "0%";
       ref.val.innerHTML = `0 <span class="max">/ ${axis.max}</span>`;
     }
     if (els.proofMotion) els.proofMotion.textContent = "head motion: —";
     if (els.proofChallengeStats)
-      els.proofChallengeStats.textContent = "challenges: 0 / 0";
+      els.proofChallengeStats.textContent = "challenges: 0 passed · 0 failed";
     return;
   }
 
@@ -126,9 +127,10 @@ function renderProofPanel(proof) {
     <span class="total">${total}<span class="max"> / 100</span> · <span style="font-size:11px">${status}</span></span>
   `;
 
-  // Active challenge banner — only visible while one is pending.
+  // Active challenge banner — only visible while one is pending AND active
+  // challenges are part of this consumer's proof flow.
   const ac = proof.active_challenge;
-  if (ac && ac.state === "prompted") {
+  if (SHOW_ACTIVE_SECTION && ac && ac.state === "prompted") {
     const remain = Math.max(
       0,
       (ac.timeout_sec ?? 0) - (proof.elapsed_sec - (ac.prompted_at ?? 0)),
@@ -144,6 +146,7 @@ function renderProofPanel(proof) {
 
   for (const axis of PROOF_AXES) {
     const ref = proofRefs[axis.name];
+    if (!ref) continue; // axis hidden (e.g. challenges in proctoring mode)
     const v = proof.details?.[axis.name] ?? 0;
     const pct = Math.max(0, Math.min(100, (v / axis.max) * 100));
     ref.fill.style.width = `${pct.toFixed(0)}%`;
@@ -336,6 +339,11 @@ buildAnalyzerGroup("Video-track (over time)", "video");
 // (when surfaced). Each axis has a hard cap; the total of 60 crosses the
 // proven-live threshold. The proof score feeds the engine's confidence
 // calculation via the 0.3 × proverConfidence term.
+// amispoof runs the prover in passive-only proctoring mode (no active
+// challenges — they would disrupt an exam). The "active" section is kept
+// in the registry for future non-proctoring consumers but is gated by
+// SHOW_ACTIVE_SECTION; rendering and copy/download stay consistent.
+const SHOW_ACTIVE_SECTION = false;
 const PROOF_AXES = [
   {
     name: "blink_points",
@@ -349,14 +357,14 @@ const PROOF_AXES = [
     label: "Landmark var",
     max: 20,
     section: "passive",
-    desc: "Per-frame landmark drift. Capped at 20 once the 478-point mesh shows clear non-rigid motion.",
+    desc: "Overall mesh drift. Capped at 20 once the 478-point face shows clear non-rigid motion.",
   },
   {
     name: "rotation_points",
     label: "Head rotation",
     max: 15,
     section: "passive",
-    desc: "Combined yaw + pitch range seen across the 3-second window. Photos held still score 0; even slight natural head motion accumulates points.",
+    desc: "Combined yaw + pitch range seen across the 3-second window. Subtle natural head motion accumulates points; a fixed photo scores 0.",
   },
   {
     name: "expression_points",
@@ -366,19 +374,40 @@ const PROOF_AXES = [
     desc: "Eye/mouth/forehead variance ratio. Awarded when the face shows non-rigid expression change.",
   },
   {
+    name: "eye_motion_points",
+    label: "Eye motion",
+    max: 12,
+    section: "passive",
+    desc: "Eye-region landmark drift independent of blink counting. Credits gaze tracking and eyelid micro-movement.",
+  },
+  {
+    name: "mouth_motion_points",
+    label: "Mouth motion",
+    max: 10,
+    section: "passive",
+    desc: "Mouth-region landmark drift. Credits lip motion, talking, and sub-expression-ratio mouth movement.",
+  },
+  {
+    name: "face_motion_points",
+    label: "Face motion",
+    max: 8,
+    section: "passive",
+    desc: "Bbox/centroid drift over time. Credits natural face/body sway; 0 on a perfectly locked photo or frozen-frame replay.",
+  },
+  {
     name: "challenge_points",
     label: "Challenges",
     max: 40,
     section: "active",
-    desc: "10 points per completed active challenge (turn head, nod, blink-on-cue), capped at 40. Only awarded when the consumer surfaces the prompt to the user.",
+    desc: "10 points per completed active challenge (turn head, nod, blink-on-cue), capped at 40. Disabled in proctoring mode — passive axes above carry the score on their own.",
   },
 ];
 
 const proofRefs = {};
 function buildProofPanel() {
-  const sections = ["passive", "active"];
+  const sections = SHOW_ACTIVE_SECTION ? ["passive", "active"] : ["passive"];
   const labels = {
-    passive: "Passive evidence (always running)",
+    passive: "Passive evidence — every observed movement",
     active: "Active challenges (when surfaced)",
   };
   for (const section of sections) {
@@ -404,12 +433,16 @@ function buildProofPanel() {
       };
     }
   }
-  // Trailing summary line: yaw / pitch / challenge counts.
+  // Trailing summary line: yaw / pitch coverage. Challenge counts hidden
+  // in proctoring mode (no challenges issued).
   const summary = document.createElement("div");
   summary.className = "proof-summary";
+  const challengeSpan = SHOW_ACTIVE_SECTION
+    ? `<span id="proofChallengeStats">challenges: 0 passed · 0 failed</span>`
+    : `<span id="proofMode" style="color: var(--accent); opacity: 0.7">passive proctoring mode</span>`;
   summary.innerHTML = `
     <span id="proofMotion">head motion: —</span>
-    <span id="proofChallengeStats">challenges: 0 / 0</span>
+    ${challengeSpan}
   `;
   els.proofRows.appendChild(summary);
   els.proofMotion = $("proofMotion");
@@ -479,6 +512,16 @@ async function ensureDetector() {
     ortExecutionProviders: ["wasm"],
     numFaces: 1,
     useGpu: true,
+    // Proctoring profile — passive observation only, no mid-session
+    // challenge prompts. The new passive axes (eye_motion, mouth_motion,
+    // face_motion) plus the looser gates below let a natural live face
+    // reach the 60-point proven-live threshold without performing.
+    enableLivenessChallenges: false,
+    livenessProverThresholds: {
+      expressionRatioGate: 0.4,
+      rotationThreshold: 2.0,
+      landmarkVarThreshold: 0.5,
+    },
   });
   return detector;
 }
@@ -860,13 +903,19 @@ els.copyVerdict.addEventListener("click", async () => {
   const proofLines = proof
     ? [
         "",
-        `Liveness proof: ${Math.round(proof.score)} / 100 (${proof.is_proven_live ? "proven live" : "not proven"})`,
-        ...PROOF_AXES.map((axis) => {
+        `Liveness proof: ${Math.round(proof.score)} / 100 (${proof.is_proven_live ? "proven live" : "not proven"})${SHOW_ACTIVE_SECTION ? "" : " [proctoring: passive-only]"}`,
+        ...PROOF_AXES.filter(
+          (axis) => SHOW_ACTIVE_SECTION || axis.section === "passive",
+        ).map((axis) => {
           const val = proof.details?.[axis.name] ?? 0;
           return `  ${axis.label.padEnd(16)} ${String(val.toFixed(0)).padStart(3)} / ${axis.max}`;
         }),
         `  head motion        yaw ${(proof.yaw_range_seen_deg ?? 0).toFixed(1)}° · pitch ${(proof.pitch_range_seen_deg ?? 0).toFixed(1)}°`,
-        `  challenges         ${proof.details?.challenges_passed ?? 0} passed · ${proof.details?.challenges_failed ?? 0} failed`,
+        ...(SHOW_ACTIVE_SECTION
+          ? [
+              `  challenges         ${proof.details?.challenges_passed ?? 0} passed · ${proof.details?.challenges_failed ?? 0} failed`,
+            ]
+          : []),
       ]
     : [];
   const text = [

@@ -93,6 +93,23 @@ export interface LivenessScore {
   challenge_points: number;
   challenges_passed: number;
   challenges_failed: number;
+  /**
+   * Max 12 — eye-region landmark drift, independent of blink counting.
+   * Rewards gaze tracking and eyelid micro-motion. Additive over Python;
+   * always 0 unless the LandmarkVarianceAnalyzer is wired and publishing
+   * an `eye_var` detail.
+   */
+  eye_motion_points: number;
+  /**
+   * Max 10 — mouth-region landmark drift. Rewards talking, lip movement,
+   * micro-expressions. Pulled from LandmarkVarianceAnalyzer `mouth_var`.
+   */
+  mouth_motion_points: number;
+  /**
+   * Max 8 — bbox/centroid drift over time. Rewards natural face/body sway.
+   * Pulled from TemporalAnalyzer `motion`. 0 on a perfectly static photo.
+   */
+  face_motion_points: number;
 }
 
 /** Concise history record for reporting (mirrors `get_challenge_history`). */
@@ -135,6 +152,22 @@ export interface LivenessProverOptions {
    * `Math.random`. The prover only uses it to pick the next challenge type.
    */
   random?: () => number;
+  /**
+   * Override `EXPRESSION_RATIO_GATE` (default 1.2 — Python parity). Lower
+   * the gate when the consumer wants natural-observation expression scoring;
+   * proctoring (passive-only) typically uses 0.4.
+   */
+  expressionRatioGate?: number;
+  /**
+   * Override `ROTATION_THRESHOLD` in degrees (default 3.0 — Python parity).
+   * Lower it to credit subtle head movement. Proctoring typically uses 2.0.
+   */
+  rotationThreshold?: number;
+  /**
+   * Override `LANDMARK_VAR_THRESHOLD` (default 1.0 — Python parity). Lower
+   * it to credit small mesh drift. Proctoring typically uses 0.5.
+   */
+  landmarkVarThreshold?: number;
 }
 
 // MediaPipe face mesh key points for head pose estimation
@@ -185,8 +218,28 @@ export class LivenessProver {
   static readonly YAW_GAIN = 0.5;
   static readonly PITCH_GAIN = 0.3;
 
+  // === Passive movement axes (additive over Python — credit per-region
+  // landmark drift and face-position drift that Python rolls up into the
+  // single `landmark_points` term). The constants are conservative so they
+  // can be turned on as defaults without breaking Python-parity tests:
+  // their `*_THRESHOLD` is the minimum value below which no points are
+  // awarded, and the inner cap saturates a reasonably-active session.
+  static readonly EYE_MOTION_POINT_CAP = 12.0;
+  static readonly EYE_MOTION_GAIN = 0.5;
+  static readonly EYE_MOTION_THRESHOLD = 1.0;
+  static readonly MOUTH_MOTION_POINT_CAP = 10.0;
+  static readonly MOUTH_MOTION_GAIN = 0.5;
+  static readonly MOUTH_MOTION_THRESHOLD = 1.0;
+  static readonly FACE_MOTION_POINT_CAP = 8.0;
+  static readonly FACE_MOTION_GAIN = 20.0;
+  static readonly FACE_MOTION_THRESHOLD = 0.05;
+
   private readonly enableChallenges: boolean;
   private readonly random: () => number;
+  // Tunable gates (Python defaults preserved). See LivenessProverOptions.
+  private readonly expressionRatioGate: number;
+  private readonly rotationThreshold: number;
+  private readonly landmarkVarThreshold: number;
 
   // Use ms epoch like SessionEngine; `elapsedSec` derives seconds-since-start.
   private startTimeMs = 0;
@@ -218,6 +271,12 @@ export class LivenessProver {
   constructor(options: LivenessProverOptions = {}) {
     this.enableChallenges = options.enableChallenges ?? true;
     this.random = options.random ?? Math.random;
+    this.expressionRatioGate =
+      options.expressionRatioGate ?? LivenessProver.EXPRESSION_RATIO_GATE;
+    this.rotationThreshold =
+      options.rotationThreshold ?? LivenessProver.ROTATION_THRESHOLD;
+    this.landmarkVarThreshold =
+      options.landmarkVarThreshold ?? LivenessProver.LANDMARK_VAR_THRESHOLD;
   }
 
   /** Start the session clock. */
@@ -310,8 +369,9 @@ export class LivenessProver {
 
     const blinkCount = readBlinkCount(cls);
     const landmarks = primary.landmarks ?? null;
-    const { landmarkVariance, expressionRatio } =
+    const { landmarkVariance, expressionRatio, eyeVar, mouthVar } =
       readLandmarkVarianceDetails(cls);
+    const faceMotion = readTemporalMotion(cls);
 
     this.lastSeenBlinkCount = blinkCount;
 
@@ -321,6 +381,9 @@ export class LivenessProver {
       landmarkVariance,
       expressionRatio,
       faceCount,
+      eyeVar,
+      mouthVar,
+      faceMotion,
     );
   }
 
@@ -336,6 +399,9 @@ export class LivenessProver {
     landmarkVariance: number,
     expressionRatio: number,
     faceCount: number,
+    eyeVar: number = 0,
+    mouthVar: number = 0,
+    faceMotion: number = 0,
   ): void {
     const elapsed = this.elapsedSec;
 
@@ -348,7 +414,7 @@ export class LivenessProver {
     }
 
     // === Passive Proof: Landmark Variance ===
-    if (landmarkVariance > LivenessProver.LANDMARK_VAR_THRESHOLD) {
+    if (landmarkVariance > this.landmarkVarThreshold) {
       this.score.landmark_points = Math.min(
         LivenessProver.LANDMARK_POINT_CAP,
         landmarkVariance * LivenessProver.LANDMARK_VAR_GAIN,
@@ -356,10 +422,39 @@ export class LivenessProver {
     }
 
     // === Passive Proof: Expression Changes ===
-    if (expressionRatio > LivenessProver.EXPRESSION_RATIO_GATE) {
+    if (expressionRatio > this.expressionRatioGate) {
       this.score.expression_points = Math.min(
         LivenessProver.EXPRESSION_POINT_CAP,
         expressionRatio * LivenessProver.EXPRESSION_GAIN,
+      );
+    }
+
+    // === Passive Proof: Eye-region motion (additive over Python) ===
+    // Independent of blink counting — credits gaze tracking and eyelid
+    // micro-movement that the binary blink detector misses.
+    if (eyeVar > LivenessProver.EYE_MOTION_THRESHOLD) {
+      this.score.eye_motion_points = Math.min(
+        LivenessProver.EYE_MOTION_POINT_CAP,
+        eyeVar * LivenessProver.EYE_MOTION_GAIN,
+      );
+    }
+
+    // === Passive Proof: Mouth-region motion (additive over Python) ===
+    // Credits talking, lip movement, and sub-expression-ratio mouth motion.
+    if (mouthVar > LivenessProver.MOUTH_MOTION_THRESHOLD) {
+      this.score.mouth_motion_points = Math.min(
+        LivenessProver.MOUTH_MOTION_POINT_CAP,
+        mouthVar * LivenessProver.MOUTH_MOTION_GAIN,
+      );
+    }
+
+    // === Passive Proof: Face/body sway (additive over Python) ===
+    // Credits natural drift in face bbox over time, even when the head
+    // pose is steady. 0 on a perfectly locked photo or frozen-frame replay.
+    if (faceMotion > LivenessProver.FACE_MOTION_THRESHOLD) {
+      this.score.face_motion_points = Math.min(
+        LivenessProver.FACE_MOTION_POINT_CAP,
+        faceMotion * LivenessProver.FACE_MOTION_GAIN,
       );
     }
 
@@ -381,13 +476,13 @@ export class LivenessProver {
         if (pitchSpan > this.pitchRangeSeen) this.pitchRangeSeen = pitchSpan;
       }
 
-      if (this.yawRangeSeen > LivenessProver.ROTATION_THRESHOLD) {
+      if (this.yawRangeSeen > this.rotationThreshold) {
         this.score.rotation_points = Math.min(
           LivenessProver.ROTATION_YAW_CAP,
           this.yawRangeSeen * LivenessProver.YAW_GAIN,
         );
       }
-      if (this.pitchRangeSeen > LivenessProver.ROTATION_THRESHOLD) {
+      if (this.pitchRangeSeen > this.rotationThreshold) {
         this.score.rotation_points = Math.min(
           LivenessProver.ROTATION_PITCH_CAP,
           this.score.rotation_points +
@@ -416,6 +511,9 @@ export class LivenessProver {
       challenge_points: 0,
       challenges_passed: 0,
       challenges_failed: 0,
+      eye_motion_points: 0,
+      mouth_motion_points: 0,
+      face_motion_points: 0,
     };
   }
 
@@ -426,7 +524,10 @@ export class LivenessProver {
         this.score.landmark_points +
         this.score.rotation_points +
         this.score.expression_points +
-        this.score.challenge_points,
+        this.score.challenge_points +
+        this.score.eye_motion_points +
+        this.score.mouth_motion_points +
+        this.score.face_motion_points,
     );
   }
 
@@ -629,18 +730,38 @@ function readBlinkCount(cls: SpoofClassification | undefined): number {
 
 function readLandmarkVarianceDetails(
   cls: SpoofClassification | undefined,
-): { landmarkVariance: number; expressionRatio: number } {
-  if (!cls) return { landmarkVariance: 0, expressionRatio: 0 };
+): {
+  landmarkVariance: number;
+  expressionRatio: number;
+  eyeVar: number;
+  mouthVar: number;
+} {
+  if (!cls)
+    return { landmarkVariance: 0, expressionRatio: 0, eyeVar: 0, mouthVar: 0 };
   const lv = cls.analyzer_results["landmark_variance"];
-  if (!lv) return { landmarkVariance: 0, expressionRatio: 0 };
+  if (!lv)
+    return { landmarkVariance: 0, expressionRatio: 0, eyeVar: 0, mouthVar: 0 };
   // Python `landmark_variance` is the raw scalar fed to the prover. The
   // LandmarkVarianceAnalyzer publishes the closest analog under
   // `overall_var` (the per-frame averaged squared displacement) — see
-  // LandmarkVarianceAnalyzer.ts:226.
+  // LandmarkVarianceAnalyzer.ts:226. eye_var / mouth_var are TS-port
+  // additions that feed the eye-motion + mouth-motion proof axes.
   const lv_raw = lv.details["overall_var"];
   const er_raw = lv.details["expression_ratio"];
+  const ev_raw = lv.details["eye_var"];
+  const mv_raw = lv.details["mouth_var"];
   return {
     landmarkVariance: typeof lv_raw === "number" ? lv_raw : 0,
     expressionRatio: typeof er_raw === "number" ? er_raw : 0,
+    eyeVar: typeof ev_raw === "number" ? ev_raw : 0,
+    mouthVar: typeof mv_raw === "number" ? mv_raw : 0,
   };
+}
+
+function readTemporalMotion(cls: SpoofClassification | undefined): number {
+  if (!cls) return 0;
+  const t = cls.analyzer_results["temporal"];
+  if (!t) return 0;
+  const m_raw = t.details["motion"];
+  return typeof m_raw === "number" ? m_raw : 0;
 }
