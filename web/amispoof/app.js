@@ -14,12 +14,12 @@ import * as ort from "onnxruntime-web";
 import {
   createSpoofDetector,
   runCasiaFasdMicroBench,
-} from "./lib/spoof-detector.js?v=2026-05-16-confnorm2";
+} from "./lib/spoof-detector.js?v=2026-05-16-proofpanel";
 
 // Version handshake — checked by the inline script in index.html.
 // If the user is running a stale cached app.js (no AMISPOOF_VERSION),
 // the HTML triggers a one-shot reload after 4 s.
-window.AMISPOOF_VERSION = "2026-05-16-confnorm2";
+window.AMISPOOF_VERSION = "2026-05-16-proofpanel";
 
 // SessionEngine.getVerdict() returns a confidence in [0, 0.88] when the
 // LivenessProver is wired (structural ceiling — see SessionEngine.ts
@@ -47,6 +47,119 @@ function displaySummary(v) {
     `${v.session_duration_sec.toFixed(1)}s | ${v.frames_analyzed} frames | ` +
     `blinks=${v.blink_count ?? 0} | incidents=${v.incidents.length}`
   );
+}
+
+// Per-analyzer hover tooltip: static description + the most-informative
+// detail fields rendered as `key=value` pairs. The full per-frame detail
+// blob still ships in the downloaded JSON; this surfaces the headline
+// numbers (eye/mouth/forehead variance, tremor_x/y, EAR, …) inline.
+const ANALYZER_DETAIL_KEYS = {
+  landmark_variance: [
+    "eye_var",
+    "mouth_var",
+    "forehead_var",
+    "expression_ratio",
+  ],
+  blink: ["ear", "blinks", "blink_rate_per_min"],
+  micro_tremor: ["tremor_x", "tremor_y", "tremor_ratio", "data_quality"],
+  rppg: ["bpm", "snr", "data_quality"],
+  screen_flicker: ["dominant_freq_hz", "max_flicker_power", "measured_fps"],
+  temporal: ["pos_std", "area_std", "motion"],
+  background_grid: [
+    "stability_ratio",
+    "specular_ratio",
+    "cool_ratio",
+    "total_bg_cells",
+  ],
+  device_boundary: ["boundary_score", "line_score", "n_lines"],
+  screen_replay: ["fft_score", "laplacian_score", "skin_score"],
+  texture: ["texture_score", "color_score", "frequency_score"],
+  moire: ["moire_risk", "gabor_risk", "fft_risk"],
+  minifasnet: ["p_real", "p_spoof"],
+};
+
+function formatDetailValue(v) {
+  if (v === null || v === undefined) return "—";
+  if (typeof v === "number") {
+    if (!Number.isFinite(v)) return "—";
+    return Math.abs(v) >= 100 ? v.toFixed(0) : v.toFixed(3);
+  }
+  return String(v);
+}
+
+function analyzerTooltip(cfg, result) {
+  const keys = ANALYZER_DETAIL_KEYS[cfg.name] ?? [];
+  const details = result.details ?? {};
+  const pairs = keys
+    .filter((k) => details[k] !== undefined)
+    .map((k) => `${k}=${formatDetailValue(details[k])}`);
+  if (pairs.length === 0) return cfg.desc;
+  return `${cfg.desc}\n\nLive: ${pairs.join(" · ")}`;
+}
+
+// Render the LivenessProver proof panel from a getProof() snapshot.
+// Updates the headline (total + proven badge), the active-challenge prompt
+// (visible only while one is pending), the per-axis bars, and the trailing
+// motion/challenge summary. Safe to call with `null` (placeholder state).
+function renderProofPanel(proof) {
+  if (!proof) {
+    els.proofHeadline.className = "proof-headline pending";
+    els.proofHeadline.innerHTML = "waiting for evidence…";
+    els.proofChallenge.style.display = "none";
+    for (const axis of PROOF_AXES) {
+      const ref = proofRefs[axis.name];
+      ref.fill.style.width = "0%";
+      ref.val.innerHTML = `0 <span class="max">/ ${axis.max}</span>`;
+    }
+    if (els.proofMotion) els.proofMotion.textContent = "head motion: —";
+    if (els.proofChallengeStats)
+      els.proofChallengeStats.textContent = "challenges: 0 / 0";
+    return;
+  }
+
+  const total = Math.round(proof.score);
+  const proven = proof.is_proven_live;
+  els.proofHeadline.className = `proof-headline ${proven ? "proven" : "pending"}`;
+  const status = proven ? "✓ proven live" : `${60 - total} pts to proof`;
+  els.proofHeadline.innerHTML = `
+    <span>${proven ? "Proven live" : "Building proof"}</span>
+    <span class="total">${total}<span class="max"> / 100</span> · <span style="font-size:11px">${status}</span></span>
+  `;
+
+  // Active challenge banner — only visible while one is pending.
+  const ac = proof.active_challenge;
+  if (ac && ac.state === "prompted") {
+    const remain = Math.max(
+      0,
+      (ac.timeout_sec ?? 0) - (proof.elapsed_sec - (ac.prompted_at ?? 0)),
+    );
+    const label = (ac.challenge_type ?? "challenge")
+      .replace(/_/g, " ")
+      .toUpperCase();
+    els.proofChallenge.style.display = "";
+    els.proofChallenge.textContent = `${label} — ${remain.toFixed(1)}s remaining`;
+  } else {
+    els.proofChallenge.style.display = "none";
+  }
+
+  for (const axis of PROOF_AXES) {
+    const ref = proofRefs[axis.name];
+    const v = proof.details?.[axis.name] ?? 0;
+    const pct = Math.max(0, Math.min(100, (v / axis.max) * 100));
+    ref.fill.style.width = `${pct.toFixed(0)}%`;
+    ref.val.innerHTML = `${v.toFixed(0)} <span class="max">/ ${axis.max}</span>`;
+  }
+
+  if (els.proofMotion) {
+    const yaw = proof.yaw_range_seen_deg ?? 0;
+    const pitch = proof.pitch_range_seen_deg ?? 0;
+    els.proofMotion.textContent = `head motion: yaw ${yaw.toFixed(1)}° · pitch ${pitch.toFixed(1)}°`;
+  }
+  if (els.proofChallengeStats) {
+    const passed = proof.details?.challenges_passed ?? 0;
+    const failed = proof.details?.challenges_failed ?? 0;
+    els.proofChallengeStats.textContent = `challenges: ${passed} passed · ${failed} failed`;
+  }
 }
 
 const ORT_WASM_BASE =
@@ -136,6 +249,20 @@ const ANALYZER_ORDER = [
     group: "video",
     desc: "Eye Aspect Ratio over time. 0 blinks for 15s ⇒ static-image incident.",
   },
+  {
+    name: "temporal",
+    weight: 0,
+    label: "Face motion",
+    group: "video",
+    desc: "Face position and bounding-box area variance across the rolling window. Photos and locked-frame replays score 0; live faces drift naturally.",
+  },
+  {
+    name: "background_grid",
+    weight: 1.5,
+    label: "Background grid",
+    group: "video",
+    desc: "Per-cell stability of the scene behind the face. A replay attack on a phone screen produces specular highlights and a too-stable backdrop.",
+  },
 ];
 
 const $ = (id) => document.getElementById(id);
@@ -171,6 +298,9 @@ const els = {
   gateBanner: $("gateBanner"),
   gateBody: $("gateBody"),
   copyVerdict: $("copyVerdict"),
+  proofHeadline: $("proofHeadline"),
+  proofChallenge: $("proofChallenge"),
+  proofRows: $("proofRows"),
 };
 
 const analyzerRefs = {};
@@ -191,6 +321,7 @@ function buildAnalyzerGroup(title, group) {
     `;
     els.analyzers.appendChild(row);
     analyzerRefs[cfg.name] = {
+      row,
       fill: row.querySelector(".fill"),
       val: row.querySelector(".val"),
     };
@@ -198,6 +329,93 @@ function buildAnalyzerGroup(title, group) {
 }
 buildAnalyzerGroup("Image-track (single frame)", "image");
 buildAnalyzerGroup("Video-track (over time)", "video");
+
+// ---------- Liveness proof panel ----------
+// LivenessProver scores accumulate every frame from passive evidence (blinks,
+// landmark variance, head rotation, expression) and from active challenges
+// (when surfaced). Each axis has a hard cap; the total of 60 crosses the
+// proven-live threshold. The proof score feeds the engine's confidence
+// calculation via the 0.3 × proverConfidence term.
+const PROOF_AXES = [
+  {
+    name: "blink_points",
+    label: "Blink",
+    max: 25,
+    section: "passive",
+    desc: "5 points per detected blink, capped at 25. A printed photo never blinks.",
+  },
+  {
+    name: "landmark_points",
+    label: "Landmark var",
+    max: 20,
+    section: "passive",
+    desc: "Per-frame landmark drift. Capped at 20 once the 478-point mesh shows clear non-rigid motion.",
+  },
+  {
+    name: "rotation_points",
+    label: "Head rotation",
+    max: 15,
+    section: "passive",
+    desc: "Combined yaw + pitch range seen across the 3-second window. Photos held still score 0; even slight natural head motion accumulates points.",
+  },
+  {
+    name: "expression_points",
+    label: "Expression",
+    max: 15,
+    section: "passive",
+    desc: "Eye/mouth/forehead variance ratio. Awarded when the face shows non-rigid expression change.",
+  },
+  {
+    name: "challenge_points",
+    label: "Challenges",
+    max: 40,
+    section: "active",
+    desc: "10 points per completed active challenge (turn head, nod, blink-on-cue), capped at 40. Only awarded when the consumer surfaces the prompt to the user.",
+  },
+];
+
+const proofRefs = {};
+function buildProofPanel() {
+  const sections = ["passive", "active"];
+  const labels = {
+    passive: "Passive evidence (always running)",
+    active: "Active challenges (when surfaced)",
+  };
+  for (const section of sections) {
+    const heading = document.createElement("div");
+    heading.className = "proof-divider";
+    heading.textContent = labels[section];
+    els.proofRows.appendChild(heading);
+    for (const axis of PROOF_AXES) {
+      if (axis.section !== section) continue;
+      const row = document.createElement("div");
+      row.className = "proof-row";
+      row.title = axis.desc;
+      row.innerHTML = `
+        <span class="name">${axis.label}</span>
+        <span class="bar"><span class="fill" style="width: 0%"></span></span>
+        <span class="val">0 <span class="max">/ ${axis.max}</span></span>
+      `;
+      els.proofRows.appendChild(row);
+      proofRefs[axis.name] = {
+        fill: row.querySelector(".fill"),
+        val: row.querySelector(".val"),
+        max: axis.max,
+      };
+    }
+  }
+  // Trailing summary line: yaw / pitch / challenge counts.
+  const summary = document.createElement("div");
+  summary.className = "proof-summary";
+  summary.innerHTML = `
+    <span id="proofMotion">head motion: —</span>
+    <span id="proofChallengeStats">challenges: 0 / 0</span>
+  `;
+  els.proofRows.appendChild(summary);
+  els.proofMotion = $("proofMotion");
+  els.proofChallengeStats = $("proofChallengeStats");
+}
+buildProofPanel();
 
 const CATEGORIES = [
   "static_image",
@@ -232,6 +450,7 @@ let lastTs = 0;
 let lastVerdict = null;
 let lastAnalyzerScores = null;
 let lastGateResult = null;
+let lastProof = null;
 let knownIncidentIds = new Set();
 // Gate-stability smoother — the per-frame gate state oscillates between
 // CLEAR and OCCLUDED_PENDING under modest landmark jitter. We keep the
@@ -410,6 +629,7 @@ function updateUI(analysis, v) {
   for (const cfg of ANALYZER_ORDER) {
     const r = analyzerResults[cfg.name];
     const ref = analyzerRefs[cfg.name];
+    if (!ref) continue;
     if (!r) {
       ref.fill.style.width = "0%";
       ref.val.textContent = "—";
@@ -419,12 +639,23 @@ function updateUI(analysis, v) {
     const score = Math.max(0, Math.min(100, r.score));
     ref.fill.style.width = `${score.toFixed(0)}%`;
     ref.val.textContent = score.toFixed(0);
+    // Refresh per-row tooltip with the analyzer's live detail breakdown.
+    // The static description from ANALYZER_ORDER is kept as the first
+    // line; per-frame numbers append after a separator so hovering any
+    // row reveals the same per-region/per-axis data that ships in the
+    // downloaded JSON (eye_var, mouth_var, forehead_var, tremor_x, etc.).
+    ref.row.title = analyzerTooltip(cfg, r);
     snapshot[cfg.name] = {
       score: Math.round(score * 10) / 10,
       details: r.details ?? null,
     };
   }
   lastAnalyzerScores = snapshot;
+
+  // Liveness proof — read independent of analyzers, refreshes every frame.
+  const proof = detector?.getProof?.() ?? null;
+  renderProofPanel(proof);
+  lastProof = proof;
 
   // Per-category P(spoof)
   for (const cat of CATEGORIES) {
@@ -518,9 +749,11 @@ function reset() {
   detector.reset();
   smoothedFps = 0;
   lastTs = 0;
+  lastProof = null;
   knownIncidentIds = new Set();
   els.incidentList.innerHTML =
     '<div class="incident">No incidents yet.</div>';
+  renderProofPanel(null);
   setStatus("running", "live");
 }
 
@@ -536,6 +769,7 @@ function download() {
           verdict,
           latest_analyzer_scores: lastAnalyzerScores,
           latest_gate_result: lastGateResult,
+          latest_liveness_proof: lastProof,
           fps_smoothed: Math.round(smoothedFps * 10) / 10,
         },
         null,
@@ -622,6 +856,19 @@ if (els.bench) {
 els.copyVerdict.addEventListener("click", async () => {
   const v = lastVerdict;
   if (!v) return;
+  const proof = lastProof;
+  const proofLines = proof
+    ? [
+        "",
+        `Liveness proof: ${Math.round(proof.score)} / 100 (${proof.is_proven_live ? "proven live" : "not proven"})`,
+        ...PROOF_AXES.map((axis) => {
+          const val = proof.details?.[axis.name] ?? 0;
+          return `  ${axis.label.padEnd(16)} ${String(val.toFixed(0)).padStart(3)} / ${axis.max}`;
+        }),
+        `  head motion        yaw ${(proof.yaw_range_seen_deg ?? 0).toFixed(1)}° · pitch ${(proof.pitch_range_seen_deg ?? 0).toFixed(1)}°`,
+        `  challenges         ${proof.details?.challenges_passed ?? 0} passed · ${proof.details?.challenges_failed ?? 0} failed`,
+      ]
+    : [];
   const text = [
     displaySummary(v),
     "",
@@ -632,6 +879,7 @@ els.copyVerdict.addEventListener("click", async () => {
         ? `  ${cfg.label.padEnd(20)} ${String(s.score).padStart(5)} (w ${cfg.weight})`
         : `  ${cfg.label.padEnd(20)} —`;
     }),
+    ...proofLines,
     "",
     `Gate: ${lastGateResult ? (lastGateResult.usable ? "usable" : `advisory: ${lastGateResult.reason}`) : "—"}`,
     "",

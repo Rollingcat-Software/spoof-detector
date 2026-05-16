@@ -116,6 +116,14 @@ export interface LivenessProof {
   challenge_history: ChallengeHistoryEntry[];
   /** Seconds since `start()`. */
   elapsed_sec: number;
+  /**
+   * Largest yaw range observed across the rolling 3-second window, in
+   * degrees. Surfaced so consumers can display "head turn coverage"
+   * directly instead of inferring it from the rotation_points.
+   */
+  yaw_range_seen_deg: number;
+  /** Largest pitch range observed across the same window, in degrees. */
+  pitch_range_seen_deg: number;
 }
 
 /** Constructor options. */
@@ -256,6 +264,8 @@ export class LivenessProver {
       active_challenge: this.activeChallenge,
       challenge_history: this.getChallengeHistory(),
       elapsed_sec: this.elapsedSec,
+      yaw_range_seen_deg: this.yawRangeSeen,
+      pitch_range_seen_deg: this.pitchRangeSeen,
     };
   }
 
