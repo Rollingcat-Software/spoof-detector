@@ -8,17 +8,34 @@
 // Peak-sensitive verdict aggregator: any sustained spoof window flags the
 // session even if the majority of frames are live (critical for proctoring).
 //
-// Phase 1 deviations from the Python source:
-//   * LivenessProver integration is deferred to Phase 5; the boolean
-//     `prover_live` is replaced by an analyzer-fusion-only decision. The
-//     `_check_minifasnet_instability` and `_check_motion_naturalness`
-//     incident detectors are preserved.
-//   * `_pipeline_analyzers` (used to extract `_last_landmarks` from a Blink
-//     instance) is omitted — landmarks now ride on FaceROI directly.
-//   * np.std / np.var / np.sqrt are inlined as TS helpers below.
+// Decision rule:
 //
-// Constants are preserved verbatim (WARMUP_FRAMES = 30, etc.).
+//   base = adjusted_real > 0.45 AND NOT incident_override (>=3 incidents)
+//   is_live = base AND (NOT requireProverLive OR prover.isProvenLive)
+//
+// Python session_engine.py:400 always ANDs prover_live; we make that AND-term
+// opt-in (`requireProverLive`) because the prover only reaches its 60-point
+// threshold when the consumer surfaces active challenges (head-turn, nod) to
+// the user. Consumers that don't wire challenge UI would otherwise reject
+// every borderline live user. amispoof currently doesn't surface challenges
+// → default false. verify.fivucsas.com, which does wire challenges, sets it
+// to true to get the full Python "guilty until proven innocent" semantics.
+//
+// The prover is *always* fed (when injected) and its score contributes to
+// `confidence` regardless of the gate setting — a free positive signal.
+//
+// Peak-sensitivity (the property that motivated the now-removed
+// `verdictLockedSpoof` latch) is preserved entirely by:
+//   * worstWindowReal → blendedReal → adjustedReal (sticky-low across the
+//     1800-sample ring buffer; long enough for a multi-minute session)
+//   * the ≥3-incident override (incidents are append-only within a session)
+// Both are monotonic in evidence and survive on their own.
+//
+// UI flicker smoothing (the 250ms SPOOF→LIVE→SPOOF jitter) belongs at the
+// display layer — apply hysteresis on the displayed verdict, not on the
+// domain state machine.
 
+import { LivenessProver } from "./LivenessProver";
 import {
   ALL_SPOOF_CATEGORIES,
   FrameAnalysis,
@@ -38,6 +55,21 @@ import {
 
 export interface SessionEngineOptions {
   sessionId?: string;
+  /**
+   * Optional liveness prover. When provided, the engine forwards
+   * `start()`, `ingest()`, and `reset()` to it and includes its score
+   * in the verdict confidence calculation.
+   */
+  prover?: LivenessProver | null;
+  /**
+   * When true, the prover's isProvenLive gate (score ≥ 60) is ANDed into
+   * the live verdict — full Python session_engine.py semantics. Requires
+   * the consumer to surface `detector.getProof().active_challenge` to the
+   * user; otherwise borderline live sessions without spontaneous head
+   * motion will be rejected. Default false — fusion-only verdict, prover
+   * still feeds confidence. Has no effect when `prover` is null.
+   */
+  requireProverLive?: boolean;
 }
 
 export class SessionEngine {
@@ -69,20 +101,15 @@ export class SessionEngine {
   private lastBlinkCount = 0;
   private lastBlinkObservedAt = 0;
   private lastNoBlinkIncidentAt = -Infinity;
-  // Once the verdict has locked to SPOOF, it stays SPOOF for the rest of the
-  // session. The fuser/category averages can briefly nudge adjustedReal back
-  // above 0.45 on a single high-confidence MiniFASNet frame even after the
-  // override has fired, which used to be visible to the user as a 250ms
-  // SPOOF → LIVE → SPOOF flicker on the verdict block.
-  private verdictLockedSpoof = false;
-  // Consecutive-frame counter for the post-warmup low-real latch. Reset
-  // whenever a live frame is observed, incremented when low-real, and
-  // only flips verdictLockedSpoof at >= 15 in a row (~1.5s at 10 fps).
-  private lowRealStreak = 0;
+
+  private readonly prover: LivenessProver | null;
+  private readonly requireProverLive: boolean;
 
   constructor(options: SessionEngineOptions = {}) {
     this.sessionId =
       options.sessionId ?? `session_${Math.floor(Date.now() / 1000)}`;
+    this.prover = options.prover ?? null;
+    this.requireProverLive = options.requireProverLive === true;
     this.categoryEvidence = {} as Record<SpoofCategory, RingBuffer<number>>;
     for (const cat of ALL_SPOOF_CATEGORIES) {
       // 60 seconds of evidence at 30 fps
@@ -107,6 +134,7 @@ export class SessionEngine {
   start(): void {
     this.startTime = Date.now();
     this.state = SessionState.WARMING_UP;
+    this.prover?.start();
   }
 
   /** Reset session state but keep the engine instance reusable. */
@@ -127,13 +155,13 @@ export class SessionEngine {
     this.lastBlinkCount = 0;
     this.lastBlinkObservedAt = 0;
     this.lastNoBlinkIncidentAt = -Infinity;
-    this.verdictLockedSpoof = false;
-    this.lowRealStreak = 0;
+    this.prover?.reset();
   }
 
   /** Ingest a frame analysis into the session. Called every frame. */
   ingest(analysis: FrameAnalysis): void {
     this.frameCount += 1;
+    this.prover?.ingest(analysis);
     const elapsed = this.elapsedSec;
 
     if (
@@ -457,41 +485,28 @@ export class SessionEngine {
     adjustedReal = adjustedReal * (1.0 - incidentPenalty * 0.4);
     adjustedReal += temporalBoost * 0.15;
 
-    // Phase-1 simplified decision (no LivenessProver yet):
-    //   live IFF analyzer fusion says real AND incidents < 3.
+    // Verdict rule — see file header for design rationale.
+    const proverScore = this.prover?.getScore();
+    const proverLive =
+      this.prover === null || !this.requireProverLive
+        ? true
+        : (proverScore?.total ?? 0) >= 60;
     const incidentOverride = this.incidents.length >= 3;
-    let isLive = adjustedReal > 0.45 && !incidentOverride;
+    const isLive = adjustedReal > 0.45 && proverLive && !incidentOverride;
 
-    // Once the verdict has *legitimately* locked to SPOOF, latch it for the
-    // rest of the session — peak-sensitive by design.
-    //
-    // Latch ONLY when one of the following is sustained:
-    //   a) incidentOverride fired (>=3 incidents — a hard signal)
-    //   b) we're past warmup AND adjustedReal stayed below 0.45 for
-    //      >=15 consecutive frames (≈ 1.5s at 10 fps).
-    //
-    // The earlier "latch on any single non-live frame" rule fired during
-    // warmup — dataConfidence < 1.0 collapses adjustedReal even on a
-    // perfectly live face, causing a permanent SPOOF lock from the first
-    // frame. Bug surfaced in the 2026-05-16 incognito test (live face,
-    // 7 blinks, 0 incidents, MiniFASNet 1.0, verdict SPOOF).
-    const past_warmup =
-      this.state !== SessionState.WARMING_UP &&
-      this.frameCount > SessionEngine.WARMUP_FRAMES;
-    if (incidentOverride) {
-      this.verdictLockedSpoof = true;
-    } else if (past_warmup && !isLive) {
-      this.lowRealStreak = (this.lowRealStreak ?? 0) + 1;
-      if (this.lowRealStreak >= 15) this.verdictLockedSpoof = true;
-    } else {
-      this.lowRealStreak = 0;
-    }
-    if (this.verdictLockedSpoof) isLive = false;
-
-    const confidence = Math.min(
-      1.0,
-      dataConfidence * (0.5 + 0.4 * Math.max(0, adjustedReal - 0.3)),
-    );
+    const proverConfidence = proverScore ? proverScore.total / 100.0 : 0;
+    const confidence = this.prover
+      ? Math.min(
+          1.0,
+          dataConfidence *
+            (0.3 * proverConfidence +
+              0.3 +
+              0.4 * Math.max(0, adjustedReal - 0.3)),
+        )
+      : Math.min(
+          1.0,
+          dataConfidence * (0.5 + 0.4 * Math.max(0, adjustedReal - 0.3)),
+        );
 
     // Blink count from blink analyzer details, if present in latest verdicts.
     let blinkCount = 0;
