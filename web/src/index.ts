@@ -28,10 +28,15 @@ import { SessionVerdict } from "./domain/session";
 import { FaceUsabilityGate } from "./gates/FaceUsabilityGate";
 import { BackgroundGridAnalyzer } from "./infrastructure/analyzers/BackgroundGridAnalyzer";
 import { BlinkAnalyzer } from "./infrastructure/analyzers/BlinkAnalyzer";
+import { BlinkSymmetryAnalyzer } from "./infrastructure/analyzers/BlinkSymmetryAnalyzer";
 import { DeviceBoundaryAnalyzer } from "./infrastructure/analyzers/DeviceBoundaryAnalyzer";
+import { ExpressionDynamicsAnalyzer } from "./infrastructure/analyzers/ExpressionDynamicsAnalyzer";
+import { EyebrowAnalyzer } from "./infrastructure/analyzers/EyebrowAnalyzer";
+import { GazeAnalyzer } from "./infrastructure/analyzers/GazeAnalyzer";
 import { LandmarkVarianceAnalyzer } from "./infrastructure/analyzers/LandmarkVarianceAnalyzer";
 import { MicroTremorAnalyzer } from "./infrastructure/analyzers/MicroTremorAnalyzer";
 import { MiniFASNetAnalyzer } from "./infrastructure/analyzers/MiniFASNetAnalyzer";
+import { Pose3DConsistencyAnalyzer } from "./infrastructure/analyzers/Pose3DConsistencyAnalyzer";
 import { RppgAnalyzer } from "./infrastructure/analyzers/RppgAnalyzer";
 import { ScreenFlickerAnalyzer } from "./infrastructure/analyzers/ScreenFlickerAnalyzer";
 import { TemporalAnalyzer } from "./infrastructure/analyzers/TemporalAnalyzer";
@@ -151,6 +156,14 @@ export interface SpoofDetectorOptions {
   // Phase 4 (parity with Python `src/`).
   enableBackgroundGrid?: boolean;
   enableTemporal?: boolean;
+  // Phase A (blendshape + 3D matrix derived; require MediaPipe
+  // outputFaceBlendshapes + outputFacialTransformationMatrixes — both
+  // enabled by default in MediaPipeFaceDetector).
+  enableEyebrow?: boolean;
+  enableBlinkSymmetry?: boolean;
+  enableGaze?: boolean;
+  enableExpressionDynamics?: boolean;
+  enablePose3DConsistency?: boolean;
   /** Run Aysenur's face-usability gate. Result attached to each FrameAnalysis. Default true. */
   enableFaceUsabilityGate?: boolean;
   /** Run the LivenessProver passive proof scorer alongside the SessionEngine. Default true. */
@@ -230,6 +243,12 @@ export class SpoofDetector {
   private temporal: TemporalAnalyzer | null = null;
   private faceUsabilityGate: FaceUsabilityGate | null = null;
   private livenessProver: LivenessProver | null = null;
+  // Phase A — blendshape / 3D matrix derived analyzers (lazy-init).
+  private eyebrow: EyebrowAnalyzer | null = null;
+  private blinkSymmetry: BlinkSymmetryAnalyzer | null = null;
+  private gaze: GazeAnalyzer | null = null;
+  private expressionDynamics: ExpressionDynamicsAnalyzer | null = null;
+  private pose3DConsistency: Pose3DConsistencyAnalyzer | null = null;
 
   private readonly fuser: MultiClassFuser;
   private readonly engine: SessionEngine;
@@ -247,6 +266,11 @@ export class SpoofDetector {
     temporal: boolean;
     faceUsabilityGate: boolean;
     livenessProver: boolean;
+    eyebrow: boolean;
+    blinkSymmetry: boolean;
+    gaze: boolean;
+    expressionDynamics: boolean;
+    pose3DConsistency: boolean;
   }>;
   private frameId = 0;
   private started = false;
@@ -288,6 +312,11 @@ export class SpoofDetector {
       temporal: opts.enableTemporal !== false,
       faceUsabilityGate: opts.enableFaceUsabilityGate !== false,
       livenessProver: opts.enableLivenessProver !== false,
+      eyebrow: opts.enableEyebrow !== false,
+      blinkSymmetry: opts.enableBlinkSymmetry !== false,
+      gaze: opts.enableGaze !== false,
+      expressionDynamics: opts.enableExpressionDynamics !== false,
+      pose3DConsistency: opts.enablePose3DConsistency !== false,
     };
     // LivenessProver is owned by the SessionEngine so its `isProvenLive` gate
     // joins the verdict AND-condition (matches Python design). When the
@@ -494,6 +523,29 @@ export class SpoofDetector {
         const a = this.ensureTemporal();
         results[a.name] = await asyncify(a.analyze(crop, face));
       }
+      // Phase A — blendshape / 3D matrix driven analyzers. All read
+      // directly from face.blendshapes / face.transformMatrix; no heavy
+      // CV cost, sub-2-ms each on the main thread.
+      if (this.toggles.eyebrow) {
+        const a = this.ensureEyebrow();
+        results[a.name] = await asyncify(a.analyze(crop, face));
+      }
+      if (this.toggles.blinkSymmetry) {
+        const a = this.ensureBlinkSymmetry();
+        results[a.name] = await asyncify(a.analyze(crop, face));
+      }
+      if (this.toggles.gaze) {
+        const a = this.ensureGaze();
+        results[a.name] = await asyncify(a.analyze(crop, face));
+      }
+      if (this.toggles.expressionDynamics) {
+        const a = this.ensureExpressionDynamics();
+        results[a.name] = await asyncify(a.analyze(crop, face));
+      }
+      if (this.toggles.pose3DConsistency) {
+        const a = this.ensurePose3DConsistency();
+        results[a.name] = await asyncify(a.analyze(crop, face));
+      }
 
       // Heavy analyzers — inline path. (Worker path is awaited in Stage C.)
       if (runHeavy && !this.enableHeavyWorker) {
@@ -603,6 +655,11 @@ export class SpoofDetector {
     this.texture?.reset();
     this.backgroundGrid?.reset();
     this.temporal?.reset();
+    this.eyebrow?.reset();
+    this.blinkSymmetry?.reset();
+    this.gaze?.reset();
+    this.expressionDynamics?.reset();
+    this.pose3DConsistency?.reset();
     // LivenessProver is reset inside SessionEngine.reset() (single source of truth).
     // MoireAnalyzer has no reset() — it's stateless per-frame.
     // Gates are stateful (streak counters) — replace with a fresh instance.
@@ -654,6 +711,29 @@ export class SpoofDetector {
   private ensureTemporal(): TemporalAnalyzer {
     if (!this.temporal) this.temporal = new TemporalAnalyzer();
     return this.temporal;
+  }
+  private ensureEyebrow(): EyebrowAnalyzer {
+    if (!this.eyebrow) this.eyebrow = new EyebrowAnalyzer();
+    return this.eyebrow;
+  }
+  private ensureBlinkSymmetry(): BlinkSymmetryAnalyzer {
+    if (!this.blinkSymmetry)
+      this.blinkSymmetry = new BlinkSymmetryAnalyzer();
+    return this.blinkSymmetry;
+  }
+  private ensureGaze(): GazeAnalyzer {
+    if (!this.gaze) this.gaze = new GazeAnalyzer();
+    return this.gaze;
+  }
+  private ensureExpressionDynamics(): ExpressionDynamicsAnalyzer {
+    if (!this.expressionDynamics)
+      this.expressionDynamics = new ExpressionDynamicsAnalyzer();
+    return this.expressionDynamics;
+  }
+  private ensurePose3DConsistency(): Pose3DConsistencyAnalyzer {
+    if (!this.pose3DConsistency)
+      this.pose3DConsistency = new Pose3DConsistencyAnalyzer();
+    return this.pose3DConsistency;
   }
   // LivenessProver is constructed eagerly in the constructor when the toggle
   // is on and injected into the SessionEngine — no lazy helper needed.

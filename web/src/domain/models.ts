@@ -98,6 +98,20 @@ export interface FaceROI {
   landmarks?: Float32Array;
   /** Optional cropped face region as ImageData. */
   crop?: ImageData;
+  /**
+   * Optional 52 ARKit-style blendshape coefficients ([0, 1] each), keyed
+   * by MediaPipe `categoryName` (e.g. "browInnerUp", "eyeBlinkLeft",
+   * "mouthSmileRight", "jawOpen", "tongueOut"). Present iff the detector
+   * was configured with `outputFaceBlendshapes: true`.
+   */
+  blendshapes?: ReadonlyMap<string, number>;
+  /**
+   * Optional 4×4 facial transformation matrix (row-major, 16 floats)
+   * — world-space 3D head pose. Present iff the detector was configured
+   * with `outputFacialTransformationMatrixes: true`. Consumed by
+   * Pose3DConsistencyAnalyzer for landmark-reprojection checks.
+   */
+  transformMatrix?: Float32Array;
 }
 
 /** Result from a single analyzer. */

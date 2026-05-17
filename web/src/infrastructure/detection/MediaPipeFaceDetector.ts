@@ -65,8 +65,14 @@ export class MediaPipeFaceDetector {
       },
       runningMode: this.options.runningMode ?? "VIDEO",
       numFaces: this.options.numFaces ?? 1,
-      outputFaceBlendshapes: false,
-      outputFacialTransformationMatrixes: false,
+      // 52 ARKit-style blendshape coefficients per face (eyebrow / per-eye
+      // blink / gaze direction / mouth / cheek / nose / jaw / tongue) — see
+      // EyebrowAnalyzer / BlinkSymmetryAnalyzer / GazeAnalyzer /
+      // ExpressionDynamicsAnalyzer for consumers. Zero extra model cost.
+      outputFaceBlendshapes: true,
+      // 4×4 facial transformation matrix (world-space 3D pose) — consumed
+      // by Pose3DConsistencyAnalyzer for landmark reprojection checks.
+      outputFacialTransformationMatrixes: true,
     });
   }
 
@@ -97,7 +103,8 @@ export class MediaPipeFaceDetector {
       return out;
     }
 
-    for (const lmSet of result.faceLandmarks) {
+    for (let faceIdx = 0; faceIdx < result.faceLandmarks.length; faceIdx++) {
+      const lmSet = result.faceLandmarks[faceIdx];
       let minX = Infinity;
       let minY = Infinity;
       let maxX = -Infinity;
@@ -122,6 +129,29 @@ export class MediaPipeFaceDetector {
       const x2 = Math.min(width - 1, Math.ceil(maxX));
       const y2 = Math.min(height - 1, Math.ceil(maxY));
 
+      // Blendshapes — 52 ARKit categories per face. The result shape is
+      // result.faceBlendshapes[faceIdx].categories[]: { categoryName, score, … }.
+      // We flatten to a Map<categoryName, score> so consumers can do O(1)
+      // lookups by name without scanning the array each frame.
+      let blendshapes: ReadonlyMap<string, number> | undefined;
+      const fbs = result.faceBlendshapes?.[faceIdx];
+      if (fbs && Array.isArray(fbs.categories)) {
+        const m = new Map<string, number>();
+        for (const c of fbs.categories) {
+          if (typeof c.categoryName === "string" && typeof c.score === "number") {
+            m.set(c.categoryName, c.score);
+          }
+        }
+        blendshapes = m;
+      }
+
+      // Facial transformation matrix — 4×4 row-major, 16 floats.
+      let transformMatrix: Float32Array | undefined;
+      const ftm = result.facialTransformationMatrixes?.[faceIdx];
+      if (ftm && Array.isArray(ftm.data) && ftm.data.length === 16) {
+        transformMatrix = Float32Array.from(ftm.data);
+      }
+
       // Phase-1 face-id assignment: index-within-frame. This is correct
       // for the common numFaces=1 case (always face_id=0) but does NOT
       // do real cross-frame tracking — that's the FaceTracker port in
@@ -131,6 +161,8 @@ export class MediaPipeFaceDetector {
         bbox: new BBox(x1, y1, x2, y2),
         confidence: 0.95, // MediaPipe FaceLandmarker doesn't expose a per-face score
         landmarks: flat,
+        blendshapes,
+        transformMatrix,
       });
     }
 

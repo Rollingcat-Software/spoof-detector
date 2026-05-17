@@ -8,7 +8,7 @@
     <!-- Primary SEO -->
     <meta
       name="description"
-      content="amispoof is an open, browser-side face anti-spoof and liveness tester. It runs the FIVUCSAS / Rollingcat spoof-detector pipeline (12 analyzers: MiniFASNet, screen flicker, micro-tremor, blink, rPPG pulse, device boundary, moire, texture, screen replay, landmark variance, face motion, background grid) plus a passive+active liveness-proof scorer (blink/landmark/head-rotation/expression/challenge points) and Ayşenur's face-usability gate, fully client-side. No server, no GPU, no upload — point your camera at a printed photo or another screen and watch the verdict in seconds."
+      content="amispoof is an open, browser-side face anti-spoof and liveness tester. It runs the FIVUCSAS / Rollingcat spoof-detector pipeline (17 analyzers: MiniFASNet, screen flicker, micro-tremor, blink, rPPG pulse, device boundary, moire, texture, screen replay, landmark variance, face motion, background grid, eyebrow motion, blink symmetry, gaze, expression dynamics, 3D pose consistency) plus a passive liveness-proof scorer (blink/landmark/head-rotation/expression/eye-motion/mouth-motion/face-motion/eyebrow/blink-symmetry/gaze/expression-dynamics/3D-pose points) and Ayşenur's face-usability gate, fully client-side. No server, no GPU, no upload — point your camera at a printed photo or another screen and watch the verdict in seconds."
     />
     <meta
       name="keywords"
@@ -27,7 +27,7 @@
     <meta property="og:title" content="amispoof — Live face anti-spoof tester (browser, no server)" />
     <meta
       property="og:description"
-      content="Open browser tester for the FIVUCSAS spoof-detector pipeline. 12 analyzers + 3 gates + passive/active liveness-proof scorer run client-side via onnxruntime-web + MediaPipe. Test printed-photo, screen-replay, occlusion and dark-room attacks against a session verdict in seconds."
+      content="Open browser tester for the FIVUCSAS spoof-detector pipeline. 17 analyzers + 3 gates + passive liveness-proof scorer run client-side via onnxruntime-web + MediaPipe. Test printed-photo, screen-replay, occlusion and dark-room attacks against a session verdict in seconds."
     />
     <meta property="og:locale" content="en_US" />
 
@@ -833,7 +833,7 @@
       // older cached copy (no AMISPOOF_VERSION export at all), force a
       // one-shot hard reload so the user doesn't get stuck on a broken
       // bundle. Guarded by sessionStorage to avoid infinite loops.
-      window.AMISPOOF_HTML_VERSION = "2026-05-17-cleanup";
+      window.AMISPOOF_HTML_VERSION = "2026-05-17-phaseA";
       setTimeout(function () {
         if (
           window.AMISPOOF_VERSION !== window.AMISPOOF_HTML_VERSION &&
@@ -844,6 +844,6 @@
         }
       }, 4000);
     </script>
-    <script type="module" src="./app.js?v=2026-05-17-cleanup"></script>
+    <script type="module" src="./app.js?v=2026-05-17-phaseA"></script>
   </body>
 </html>

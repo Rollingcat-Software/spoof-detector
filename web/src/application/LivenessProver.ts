@@ -110,6 +110,35 @@ export interface LivenessScore {
    * Pulled from TemporalAnalyzer `motion`. 0 on a perfectly static photo.
    */
   face_motion_points: number;
+  /**
+   * Max 8 — eyebrow blendshape variance over rolling window. Sourced from
+   * EyebrowAnalyzer details. 0 on a static photo with rigid brows.
+   */
+  eyebrow_motion_points: number;
+  /**
+   * Max 6 — left/right blink Pearson correlation. Sourced from
+   * BlinkSymmetryAnalyzer. Awarded only when corr ≥ 0.7 (real synchronous
+   * blinks); animated avatars / deepfakes typically desync per-eye blinks.
+   */
+  blink_symmetry_points: number;
+  /**
+   * Max 8 — gaze direction variance + saccade count. Sourced from
+   * GazeAnalyzer. 0 on a fixed-gaze photo; humans saccade ~3/s.
+   */
+  gaze_variation_points: number;
+  /**
+   * Max 8 — mouth/cheek/nose blendshape variance over rolling window.
+   * Sourced from ExpressionDynamicsAnalyzer. Approximates a passive
+   * emotion-change signal without a dedicated classifier.
+   */
+  expression_dynamics_points: number;
+  /**
+   * Max 6 — 3D pose rotation orthonormality + Z-translation motion.
+   * Sourced from Pose3DConsistencyAnalyzer. Catches flat-photo /
+   * tilted-photo / 2D-screen attack classes whose transformation
+   * matrix fits are subtly degenerate.
+   */
+  pose_3d_consistency_points: number;
 }
 
 /** Concise history record for reporting (mirrors `get_challenge_history`). */
@@ -233,6 +262,22 @@ export class LivenessProver {
   static readonly FACE_MOTION_POINT_CAP = 8.0;
   static readonly FACE_MOTION_GAIN = 20.0;
   static readonly FACE_MOTION_THRESHOLD = 0.05;
+
+  // === Phase A passive movement axes (sourced from MediaPipe blendshape
+  // + transformMatrix outputs unlocked by the detector flag flip). Each
+  // axis reads from its dedicated analyzer's `score` directly (already
+  // 0–100) and scales by the cap. Threshold = minimum score below which
+  // no points are awarded (e.g. neutral 50 during warmup → 0 pts).
+  static readonly EYEBROW_MOTION_POINT_CAP = 8.0;
+  static readonly EYEBROW_MOTION_THRESHOLD = 5.0; // analyzer score
+  static readonly BLINK_SYMMETRY_POINT_CAP = 6.0;
+  static readonly BLINK_SYMMETRY_THRESHOLD = 70.0; // corr ≥ 0.7 → 70 score
+  static readonly GAZE_VARIATION_POINT_CAP = 8.0;
+  static readonly GAZE_VARIATION_THRESHOLD = 10.0;
+  static readonly EXPRESSION_DYNAMICS_POINT_CAP = 8.0;
+  static readonly EXPRESSION_DYNAMICS_THRESHOLD = 5.0;
+  static readonly POSE_3D_CONSISTENCY_POINT_CAP = 6.0;
+  static readonly POSE_3D_CONSISTENCY_THRESHOLD = 30.0;
 
   private readonly enableChallenges: boolean;
   private readonly random: () => number;
@@ -372,6 +417,14 @@ export class LivenessProver {
     const { landmarkVariance, expressionRatio, eyeVar, mouthVar } =
       readLandmarkVarianceDetails(cls);
     const faceMotion = readTemporalMotion(cls);
+    // Phase A: per-analyzer 0–100 scores. The prover doesn't recompute
+    // any signals here — it just awards proof points proportional to the
+    // analyzer's published score, gated by a threshold floor.
+    const eyebrowScore = readAnalyzerScore(cls, "eyebrow_motion");
+    const blinkSymmetryScore = readAnalyzerScore(cls, "blink_symmetry");
+    const gazeScore = readAnalyzerScore(cls, "gaze");
+    const expressionDynamicsScore = readAnalyzerScore(cls, "expression_dynamics");
+    const pose3dScore = readAnalyzerScore(cls, "pose_3d_consistency");
 
     this.lastSeenBlinkCount = blinkCount;
 
@@ -384,6 +437,11 @@ export class LivenessProver {
       eyeVar,
       mouthVar,
       faceMotion,
+      eyebrowScore,
+      blinkSymmetryScore,
+      gazeScore,
+      expressionDynamicsScore,
+      pose3dScore,
     );
   }
 
@@ -402,6 +460,11 @@ export class LivenessProver {
     eyeVar: number = 0,
     mouthVar: number = 0,
     faceMotion: number = 0,
+    eyebrowScore: number = 0,
+    blinkSymmetryScore: number = 0,
+    gazeScore: number = 0,
+    expressionDynamicsScore: number = 0,
+    pose3dScore: number = 0,
   ): void {
     const elapsed = this.elapsedSec;
 
@@ -455,6 +518,46 @@ export class LivenessProver {
       this.score.face_motion_points = Math.min(
         LivenessProver.FACE_MOTION_POINT_CAP,
         faceMotion * LivenessProver.FACE_MOTION_GAIN,
+      );
+    }
+
+    // === Phase A passive movement axes (blendshape / 3D-matrix derived).
+    // Each axis is awarded as a linear scale of the analyzer's published
+    // 0–100 score, clamped by the axis cap. The threshold floor zeroes out
+    // the analyzer's neutral 50 (warmup / no-data state) so warming-up
+    // frames don't get free credit.
+    if (eyebrowScore > LivenessProver.EYEBROW_MOTION_THRESHOLD) {
+      this.score.eyebrow_motion_points = Math.min(
+        LivenessProver.EYEBROW_MOTION_POINT_CAP,
+        (eyebrowScore / 100) * LivenessProver.EYEBROW_MOTION_POINT_CAP,
+      );
+    }
+    if (blinkSymmetryScore > LivenessProver.BLINK_SYMMETRY_THRESHOLD) {
+      this.score.blink_symmetry_points = Math.min(
+        LivenessProver.BLINK_SYMMETRY_POINT_CAP,
+        ((blinkSymmetryScore - LivenessProver.BLINK_SYMMETRY_THRESHOLD) /
+          (100 - LivenessProver.BLINK_SYMMETRY_THRESHOLD)) *
+          LivenessProver.BLINK_SYMMETRY_POINT_CAP,
+      );
+    }
+    if (gazeScore > LivenessProver.GAZE_VARIATION_THRESHOLD) {
+      this.score.gaze_variation_points = Math.min(
+        LivenessProver.GAZE_VARIATION_POINT_CAP,
+        (gazeScore / 100) * LivenessProver.GAZE_VARIATION_POINT_CAP,
+      );
+    }
+    if (expressionDynamicsScore > LivenessProver.EXPRESSION_DYNAMICS_THRESHOLD) {
+      this.score.expression_dynamics_points = Math.min(
+        LivenessProver.EXPRESSION_DYNAMICS_POINT_CAP,
+        (expressionDynamicsScore / 100) *
+          LivenessProver.EXPRESSION_DYNAMICS_POINT_CAP,
+      );
+    }
+    if (pose3dScore > LivenessProver.POSE_3D_CONSISTENCY_THRESHOLD) {
+      this.score.pose_3d_consistency_points = Math.min(
+        LivenessProver.POSE_3D_CONSISTENCY_POINT_CAP,
+        (pose3dScore / 100) *
+          LivenessProver.POSE_3D_CONSISTENCY_POINT_CAP,
       );
     }
 
@@ -514,6 +617,11 @@ export class LivenessProver {
       eye_motion_points: 0,
       mouth_motion_points: 0,
       face_motion_points: 0,
+      eyebrow_motion_points: 0,
+      blink_symmetry_points: 0,
+      gaze_variation_points: 0,
+      expression_dynamics_points: 0,
+      pose_3d_consistency_points: 0,
     };
   }
 
@@ -527,7 +635,12 @@ export class LivenessProver {
         this.score.challenge_points +
         this.score.eye_motion_points +
         this.score.mouth_motion_points +
-        this.score.face_motion_points,
+        this.score.face_motion_points +
+        this.score.eyebrow_motion_points +
+        this.score.blink_symmetry_points +
+        this.score.gaze_variation_points +
+        this.score.expression_dynamics_points +
+        this.score.pose_3d_consistency_points,
     );
   }
 
@@ -777,4 +890,14 @@ function readTemporalMotion(cls: SpoofClassification | undefined): number {
   if (!t) return 0;
   const m_raw = t.details["motion"];
   return typeof m_raw === "number" ? m_raw : 0;
+}
+
+function readAnalyzerScore(
+  cls: SpoofClassification | undefined,
+  name: string,
+): number {
+  if (!cls) return 0;
+  const r = cls.analyzer_results[name];
+  if (!r) return 0;
+  return typeof r.score === "number" ? r.score : 0;
 }
