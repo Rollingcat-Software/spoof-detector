@@ -459,8 +459,16 @@ export class LivenessProver {
 
     const blinkCount = readBlinkCount(cls);
     const landmarks = primary.landmarks ?? null;
-    const { landmarkVariance, expressionRatio, eyeVar, mouthVar } =
+    const { landmarkVariance, expressionRatio } =
       readLandmarkVarianceDetails(cls);
+    // 2026-05-17 fix: eye / mouth motion are now sourced from face-relative
+    // blendshape analyzers (see readBlendshapeRegionMotion). The previous
+    // path read raw landmark per-region variance, which coupled with head
+    // pose (2D projection of eye/mouth landmarks shifts as the head turns
+    // even when the eyes/mouth are perfectly still). The new path is
+    // pose-invariant by MediaPipe construction.
+    const { eyeMotion: eyeVar, mouthMotion: mouthVar } =
+      readBlendshapeRegionMotion(cls);
     const faceMotion = readTemporalMotion(cls);
     // Phase A: per-analyzer 0–100 scores. The prover doesn't recompute
     // any signals here — it just awards proof points proportional to the
@@ -996,6 +1004,60 @@ function readTemporalMotion(cls: SpoofClassification | undefined): number {
   if (!t) return 0;
   const m_raw = t.details["motion"];
   return typeof m_raw === "number" ? m_raw : 0;
+}
+
+/**
+ * Face-relative eye and mouth motion sourced from MediaPipe blendshape
+ * analyzers (Phase A). Blendshapes are pose-normalised by MediaPipe's
+ * own pipeline, so reading these instead of raw landmark variance
+ * decouples the eye_motion_points / mouth_motion_points proof axes
+ * from head pose. The 2026-05-17 mobile trace showed eye_var rising
+ * 1.8× and mouth_var rising 2.5× during pure head rotation — those
+ * spikes were artefacts of 2D landmark projection, not real
+ * eye/mouth activity. Blendshape-derived stddevs do NOT show that
+ * coupling (modulo vestibulo-ocular reflex, which is intended).
+ *
+ * Returns values rescaled to the landmark-variance-like magnitude
+ * range that the existing thresholds/gains assume (≈ 5–50), so the
+ * LivenessProver scoring constants don't need re-tuning.
+ */
+function readBlendshapeRegionMotion(
+  cls: SpoofClassification | undefined,
+): { eyeMotion: number; mouthMotion: number } {
+  if (!cls) return { eyeMotion: 0, mouthMotion: 0 };
+
+  let eyeRaw = 0;
+  const bs = cls.analyzer_results["blink_symmetry"];
+  if (bs?.details) {
+    const sl =
+      typeof bs.details["std_left"] === "number" ? bs.details["std_left"] : 0;
+    const sr =
+      typeof bs.details["std_right"] === "number"
+        ? bs.details["std_right"]
+        : 0;
+    eyeRaw += sl + sr;
+  }
+  const g = cls.analyzer_results["gaze"];
+  if (g?.details) {
+    const sx = typeof g.details["std_x"] === "number" ? g.details["std_x"] : 0;
+    const sy = typeof g.details["std_y"] === "number" ? g.details["std_y"] : 0;
+    eyeRaw += sx + sy;
+  }
+
+  let mouthRaw = 0;
+  const ed = cls.analyzer_results["expression_dynamics"];
+  if (ed?.details) {
+    const s = typeof ed.details["std"] === "number" ? ed.details["std"] : 0;
+    mouthRaw = s;
+  }
+
+  // Blendshape stddev sums for a live face cluster in [0.2, 1.0]. The
+  // LivenessProver eye/mouth-motion thresholds are calibrated against
+  // landmark-variance magnitudes ([0, ~50]). A 30× scale brings the
+  // blendshape signal into that range without re-tuning the constants:
+  //   eye stddev 0.4 → 12 → 6 proof pts (eye motion gain 0.5)
+  //   mouth std  0.6 → 18 → 9 proof pts (mouth motion gain 0.5)
+  return { eyeMotion: eyeRaw * 30, mouthMotion: mouthRaw * 30 };
 }
 
 function readAnalyzerScore(
