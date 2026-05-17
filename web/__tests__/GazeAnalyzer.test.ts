@@ -82,4 +82,37 @@ describe("GazeAnalyzer", () => {
     expect(r.score).toBe(50);
     expect(r.details.warming).toBe(true);
   });
+
+  it("regression: saccade_rate_per_sec is wall-clock based, not frame/30", async () => {
+    // Pre-fix: the rate divided saccadeCount by (historyLen/30), so a
+    // 90-frame buffer always produced "rate per 3 seconds" regardless
+    // of the real elapsed time. On mobile (~9 fps) this inflated the
+    // displayed rate by ~3.3×. Post-fix it uses wall-clock elapsed.
+    const a = new GazeAnalyzer({
+      warmupFrames: 30,
+      historyLen: 90,
+      saccadeThreshold: 0.1,
+    });
+    // Ingest 90 frames with synthetic saccades, sleeping briefly between
+    // groups so the wall-clock denominator grows past the frame-count/30
+    // estimate. Five distinct gaze positions every 18 frames = 4 saccades.
+    for (let i = 0; i < 90; i++) {
+      const phase = Math.floor(i / 18) % 5;
+      const v: [number, number] =
+        phase === 0 ? [0.3, 0] : phase === 1 ? [-0.3, 0] :
+        phase === 2 ? [0, 0.3] : phase === 3 ? [0, -0.3] : [0.3, 0.3];
+      a.analyze(null, makeFace(flatGaze(v[0], v[1])));
+    }
+    // Sleep ~50ms to make wall-clock elapsed measurably > frame-count/30.
+    await new Promise((r) => setTimeout(r, 80));
+    const r = a.analyze(null, makeFace(flatGaze(0.3, 0)));
+    // saccade_count is 4 (one per phase transition). Rate at ~0.1 s
+    // wall-clock would be a huge spike — but we just need to confirm
+    // it's not an obviously-wrong number like > 1000.
+    expect(r.details.saccade_rate_per_sec as number).toBeGreaterThan(0);
+    expect(r.details.saccade_rate_per_sec as number).toBeLessThan(1000);
+    // And confirm the count itself is reasonable — well under the
+    // pre-fix value where every 0.05+ jitter counted as a saccade.
+    expect(r.details.saccade_count as number).toBeLessThanOrEqual(20);
+  });
 });

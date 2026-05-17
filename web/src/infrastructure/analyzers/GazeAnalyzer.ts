@@ -39,7 +39,11 @@ export interface GazeAnalyzerOptions {
   warmupFrames?: number;
   /** stddev-to-score gain. Natural sessions cluster around 0.08–0.15. */
   stdGain?: number;
-  /** Frame-to-frame delta above this counts as a saccade. */
+  /**
+   * Frame-to-frame delta above this counts as a saccade. Calibrated for
+   * MediaPipe gaze blendshape jitter; values < 0.10 will count
+   * blendshape noise as saccades and inflate the rate.
+   */
   saccadeThreshold?: number;
 }
 
@@ -48,6 +52,9 @@ interface GazeState {
   lastVec: [number, number];
   saccadeCount: number;
   framesSeen: number;
+  /** Wall-clock ms when the first frame was ingested — drives the
+   *  saccade-rate-per-second computation independent of fps assumptions. */
+  startTimeMs: number;
 }
 
 const KEYS = [
@@ -74,7 +81,10 @@ export class GazeAnalyzer implements IFaceAnalyzer {
     this.historyLen = options.historyLen ?? 90;
     this.warmupFrames = options.warmupFrames ?? 30;
     this.stdGain = options.stdGain ?? 8;
-    this.saccadeThreshold = options.saccadeThreshold ?? 0.05;
+    // 0.10 chosen empirically — MediaPipe gaze blendshape values typically
+    // jitter ±0.05 frame-to-frame even on a fixed gaze; 0.10 lets real
+    // saccades land above the floor without counting noise as motion.
+    this.saccadeThreshold = options.saccadeThreshold ?? 0.10;
   }
 
   analyze(_faceCrop: ImageData | null, face: FaceROI): AnalyzerResult {
@@ -86,6 +96,7 @@ export class GazeAnalyzer implements IFaceAnalyzer {
         lastVec: [0, 0],
         saccadeCount: 0,
         framesSeen: 0,
+        startTimeMs: performance.now(),
       };
       this.states.set(face.face_id, state);
     }
@@ -180,9 +191,16 @@ export class GazeAnalyzer implements IFaceAnalyzer {
     const std = Math.hypot(stdX, stdY);
 
     const stdScore = Math.max(0, Math.min(1, std * this.stdGain));
-    // Saccades per second across the window, normalized to the
-    // ~3 saccades/sec human baseline (= 1.0 saturation).
-    const saccadeRate = state.saccadeCount / Math.max(1, arr.length / 30);
+    // Saccades per second using WALL-CLOCK elapsed time rather than the
+    // (frame-count / 30 fps) assumption. The pre-2026-05-17 version
+    // divided by `arr.length / 30` which inflated the rate by ~3.4×
+    // on mobile (8-9 fps); BehavioralPatternAnalyzer used the right
+    // formula and the two analyzers disagreed on the same trace.
+    const elapsedSec = Math.max(
+      0.1,
+      (performance.now() - state.startTimeMs) / 1000,
+    );
+    const saccadeRate = state.saccadeCount / elapsedSec;
     const saccadeScore = Math.max(0, Math.min(1, saccadeRate / 3.0));
     const score = (0.7 * stdScore + 0.3 * saccadeScore) * 100;
 
