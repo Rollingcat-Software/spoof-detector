@@ -27,6 +27,8 @@ import type { IFaceAnalyzer } from "./domain/models";
 import { SessionVerdict } from "./domain/session";
 import { FaceUsabilityGate } from "./gates/FaceUsabilityGate";
 import { BackgroundGridAnalyzer } from "./infrastructure/analyzers/BackgroundGridAnalyzer";
+import { BackgroundMotionAnalyzer } from "./infrastructure/analyzers/BackgroundMotionAnalyzer";
+import { MediaPipeSelfieSegmenter } from "./infrastructure/detection/MediaPipeSelfieSegmenter";
 import { BehavioralPatternAnalyzer } from "./infrastructure/analyzers/BehavioralPatternAnalyzer";
 import { BlinkAnalyzer } from "./infrastructure/analyzers/BlinkAnalyzer";
 import { BlinkSymmetryAnalyzer } from "./infrastructure/analyzers/BlinkSymmetryAnalyzer";
@@ -167,6 +169,15 @@ export interface SpoofDetectorOptions {
   enablePose3DConsistency?: boolean;
   // Phase B — temporal-pattern analyzer (no new MediaPipe data).
   enableBehavioralPattern?: boolean;
+  /**
+   * Phase D1 (opt-in) — MediaPipe SelfieSegmenter-based background
+   * motion analyzer. Default `false`: requires an additional ~250 KB
+   * model fetch on first use. Adds `background_motion_points` (cap 8)
+   * to the LivenessProver passive ceiling when enabled.
+   */
+  enableBackgroundSegmentation?: boolean;
+  /** Optional override for the SelfieSegmenter .tflite URL. */
+  selfieSegmenterModelUrl?: string;
   /** Run Aysenur's face-usability gate. Result attached to each FrameAnalysis. Default true. */
   enableFaceUsabilityGate?: boolean;
   /** Run the LivenessProver passive proof scorer alongside the SessionEngine. Default true. */
@@ -253,6 +264,8 @@ export class SpoofDetector {
   private expressionDynamics: ExpressionDynamicsAnalyzer | null = null;
   private pose3DConsistency: Pose3DConsistencyAnalyzer | null = null;
   private behavioralPattern: BehavioralPatternAnalyzer | null = null;
+  private backgroundMotion: BackgroundMotionAnalyzer | null = null;
+  private readonly selfieSegmenterModelUrl: string | undefined;
 
   private readonly fuser: MultiClassFuser;
   private readonly engine: SessionEngine;
@@ -276,6 +289,7 @@ export class SpoofDetector {
     expressionDynamics: boolean;
     pose3DConsistency: boolean;
     behavioralPattern: boolean;
+    backgroundSegmentation: boolean;
   }>;
   private frameId = 0;
   private started = false;
@@ -323,6 +337,8 @@ export class SpoofDetector {
       expressionDynamics: opts.enableExpressionDynamics !== false,
       pose3DConsistency: opts.enablePose3DConsistency !== false,
       behavioralPattern: opts.enableBehavioralPattern !== false,
+      // Phase D1 default OFF — separate model fetch.
+      backgroundSegmentation: opts.enableBackgroundSegmentation === true,
     };
     // LivenessProver is owned by the SessionEngine so its `isProvenLive` gate
     // joins the verdict AND-condition (matches Python design). When the
@@ -347,6 +363,7 @@ export class SpoofDetector {
       Math.floor(opts.heavyAnalyzerFrameSkip ?? 3),
     );
     this.gateFrameSkip = Math.max(1, Math.floor(opts.gateFrameSkip ?? 5));
+    this.selfieSegmenterModelUrl = opts.selfieSegmenterModelUrl;
   }
 
   /** Lazy-load both heavy models. Phase 2/3 analyzers don't need a warmup. */
@@ -403,6 +420,8 @@ export class SpoofDetector {
     if (this.toggles.screenFlicker) this.ensureScreenFlicker().setFrame(input);
     if (this.toggles.rppg) this.ensureRppg().setFrame(input);
     if (this.toggles.backgroundGrid) this.ensureBackgroundGrid().setFrame(input);
+    if (this.toggles.backgroundSegmentation)
+      this.ensureBackgroundMotion().setFrame(input as never);
     if (runHeavy && !this.enableHeavyWorker) {
       if (this.toggles.deviceBoundary) this.ensureDeviceBoundary().setFrame(input);
       if (this.toggles.screenReplay) (await this.ensureScreenReplay()).setFrame(input);
@@ -556,6 +575,10 @@ export class SpoofDetector {
         const a = this.ensureBehavioralPattern();
         results[a.name] = await asyncify(a.analyze(crop, face));
       }
+      if (this.toggles.backgroundSegmentation) {
+        const a = this.ensureBackgroundMotion();
+        results[a.name] = await a.analyze(crop, face);
+      }
 
       // Heavy analyzers — inline path. (Worker path is awaited in Stage C.)
       if (runHeavy && !this.enableHeavyWorker) {
@@ -671,6 +694,7 @@ export class SpoofDetector {
     this.expressionDynamics?.reset();
     this.pose3DConsistency?.reset();
     this.behavioralPattern?.reset();
+    this.backgroundMotion?.reset();
     // LivenessProver is reset inside SessionEngine.reset() (single source of truth).
     // MoireAnalyzer has no reset() — it's stateless per-frame.
     // Gates are stateful (streak counters) — replace with a fresh instance.
@@ -750,6 +774,23 @@ export class SpoofDetector {
     if (!this.behavioralPattern)
       this.behavioralPattern = new BehavioralPatternAnalyzer();
     return this.behavioralPattern;
+  }
+  private ensureBackgroundMotion(): BackgroundMotionAnalyzer {
+    if (!this.backgroundMotion) {
+      // First call also lazy-constructs the segmenter — model fetch only
+      // happens when the consumer has flipped the toggle on AND the page
+      // has reached the first frame.
+      this.backgroundMotion = new BackgroundMotionAnalyzer(
+        this.selfieSegmenterModelUrl
+          ? {
+              segmenter: new MediaPipeSelfieSegmenter({
+                modelAssetPath: this.selfieSegmenterModelUrl,
+              }),
+            }
+          : {},
+      );
+    }
+    return this.backgroundMotion;
   }
   // LivenessProver is constructed eagerly in the constructor when the toggle
   // is on and injected into the SessionEngine — no lazy helper needed.

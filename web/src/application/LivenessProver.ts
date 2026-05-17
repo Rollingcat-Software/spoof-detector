@@ -147,6 +147,13 @@ export interface LivenessScore {
    * even when individual frames pass other analyzers.
    */
   behavioral_pattern_points: number;
+  /**
+   * Max 8 — background-region pixel drift over time, computed from
+   * MediaPipe SelfieSegmenter masks (Phase D1, opt-in). Catches replay
+   * attacks shown against a static backdrop. 0 when the segmenter
+   * isn't enabled or when the scene is genuinely still.
+   */
+  background_motion_points: number;
 }
 
 /** Concise history record for reporting (mirrors `get_challenge_history`). */
@@ -288,6 +295,8 @@ export class LivenessProver {
   static readonly POSE_3D_CONSISTENCY_THRESHOLD = 30.0;
   static readonly BEHAVIORAL_PATTERN_POINT_CAP = 10.0;
   static readonly BEHAVIORAL_PATTERN_THRESHOLD = 15.0;
+  static readonly BACKGROUND_MOTION_POINT_CAP = 8.0;
+  static readonly BACKGROUND_MOTION_THRESHOLD = 15.0;
 
   private readonly enableChallenges: boolean;
   private readonly random: () => number;
@@ -436,6 +445,7 @@ export class LivenessProver {
     const expressionDynamicsScore = readAnalyzerScore(cls, "expression_dynamics");
     const pose3dScore = readAnalyzerScore(cls, "pose_3d_consistency");
     const behavioralScore = readAnalyzerScore(cls, "behavioral_pattern");
+    const backgroundMotionScore = readAnalyzerScore(cls, "background_motion");
 
     this.lastSeenBlinkCount = blinkCount;
 
@@ -454,6 +464,7 @@ export class LivenessProver {
       expressionDynamicsScore,
       pose3dScore,
       behavioralScore,
+      backgroundMotionScore,
     );
   }
 
@@ -478,6 +489,7 @@ export class LivenessProver {
     expressionDynamicsScore: number = 0,
     pose3dScore: number = 0,
     behavioralScore: number = 0,
+    backgroundMotionScore: number = 0,
   ): void {
     const elapsed = this.elapsedSec;
 
@@ -580,6 +592,13 @@ export class LivenessProver {
           LivenessProver.BEHAVIORAL_PATTERN_POINT_CAP,
       );
     }
+    if (backgroundMotionScore > LivenessProver.BACKGROUND_MOTION_THRESHOLD) {
+      this.score.background_motion_points = Math.min(
+        LivenessProver.BACKGROUND_MOTION_POINT_CAP,
+        (backgroundMotionScore / 100) *
+          LivenessProver.BACKGROUND_MOTION_POINT_CAP,
+      );
+    }
 
     // === Passive Proof: Head Rotation ===
     // landmarks are stored flat [x0, y0, x1, y1, ...]. The Python check
@@ -643,6 +662,7 @@ export class LivenessProver {
       expression_dynamics_points: 0,
       pose_3d_consistency_points: 0,
       behavioral_pattern_points: 0,
+      background_motion_points: 0,
     };
   }
 
@@ -662,7 +682,8 @@ export class LivenessProver {
         this.score.gaze_variation_points +
         this.score.expression_dynamics_points +
         this.score.pose_3d_consistency_points +
-        this.score.behavioral_pattern_points,
+        this.score.behavioral_pattern_points +
+        this.score.background_motion_points,
     );
   }
 
