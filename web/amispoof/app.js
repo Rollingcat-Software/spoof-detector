@@ -14,12 +14,12 @@ import * as ort from "onnxruntime-web";
 import {
   createSpoofDetector,
   runCasiaFasdMicroBench,
-} from "./lib/spoof-detector.js?v=2026-05-17-phaseD2";
+} from "./lib/spoof-detector.js?v=2026-05-17-phaseD3";
 
 // Version handshake — checked by the inline script in index.html.
 // If the user is running a stale cached app.js (no AMISPOOF_VERSION),
 // the HTML triggers a one-shot reload after 4 s.
-window.AMISPOOF_VERSION = "2026-05-17-phaseD2";
+window.AMISPOOF_VERSION = "2026-05-17-phaseD3";
 
 // SessionEngine.getVerdict() returns a confidence in [0, 0.88] when the
 // LivenessProver is wired (structural ceiling — see SessionEngine.ts
@@ -108,6 +108,21 @@ const ANALYZER_DETAIL_KEYS = {
     "wrist_std",
     "samples",
     "anomaly_third_hand",
+  ],
+  voice_activity: [
+    "voice_fraction",
+    "rms_mean",
+    "rms_peak",
+    "samples",
+    "rms_hz",
+  ],
+  audio_mouth_sync: [
+    "corr",
+    "audio_std",
+    "mouth_std",
+    "jaw_open",
+    "frames",
+    "silence",
   ],
 };
 
@@ -356,6 +371,20 @@ const ANALYZER_ORDER = [
     group: "video",
     desc: "MediaPipe HandLandmarker tracks per-hand wrist position; rolling stddev → natural gesture credit. Flags >2 hands per frame as a deepfake artefact. Opt-in: append ?hand=1 to the URL (loads ~6 MB).",
   },
+  {
+    name: "voice_activity",
+    weight: 0,
+    label: "Voice activity",
+    group: "video",
+    desc: "Fraction of recent audio above the voice RMS threshold. Defensive against silent video-replay attacks. Opt-in: ?audio=1 or click 🎤 below (requires mic permission).",
+  },
+  {
+    name: "audio_mouth_sync",
+    weight: 0,
+    label: "Audio-mouth sync",
+    group: "video",
+    desc: "Pearson correlation of audio RMS with the jawOpen blendshape over the last 2 s. Strongest single anti-replay signal: live speech correlates above 0.7; replay either has no audio or is desynced.",
+  },
 ];
 
 const $ = (id) => document.getElementById(id);
@@ -394,6 +423,7 @@ const els = {
   proofHeadline: $("proofHeadline"),
   proofChallenge: $("proofChallenge"),
   proofRows: $("proofRows"),
+  micToggle: $("micToggle"),
 };
 
 const analyzerRefs = {};
@@ -542,6 +572,20 @@ const PROOF_AXES = [
     desc: "Awarded from the HandTrackingAnalyzer score (Phase D2, opt-in via ?hand=1). Credits natural hand gesture; caps low on the deepfake third-hand anomaly.",
   },
   {
+    name: "voice_activity_points",
+    label: "Voice activity",
+    max: 6,
+    section: "passive",
+    desc: "Awarded from the VoiceActivityAnalyzer score (Phase D3, opt-in via 🎤 button or ?audio=1). Defensive against silent video replays.",
+  },
+  {
+    name: "audio_mouth_sync_points",
+    label: "Audio-mouth sync",
+    max: 12,
+    section: "passive",
+    desc: "Awarded from the AudioMouthSyncAnalyzer score (Phase D3). Strongest single anti-video-replay signal — correlation of audio energy with jawOpen blendshape.",
+  },
+  {
     name: "challenge_points",
     label: "Challenges",
     max: 40,
@@ -677,6 +721,11 @@ async function ensureDetector() {
     // the demo page; enable with ?hand=1 in the URL to test.
     enableHandTracking:
       new URLSearchParams(window.location.search).get("hand") === "1",
+    // Phase D3 — audio capture for VAD + audio-mouth sync. Off by
+    // default for the demo page (mic permission UX); enable with
+    // ?audio=1 in the URL OR click the "Enable mic" button.
+    enableAudio:
+      new URLSearchParams(window.location.search).get("audio") === "1",
   });
   return detector;
 }
@@ -1049,6 +1098,40 @@ async function runBench() {
 
 if (els.bench) {
   els.bench.addEventListener("click", runBench);
+}
+
+// Phase D3 — wire the microphone toggle. The SDK requires audio to be
+// enabled at construction time (see createSpoofDetector opts). When the
+// page wasn't started with ?audio=1, clicking the button reloads with
+// it set so the SDK re-initialises with audio. When it WAS, the click
+// just calls detector.startAudio() to prompt for permission.
+if (els.micToggle) {
+  const audioPreEnabled =
+    new URLSearchParams(window.location.search).get("audio") === "1";
+  if (!audioPreEnabled) {
+    els.micToggle.textContent = "🎤 Reload with mic";
+    els.micToggle.addEventListener("click", () => {
+      const u = new URL(window.location.href);
+      u.searchParams.set("audio", "1");
+      window.location.href = u.toString();
+    });
+  } else {
+    els.micToggle.addEventListener("click", async () => {
+      try {
+        await ensureDetector();
+        if (detector.audioActive) {
+          await detector.stopAudio();
+          els.micToggle.textContent = "🎤 Enable mic";
+        } else {
+          await detector.startAudio();
+          els.micToggle.textContent = "🎤 Mic on";
+        }
+      } catch (e) {
+        console.error("mic toggle failed", e);
+        els.micToggle.textContent = "🎤 Mic failed";
+      }
+    });
+  }
 }
 
 els.copyVerdict.addEventListener("click", async () => {
