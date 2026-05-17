@@ -14,12 +14,12 @@ import * as ort from "onnxruntime-web";
 import {
   createSpoofDetector,
   runCasiaFasdMicroBench,
-} from "./lib/spoof-detector.js?v=2026-05-17-mobile";
+} from "./lib/spoof-detector.js?v=2026-05-17-replay2";
 
 // Version handshake — checked by the inline script in index.html.
 // If the user is running a stale cached app.js (no AMISPOOF_VERSION),
 // the HTML triggers a one-shot reload after 4 s.
-window.AMISPOOF_VERSION = "2026-05-17-mobile";
+window.AMISPOOF_VERSION = "2026-05-17-replay2";
 
 // SessionEngine.getVerdict() returns a confidence in [0, 0.88] when the
 // LivenessProver is wired (structural ceiling — see SessionEngine.ts
@@ -1489,14 +1489,30 @@ if (els.replayBtn && els.replayFile) {
     const file = els.replayFile.files?.[0];
     if (!file) return;
     try {
-      const text = await file.text();
+      // Mobile Chrome (and some Safari builds) can revoke the underlying
+      // file handle by the time `.text()` async resolves — surfaces as
+      // NotFoundError "A requested file or directory could not be found".
+      // Reading immediately into an ArrayBuffer via FileReader is more
+      // reliable: the browser snapshots the file synchronously when
+      // readAsArrayBuffer() is called. Decoding to text afterwards is
+      // pure JS and cannot hit the OS layer again.
+      const buf = await readFileAsArrayBuffer(file);
+      const text = new TextDecoder("utf-8").decode(buf);
       const payload = JSON.parse(text);
       els.replayPanel.style.display = "";
       renderReplay(payload);
     } catch (err) {
       console.error("replay parse failed", err);
       els.replayPanel.style.display = "";
-      els.replayHeader.textContent = `Replay parse failed: ${err.message || err}`;
+      const msg = err.message || String(err);
+      const isNotFound =
+        msg.includes("could not be found") ||
+        err.name === "NotFoundError" ||
+        err.code === 1 ||
+        err.code === 11;
+      els.replayHeader.textContent = isNotFound
+        ? "Replay parse failed: the file appears to have been moved or revoked by the OS. Re-download the recording and try again (mobile browsers sometimes release file handles after the picker closes)."
+        : `Replay parse failed: ${msg}`;
       els.replayChart.innerHTML = "";
       els.replayLegend.textContent = "";
     } finally {
@@ -1504,6 +1520,17 @@ if (els.replayBtn && els.replayFile) {
       els.replayFile.value = "";
     }
   });
+
+  function readFileAsArrayBuffer(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(/** @type {ArrayBuffer} */ (reader.result));
+      reader.onerror = () =>
+        reject(reader.error ?? new Error("FileReader failed"));
+      reader.onabort = () => reject(new Error("FileReader aborted"));
+      reader.readAsArrayBuffer(file);
+    });
+  }
 }
 if (els.replayClose) {
   els.replayClose.addEventListener("click", () => {
