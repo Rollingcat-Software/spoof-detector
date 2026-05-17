@@ -1,6 +1,6 @@
 {
   "name": "@rollingcat/spoof-detector",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "Browser/TypeScript port of the spoof-detector pipeline (Phase 1: MiniFASNet + multi-class fuser + session engine).",
   "main": "dist/spoof-detector.umd.cjs",
   "module": "dist/spoof-detector.js",
