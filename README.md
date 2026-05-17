@@ -236,7 +236,7 @@ Browser TypeScript port (`web/`, published as `@rollingcat/spoof-detector`):
 - [ ] amispoof.com domain (currently `/amispoof/` slug on fivucsas.com).
 - [ ] iBeta PAD-Level-1 browser-bundle submission package.
 
-Live tester: https://fivucsas.com/amispoof/ — 12 analyzers + 3 gates running entirely client-side. See `web/amispoof/README.md` for the deployment runbook and `ROADMAP.md` "Browser Port v0.1.0" for the full module inventory.
+Live tester: https://fivucsas.com/amispoof/ — **19 analyzers + 3 gates + 15-axis passive liveness-proof scorer** running entirely client-side. Default-on: 17 analyzers covering the original ten plus the seven blendshape/3D-pose unlocks (eyebrow motion, blink symmetry, gaze, expression dynamics, 3D pose consistency, behavioural pattern, plus temporal + background grid brought across from `src/`). Opt-in extras: background motion (MediaPipe SelfieSegmenter), hand tracking (HandLandmarker), voice-activity + audio-mouth-sync (Web Audio API). Session recording + JSON replay shipped 2026-05-17. See `web/amispoof/README.md` for the deployment runbook and `ROADMAP.md` "Browser Port v0.1.0" for the full module inventory.
 
 ## Academic paper
 
