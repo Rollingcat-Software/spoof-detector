@@ -14,12 +14,12 @@ import * as ort from "onnxruntime-web";
 import {
   createSpoofDetector,
   runCasiaFasdMicroBench,
-} from "./lib/spoof-detector.js?v=2026-05-17-phaseA";
+} from "./lib/spoof-detector.js?v=2026-05-17-phaseB";
 
 // Version handshake — checked by the inline script in index.html.
 // If the user is running a stale cached app.js (no AMISPOOF_VERSION),
 // the HTML triggers a one-shot reload after 4 s.
-window.AMISPOOF_VERSION = "2026-05-17-phaseA";
+window.AMISPOOF_VERSION = "2026-05-17-phaseB";
 
 // SessionEngine.getVerdict() returns a confidence in [0, 0.88] when the
 // LivenessProver is wired (structural ceiling — see SessionEngine.ts
@@ -82,6 +82,12 @@ const ANALYZER_DETAIL_KEYS = {
   gaze: ["gaze_x", "gaze_y", "saccade_count", "saccade_rate_per_sec"],
   expression_dynamics: ["total", "std", "frames"],
   pose_3d_consistency: ["ortho_residual", "ortho_score", "tz", "tz_std"],
+  behavioral_pattern: [
+    "blink_cv",
+    "saccade_rate_per_sec",
+    "entropy_score",
+    "fps",
+  ],
 };
 
 function formatDetailValue(v) {
@@ -308,6 +314,13 @@ const ANALYZER_ORDER = [
     group: "video",
     desc: "MediaPipe 4×4 facial transformation matrix — checks orthonormality of the rotation block + Z-translation motion. Catches tilted photos and flat-screen replays whose pose fit is degenerate.",
   },
+  {
+    name: "behavioral_pattern",
+    weight: 0,
+    label: "Behavioral pattern",
+    group: "video",
+    desc: "Temporal-distribution check: blink-interval coefficient of variation + saccade rate + Shannon entropy of the composite jaw/brow/blink signal. Catches looped videos / animated avatars whose individual frames pass but whose distributions are too regular.",
+  },
 ];
 
 const $ = (id) => document.getElementById(id);
@@ -471,6 +484,13 @@ const PROOF_AXES = [
     max: 6,
     section: "passive",
     desc: "Awarded from the Pose3DConsistencyAnalyzer score. Credits well-formed orthonormal 3D pose + natural Z-translation motion.",
+  },
+  {
+    name: "behavioral_pattern_points",
+    label: "Behavioral",
+    max: 10,
+    section: "passive",
+    desc: "Awarded from the BehavioralPatternAnalyzer score. Credits human-like temporal distributions (irregular blink intervals, natural saccade rate, high signal entropy).",
   },
   {
     name: "challenge_points",

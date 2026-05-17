@@ -139,6 +139,14 @@ export interface LivenessScore {
    * matrix fits are subtly degenerate.
    */
   pose_3d_consistency_points: number;
+  /**
+   * Max 10 — temporal behavioural patterns (blink-interval coefficient
+   * of variation, saccade rate, signal entropy). Sourced from
+   * BehavioralPatternAnalyzer (Phase B). Catches looped videos and
+   * animated avatars whose signal distributions look "too regular"
+   * even when individual frames pass other analyzers.
+   */
+  behavioral_pattern_points: number;
 }
 
 /** Concise history record for reporting (mirrors `get_challenge_history`). */
@@ -278,6 +286,8 @@ export class LivenessProver {
   static readonly EXPRESSION_DYNAMICS_THRESHOLD = 5.0;
   static readonly POSE_3D_CONSISTENCY_POINT_CAP = 6.0;
   static readonly POSE_3D_CONSISTENCY_THRESHOLD = 30.0;
+  static readonly BEHAVIORAL_PATTERN_POINT_CAP = 10.0;
+  static readonly BEHAVIORAL_PATTERN_THRESHOLD = 15.0;
 
   private readonly enableChallenges: boolean;
   private readonly random: () => number;
@@ -425,6 +435,7 @@ export class LivenessProver {
     const gazeScore = readAnalyzerScore(cls, "gaze");
     const expressionDynamicsScore = readAnalyzerScore(cls, "expression_dynamics");
     const pose3dScore = readAnalyzerScore(cls, "pose_3d_consistency");
+    const behavioralScore = readAnalyzerScore(cls, "behavioral_pattern");
 
     this.lastSeenBlinkCount = blinkCount;
 
@@ -442,6 +453,7 @@ export class LivenessProver {
       gazeScore,
       expressionDynamicsScore,
       pose3dScore,
+      behavioralScore,
     );
   }
 
@@ -465,6 +477,7 @@ export class LivenessProver {
     gazeScore: number = 0,
     expressionDynamicsScore: number = 0,
     pose3dScore: number = 0,
+    behavioralScore: number = 0,
   ): void {
     const elapsed = this.elapsedSec;
 
@@ -560,6 +573,13 @@ export class LivenessProver {
           LivenessProver.POSE_3D_CONSISTENCY_POINT_CAP,
       );
     }
+    if (behavioralScore > LivenessProver.BEHAVIORAL_PATTERN_THRESHOLD) {
+      this.score.behavioral_pattern_points = Math.min(
+        LivenessProver.BEHAVIORAL_PATTERN_POINT_CAP,
+        (behavioralScore / 100) *
+          LivenessProver.BEHAVIORAL_PATTERN_POINT_CAP,
+      );
+    }
 
     // === Passive Proof: Head Rotation ===
     // landmarks are stored flat [x0, y0, x1, y1, ...]. The Python check
@@ -622,6 +642,7 @@ export class LivenessProver {
       gaze_variation_points: 0,
       expression_dynamics_points: 0,
       pose_3d_consistency_points: 0,
+      behavioral_pattern_points: 0,
     };
   }
 
@@ -640,7 +661,8 @@ export class LivenessProver {
         this.score.blink_symmetry_points +
         this.score.gaze_variation_points +
         this.score.expression_dynamics_points +
-        this.score.pose_3d_consistency_points,
+        this.score.pose_3d_consistency_points +
+        this.score.behavioral_pattern_points,
     );
   }
 

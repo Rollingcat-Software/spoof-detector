@@ -27,6 +27,7 @@ import type { IFaceAnalyzer } from "./domain/models";
 import { SessionVerdict } from "./domain/session";
 import { FaceUsabilityGate } from "./gates/FaceUsabilityGate";
 import { BackgroundGridAnalyzer } from "./infrastructure/analyzers/BackgroundGridAnalyzer";
+import { BehavioralPatternAnalyzer } from "./infrastructure/analyzers/BehavioralPatternAnalyzer";
 import { BlinkAnalyzer } from "./infrastructure/analyzers/BlinkAnalyzer";
 import { BlinkSymmetryAnalyzer } from "./infrastructure/analyzers/BlinkSymmetryAnalyzer";
 import { DeviceBoundaryAnalyzer } from "./infrastructure/analyzers/DeviceBoundaryAnalyzer";
@@ -164,6 +165,8 @@ export interface SpoofDetectorOptions {
   enableGaze?: boolean;
   enableExpressionDynamics?: boolean;
   enablePose3DConsistency?: boolean;
+  // Phase B — temporal-pattern analyzer (no new MediaPipe data).
+  enableBehavioralPattern?: boolean;
   /** Run Aysenur's face-usability gate. Result attached to each FrameAnalysis. Default true. */
   enableFaceUsabilityGate?: boolean;
   /** Run the LivenessProver passive proof scorer alongside the SessionEngine. Default true. */
@@ -249,6 +252,7 @@ export class SpoofDetector {
   private gaze: GazeAnalyzer | null = null;
   private expressionDynamics: ExpressionDynamicsAnalyzer | null = null;
   private pose3DConsistency: Pose3DConsistencyAnalyzer | null = null;
+  private behavioralPattern: BehavioralPatternAnalyzer | null = null;
 
   private readonly fuser: MultiClassFuser;
   private readonly engine: SessionEngine;
@@ -271,6 +275,7 @@ export class SpoofDetector {
     gaze: boolean;
     expressionDynamics: boolean;
     pose3DConsistency: boolean;
+    behavioralPattern: boolean;
   }>;
   private frameId = 0;
   private started = false;
@@ -317,6 +322,7 @@ export class SpoofDetector {
       gaze: opts.enableGaze !== false,
       expressionDynamics: opts.enableExpressionDynamics !== false,
       pose3DConsistency: opts.enablePose3DConsistency !== false,
+      behavioralPattern: opts.enableBehavioralPattern !== false,
     };
     // LivenessProver is owned by the SessionEngine so its `isProvenLive` gate
     // joins the verdict AND-condition (matches Python design). When the
@@ -546,6 +552,10 @@ export class SpoofDetector {
         const a = this.ensurePose3DConsistency();
         results[a.name] = await asyncify(a.analyze(crop, face));
       }
+      if (this.toggles.behavioralPattern) {
+        const a = this.ensureBehavioralPattern();
+        results[a.name] = await asyncify(a.analyze(crop, face));
+      }
 
       // Heavy analyzers — inline path. (Worker path is awaited in Stage C.)
       if (runHeavy && !this.enableHeavyWorker) {
@@ -660,6 +670,7 @@ export class SpoofDetector {
     this.gaze?.reset();
     this.expressionDynamics?.reset();
     this.pose3DConsistency?.reset();
+    this.behavioralPattern?.reset();
     // LivenessProver is reset inside SessionEngine.reset() (single source of truth).
     // MoireAnalyzer has no reset() — it's stateless per-frame.
     // Gates are stateful (streak counters) — replace with a fresh instance.
@@ -734,6 +745,11 @@ export class SpoofDetector {
     if (!this.pose3DConsistency)
       this.pose3DConsistency = new Pose3DConsistencyAnalyzer();
     return this.pose3DConsistency;
+  }
+  private ensureBehavioralPattern(): BehavioralPatternAnalyzer {
+    if (!this.behavioralPattern)
+      this.behavioralPattern = new BehavioralPatternAnalyzer();
+    return this.behavioralPattern;
   }
   // LivenessProver is constructed eagerly in the constructor when the toggle
   // is on and injected into the SessionEngine — no lazy helper needed.
