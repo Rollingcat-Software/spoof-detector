@@ -151,8 +151,47 @@ Outstanding (browser):
 - [ ] Real CASIA-FASD micro-mirror samples in `web/amispoof/samples/`
       (placeholder URLs at the moment).
 - [ ] `ar_filter` analyzer (no ONNX model trained yet).
-- [ ] amispoof.com domain (currently `/amispoof/` slug on fivucsas.com).
-- [ ] iBeta PAD-Level-1 browser-bundle submission package.
+- [x] **Subdomain migration** — `amispoof.fivucsas.com` live (2026-05-17, PRs #44–#47). Old URL 301s; canonical/og:url/JSON-LD all on new domain; sitemap.xml + robots.txt deployed; og:image (1200×630) rendered; v0.3.0 GitHub release tagged.
+- [ ] **Stand-alone `amispoof.com` domain** (currently inherits authority from `fivucsas.com`; only worth registering if we ever spin amispoof out as an independent product line).
+- [ ] iBeta PAD-Level-1 browser-bundle submission package — currently scoped to the Python pipeline; re-scope to target the browser bundle as the production system.
+
+## Next planned — tooling & observability (2026-05-17 backlog)
+
+These do not change the algorithm; they add the operational layer that turns a working tool into a measurable product. Roughly ranked by ROI / effort:
+
+### Tier 1 — Privacy-first analytics across the constellation (~1 hour total)
+
+| Surface | Tool | Why |
+|---|---|---|
+| `amispoof.fivucsas.com` | GoatCounter (cloud) OR Plausible OR self-hosted Umami | Measure visits, source, country, device class — without cookies or banners. ~3 KB script, GDPR/CCPA-clean by construction (no PII collected). The "no upload, no GPU" ethos of amispoof should extend to its analytics |
+| Same on: fivucsas.com landing, rollingcatsoftware.com, ahmetabdullah.gultek.in, demo.fivucsas.com, all rollingcatsoftware.com sub-projects | Same | One-line script per site |
+
+**Not recommended:** Google Analytics 4 — requires cookie banner (KVKK), 90 KB script, leaks to Google. Wrong for an open-source liveness tester whose marketing point is "no upload, no server."
+
+### Tier 2 — JS error tracking on the camera-heavy surfaces
+
+| Surface | Tool | Why |
+|---|---|---|
+| `amispoof.fivucsas.com`, `app.fivucsas.com`, `verify.fivucsas.com` | Sentry (free 5k errors/mo) OR self-hosted GlitchTip | Real users hit MediaStreamTrack failures, MediaPipe wasm load errors, AudioWorklet glitches that we'd never see otherwise. The free Sentry tier covers single-digit-thousand-users/month easily |
+
+### Tier 3 — Cloudflare in front of TurkTicaret + Hostinger (~30 min)
+
+DNS migration: TurkTicaret → Cloudflare nameservers (Cloudflare imports existing records automatically). Buys global CDN, free privacy-friendly Web Analytics, basic DDoS protection, modern TLS ciphers, and a free fallback HTTPS layer.
+
+### Tier 4 — Discoverability + governance (defer / opt-in)
+
+- **GitHub Sponsors badge** on the `spoof-detector` repo — one toggle, no downside
+- **Lighthouse CI** on the `spoof-detector` repo — PageSpeed regression guard
+- **`web-vitals` reporting** from amispoof → GoatCounter custom events
+- **Microsoft Clarity** — heatmaps + session recording; SKIP for amispoof (privacy ethos conflict), consider for app.fivucsas.com only
+- **Google Ads / AdSense** — SKIP for amispoof (technical audience, ad-block-heavy); revisit only when FIVUCSAS commercial has a paying-customer funnel and a retargeting story to test against
+
+### What this section deliberately does NOT include
+
+Items the page itself should *not* grow toward:
+- A native mobile app (browser is the deployment target — see §10 of the paper)
+- A server-side inference fallback (defeats the entire architecture)
+- Closed-source proprietary analyzers (every analyzer ships under MIT)
 
 ## Priority Levels
 - P0: Must fix before next test (broken/blocking)
