@@ -596,6 +596,134 @@ describe("LivenessProver", () => {
     });
   });
 
+  // ---- Head-pose decoupling regression (2026-05-17) ---------------------
+
+  describe("head rotation does NOT inflate eye/mouth motion (via blendshape sourcing)", () => {
+    it("ingest() with rotating landmarks but flat blendshapes leaves eye/mouth motion at 0", () => {
+      // Build a face whose 2D landmarks shift dramatically (simulating
+      // head yaw) but whose blendshape analyzer details report ZERO
+      // per-region motion. The pre-fix LivenessProver would have read
+      // landmark eye_var / mouth_var and credited eye_motion + mouth_motion.
+      // Post-fix it reads blendshape stddev directly and stays at 0.
+      const prover = new LivenessProver({ enableChallenges: false });
+      prover.start();
+
+      function ingestWithFlatBlendshapes(yawShift: number): void {
+        // Shift the entire landmark grid by `yawShift` pixels to simulate
+        // image-space head rotation. The 'analyzer_results' published for
+        // this synthetic frame all carry std=0 — i.e. no face-relative
+        // motion at all. A correctly-decoupled LivenessProver should NOT
+        // award eye/mouth-motion points here.
+        const lm = makeLandmarks();
+        for (let i = 0; i < lm.length; i += 2) lm[i] += yawShift;
+        prover.ingest({
+          frame_id: yawShift,
+          faces: [
+            {
+              face_id: 0,
+              bbox: new BBox(0, 0, 640, 480),
+              confidence: 0.99,
+              landmarks: lm,
+            },
+          ],
+          classifications: {
+            0: classificationFromProbabilities(
+              0,
+              {
+                [SpoofCategory.REAL]: 0.9,
+                [SpoofCategory.STATIC_IMAGE]: 0.02,
+                [SpoofCategory.VIDEO_REPLAY]: 0.02,
+                [SpoofCategory.MASK_3D]: 0.02,
+                [SpoofCategory.HEAVY_MAKEUP]: 0.02,
+                [SpoofCategory.AR_FILTER]: 0.01,
+                [SpoofCategory.DEEPFAKE_INJECT]: 0.01,
+              },
+              {
+                blink_symmetry: makeAnalyzerResult("blink_symmetry", 50, {
+                  std_left: 0,
+                  std_right: 0,
+                }),
+                gaze: makeAnalyzerResult("gaze", 50, {
+                  std_x: 0,
+                  std_y: 0,
+                }),
+                expression_dynamics: makeAnalyzerResult(
+                  "expression_dynamics",
+                  50,
+                  { std: 0 },
+                ),
+              },
+            ),
+          },
+          frame_signals: {},
+          total_ms: 5,
+        });
+      }
+
+      // Simulate 60 frames of pure head yaw oscillation, ±50 pixels.
+      for (let i = 0; i < 60; i++) {
+        ingestWithFlatBlendshapes(i % 2 === 0 ? 50 : -50);
+      }
+      const d = prover.getProof().details;
+      expect(d.eye_motion_points).toBe(0);
+      expect(d.mouth_motion_points).toBe(0);
+    });
+
+    it("ingest() with stationary landmarks but active blendshapes DOES award eye/mouth motion", () => {
+      const prover = new LivenessProver({ enableChallenges: false });
+      prover.start();
+
+      function ingestWithActiveBlendshapes(): void {
+        prover.ingest({
+          frame_id: 1,
+          faces: [
+            {
+              face_id: 0,
+              bbox: new BBox(0, 0, 640, 480),
+              confidence: 0.99,
+              landmarks: makeLandmarks(),
+            },
+          ],
+          classifications: {
+            0: classificationFromProbabilities(
+              0,
+              {
+                [SpoofCategory.REAL]: 0.9,
+                [SpoofCategory.STATIC_IMAGE]: 0.02,
+                [SpoofCategory.VIDEO_REPLAY]: 0.02,
+                [SpoofCategory.MASK_3D]: 0.02,
+                [SpoofCategory.HEAVY_MAKEUP]: 0.02,
+                [SpoofCategory.AR_FILTER]: 0.01,
+                [SpoofCategory.DEEPFAKE_INJECT]: 0.01,
+              },
+              {
+                blink_symmetry: makeAnalyzerResult("blink_symmetry", 85, {
+                  std_left: 0.15,
+                  std_right: 0.14,
+                }),
+                gaze: makeAnalyzerResult("gaze", 85, {
+                  std_x: 0.12,
+                  std_y: 0.10,
+                }),
+                expression_dynamics: makeAnalyzerResult(
+                  "expression_dynamics",
+                  85,
+                  { std: 0.6 },
+                ),
+              },
+            ),
+          },
+          frame_signals: {},
+          total_ms: 5,
+        });
+      }
+      for (let i = 0; i < 60; i++) ingestWithActiveBlendshapes();
+      const d = prover.getProof().details;
+      expect(d.eye_motion_points).toBeGreaterThan(0);
+      expect(d.mouth_motion_points).toBeGreaterThan(0);
+    });
+  });
+
   // ---- Yaw / pitch physiological clamp -----------------------------------
 
   describe("estimateHeadPose clamps degenerate landmark configurations", () => {
