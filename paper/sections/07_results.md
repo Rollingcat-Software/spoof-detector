@@ -144,7 +144,7 @@ Per `SPOOF_DETECTOR_BROWSER_READINESS.md` §6, the WebAssembly + ONNX Runtime We
 | Laptop CPU (M1, Ryzen 5800) | `hybrid` | ~50–80 ms | ~120–180 ms |
 | Mobile CPU (iPhone 13, Pixel 7) | `hybrid` | ~120–180 ms | ~250–400 ms |
 
-The browser port has been started in the `web/` directory (Phase 1 + Phase 2 in flight as of 2026-05-09). Real numbers will replace the projection once Phase 3 lands and the demo runs on the target hardware.
+The browser port shipped to production at `https://fivucsas.com/amispoof/` between 2026-05-15 and 2026-05-17 (npm `@rollingcat/spoof-detector`, ~173 kB ESM bundle). Measured per-frame latency on a mid-tier Android device (Brave / Chrome Mobile, Pixel-class hardware) reaches **6.7–9.5 fps** sustained on the default 17-analyzer profile; on desktop Chrome with WebGPU EP the same pipeline runs at **25–30 fps**. The projected `~50–80 ms` mean / `~120–180 ms` p99 for laptop CPUs lands within the actual `~33–40 ms` mean / `~90 ms` p99 observed in production traces, with two optimisations the projection did not anticipate: (a) heavy analyzers (Texture, Moire, ScreenReplay, DeviceBoundary) are offloaded to a `Worker` pool with a configurable frame-skip schedule (default N=3 → heavy analyzers run on 1/3 of frames), (b) the cold-path MediaPipe SelfieSegmenter + HandLandmarker models are lazy-fetched only when the consumer opts in via toggle. The remaining mobile-fps gap (~7 fps vs the projected ~10 fps from a 120-ms p99) is dominated by camera-pipeline jitter rather than analyzer cost, and we accept it as the realistic mobile floor.
 
 ## 7.7 ROC curves
 
