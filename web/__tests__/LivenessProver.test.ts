@@ -596,6 +596,60 @@ describe("LivenessProver", () => {
     });
   });
 
+  // ---- blink_points is rate-aware (rolling-window) ----------------------
+
+  describe("blink_points uses a rolling 60s window, not cumulative count", () => {
+    it("saturates with sustained blinking across long sessions", () => {
+      vi.setSystemTime(new Date("2026-05-17T00:00:00Z"));
+      const prover = new LivenessProver({ enableChallenges: false });
+      prover.start();
+      // 10 minutes of one blink every 4s = 15 blinks/min — well above the
+      // 5-blinks/min saturation rate. blink_points should stay at 25 the
+      // whole way through.
+      let cumulative = 0;
+      for (let sec = 0; sec < 600; sec += 4) {
+        vi.advanceTimersByTime(4000);
+        cumulative += 1;
+        prover.update(makeLandmarks(), cumulative, 0, 0, 1);
+      }
+      expect(prover.getProof().details.blink_points).toBe(25);
+    });
+
+    it("decays to 0 when blinking stops mid-session (live-then-static attack)", () => {
+      vi.setSystemTime(new Date("2026-05-17T00:00:00Z"));
+      const prover = new LivenessProver({ enableChallenges: false });
+      prover.start();
+      // 30s of blinks (10 events) — saturate.
+      let cumulative = 0;
+      for (let i = 0; i < 10; i++) {
+        vi.advanceTimersByTime(3000);
+        cumulative += 1;
+        prover.update(makeLandmarks(), cumulative, 0, 0, 1);
+      }
+      expect(prover.getProof().details.blink_points).toBe(25);
+      // Advance 90s with NO new blinks. All 10 events fall out of the
+      // 60s rolling window. blink_points decays to 0 — closing the
+      // "live start, dead middle" attack class that cumulative count missed.
+      vi.advanceTimersByTime(90_000);
+      prover.update(makeLandmarks(), cumulative, 0, 0, 1);
+      expect(prover.getProof().details.blink_points).toBe(0);
+    });
+
+    it("scales linearly between 0 and 25 with recent-window blink count", () => {
+      vi.setSystemTime(new Date("2026-05-17T00:00:00Z"));
+      const prover = new LivenessProver({ enableChallenges: false });
+      prover.start();
+      // 3 blinks within the window → 3 × 5 = 15 points.
+      vi.advanceTimersByTime(1000);
+      prover.update(makeLandmarks(), 1, 0, 0, 1);
+      vi.advanceTimersByTime(1000);
+      prover.update(makeLandmarks(), 2, 0, 0, 1);
+      vi.advanceTimersByTime(1000);
+      prover.update(makeLandmarks(), 3, 0, 0, 1);
+      expect(prover.getProof().details.blink_points).toBe(15);
+    });
+  });
+
   // ---- Head-pose decoupling regression (2026-05-17) ---------------------
 
   describe("head rotation does NOT inflate eye/mouth motion (via blendshape sourcing)", () => {

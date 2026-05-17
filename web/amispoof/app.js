@@ -14,12 +14,12 @@ import * as ort from "onnxruntime-web";
 import {
   createSpoofDetector,
   runCasiaFasdMicroBench,
-} from "./lib/spoof-detector.js?v=2026-05-17-decouple";
+} from "./lib/spoof-detector.js?v=2026-05-17-rate-vis";
 
 // Version handshake — checked by the inline script in index.html.
 // If the user is running a stale cached app.js (no AMISPOOF_VERSION),
 // the HTML triggers a one-shot reload after 4 s.
-window.AMISPOOF_VERSION = "2026-05-17-decouple";
+window.AMISPOOF_VERSION = "2026-05-17-rate-vis";
 
 // SessionEngine.getVerdict() returns a confidence in [0, 0.88] when the
 // LivenessProver is wired (structural ceiling — see SessionEngine.ts
@@ -790,6 +790,22 @@ function stop() {
 
 async function loop() {
   if (!running) return;
+  // === Page-visibility guard ===
+  // Mobile browsers (Chrome/Brave Android, Safari iOS) pause the
+  // MediaStreamTrack when the tab is backgrounded but keep firing the
+  // requestAnimationFrame callback that drives this loop. Without this
+  // check the detector would run on the LAST frame the camera produced
+  // before the freeze, accumulating fake "static photo" incidents and
+  // decaying the proof score for what is just a tab-switch — and worse,
+  // opening a brief window where an attacker could swap the user out
+  // while the system kept reporting LIVE. We skip frames while hidden
+  // and let the SessionEngine's incident detectors see a true gap
+  // rather than synthetic static frames. The session clock keeps
+  // running, so accumulated worst-window evidence stays valid.
+  if (typeof document !== "undefined" && document.hidden) {
+    requestAnimationFrame(loop);
+    return;
+  }
   try {
     ctx.drawImage(els.video, 0, 0, canvas.width, canvas.height);
     const analysis = await detector.analyzeFrame(canvas);
@@ -802,6 +818,21 @@ async function loop() {
     setStatus(`frame error: ${err.message || err}`, "error");
   }
   if (running) requestAnimationFrame(loop);
+}
+
+// Surface the backgrounded state in the status pill so the user
+// understands why the panel froze in place. The handler is idempotent
+// and reset on each session start; setStatus restores a normal label
+// when visibility returns.
+if (typeof document !== "undefined") {
+  document.addEventListener("visibilitychange", () => {
+    if (!running) return;
+    if (document.hidden) {
+      setStatus("paused (tab hidden)", "live");
+    } else {
+      setStatus("running", "live");
+    }
+  });
 }
 
 // Draw the detected face bbox + corner ticks + a 478-point landmark dot cloud
