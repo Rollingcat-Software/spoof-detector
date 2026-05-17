@@ -17,13 +17,13 @@
     <meta name="author" content="Rollingcat Software / Ahmet Abdullah Gultekin" />
     <meta name="robots" content="index, follow, max-image-preview:large" />
     <meta name="googlebot" content="index, follow" />
-    <link rel="canonical" href="https://fivucsas.com/amispoof/" />
+    <link rel="canonical" href="https://amispoof.fivucsas.com/" />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%230d1117'/%3E%3Ctext x='50' y='66' text-anchor='middle' font-family='system-ui,sans-serif' font-size='52' font-weight='700' fill='%2358a6ff'%3E%3F%3C/text%3E%3C/svg%3E" />
 
     <!-- Open Graph (Facebook, LinkedIn, WhatsApp, Slack…) -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="FIVUCSAS" />
-    <meta property="og:url" content="https://fivucsas.com/amispoof/" />
+    <meta property="og:url" content="https://amispoof.fivucsas.com/" />
     <meta property="og:title" content="amispoof — Live face anti-spoof tester (browser, no server)" />
     <meta
       property="og:description"
@@ -46,7 +46,7 @@
         "@type": "SoftwareApplication",
         "name": "amispoof",
         "alternateName": "FIVUCSAS browser anti-spoof tester",
-        "url": "https://fivucsas.com/amispoof/",
+        "url": "https://amispoof.fivucsas.com/",
         "applicationCategory": "SecurityApplication",
         "operatingSystem": "Any modern browser (Chrome, Safari, Firefox, Edge) on desktop or mobile",
         "browserRequirements": "Requires WebAssembly, getUserMedia camera permission, MediaStream API",
@@ -856,7 +856,7 @@
       // older cached copy (no AMISPOOF_VERSION export at all), force a
       // one-shot hard reload so the user doesn't get stuck on a broken
       // bundle. Guarded by sessionStorage to avoid infinite loops.
-      window.AMISPOOF_HTML_VERSION = "2026-05-17-replay2";
+      window.AMISPOOF_HTML_VERSION = "2026-05-17-subdomain";
       setTimeout(function () {
         if (
           window.AMISPOOF_VERSION !== window.AMISPOOF_HTML_VERSION &&
@@ -867,6 +867,6 @@
         }
       }, 4000);
     </script>
-    <script type="module" src="./app.js?v=2026-05-17-replay2"></script>
+    <script type="module" src="./app.js?v=2026-05-17-subdomain"></script>
   </body>
 </html>
