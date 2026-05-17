@@ -3,12 +3,12 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>amispoof — Live face anti-spoof tester (browser, no server) — FIVUCSAS</title>
+    <title>amispoof — Am I spoof? Live browser face anti-spoof + liveness tester (no server) — FIVUCSAS</title>
 
     <!-- Primary SEO -->
     <meta
       name="description"
-      content="Open browser face anti-spoof + liveness tester. 19 analyzers (MiniFASNet, blink, rPPG, gaze, blendshapes, 3D pose, audio-mouth sync, ...) + 15-axis passive liveness-proof scorer run entirely in the browser — no server, no upload. Point your camera at a photo and watch the verdict flip in seconds."
+      content="Am I spoof? amispoof answers the question in the browser. Open face anti-spoof + liveness tester — 19 analyzers (MiniFASNet, blink, rPPG, gaze, blendshapes, 3D pose, audio-mouth sync, ...) + 15-axis passive liveness-proof scorer running entirely client-side. No server, no upload. Point your camera at a printed photo or another screen and watch the LIVE / SPOOF verdict flip in seconds."
     />
     <meta
       name="keywords"
@@ -24,10 +24,10 @@
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="FIVUCSAS" />
     <meta property="og:url" content="https://amispoof.fivucsas.com/" />
-    <meta property="og:title" content="amispoof — Live face anti-spoof tester (browser, no server)" />
+    <meta property="og:title" content="amispoof — Am I spoof? Live browser face anti-spoof + liveness tester" />
     <meta
       property="og:description"
-      content="19 analyzers, 3 gates, and a 15-axis passive liveness-proof scorer running entirely in the browser via onnxruntime-web + MediaPipe. Test printed-photo, phone-screen replay, deepfake, occlusion and dark-room attacks against a live verdict in seconds. No server, no upload."
+      content="Am I spoof? amispoof answers it in the browser. 19 analyzers, 3 gates, and a 15-axis passive liveness-proof scorer via onnxruntime-web + MediaPipe. Test printed-photo, phone-screen replay, deepfake, occlusion and dark-room attacks against a live LIVE/SPOOF verdict in seconds. No server, no upload."
     />
     <meta property="og:locale" content="en_US" />
     <meta property="og:image" content="https://amispoof.fivucsas.com/og-image.png" />
@@ -38,7 +38,7 @@
 
     <!-- Twitter / X card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="amispoof — browser face anti-spoof tester" />
+    <meta name="twitter:title" content="amispoof — Am I spoof? Browser face anti-spoof + liveness tester" />
     <meta
       name="twitter:description"
       content="19-analyzer face anti-spoof + 15-axis liveness-proof pipeline running entirely in the browser. No server, no GPU, no upload. Open the page, point your camera at a photo, watch the verdict flip."
@@ -74,6 +74,58 @@
         "sameAs": [
           "https://github.com/Rollingcat-Software/spoof-detector",
           "https://www.npmjs.com/package/@rollingcat/spoof-detector"
+        ]
+      }
+    </script>
+
+    <!-- FAQPage structured data — targets the natural-language query
+         "am i spoof" (and other liveness-check phrasings) which the
+         exact-brand-match "amispoof" doesn't surface for in Google. -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Am I spoof?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "amispoof answers the question in your browser in a few seconds — open https://amispoof.fivucsas.com/, grant camera access, and the page runs 19 anti-spoof analyzers + a 15-axis passive liveness-proof scorer on your face. The verdict (LIVE or SPOOF) appears in real time with per-axis evidence. Nothing is uploaded — all inference happens client-side in WebAssembly."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do I check if my face is real or a spoof?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Open amispoof.fivucsas.com and try the four scenarios on the page: (1) point the camera at your real face — it should read LIVE within a few seconds, (2) hold a printed photo of someone, (3) hold up another phone screen showing a face, (4) cover your mouth or step into a dark room. Each scenario flips the verdict differently so you can see which analyzers detect which attack."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does amispoof upload my camera frames?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. Every analyzer runs in your browser via WebAssembly (onnxruntime-web for the MiniFASNet ONNX model and MediaPipe Tasks for face landmarking). No frame is ever sent to any server. The page works offline once the models are cached."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What attacks does amispoof detect?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The 7-category spoof taxonomy: printed photographs, video replay attacks (phone or monitor screens showing a recorded face), 3D masks, heavy makeup, AR filters (Snapchat / Instagram beauty filters), deepfake injection (virtual webcam streaming a generated face), and the bonafide / REAL case. Each is scored independently and reported per-category in the page UI."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is amispoof free and open source?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes — MIT licensed. The TypeScript engine is published on npm as @rollingcat/spoof-detector and the source is on GitHub at Rollingcat-Software/spoof-detector. The accompanying academic paper documents the calibration and ISO/IEC 30107-3 cross-dataset evaluation."
+            }
+          }
         ]
       }
     </script>
@@ -630,7 +682,7 @@
   <body>
     <header>
       <h1>
-        <span class="tag">amispoof</span> — FIVUCSAS browser anti-spoof tester
+        <span class="tag">amispoof</span> — <strong>Am I spoof?</strong> · Browser face anti-spoof + liveness tester
       </h1>
       <div class="meta">
         <span class="status-dot" id="dot"></span><span id="status"
@@ -863,7 +915,7 @@
       // older cached copy (no AMISPOOF_VERSION export at all), force a
       // one-shot hard reload so the user doesn't get stuck on a broken
       // bundle. Guarded by sessionStorage to avoid infinite loops.
-      window.AMISPOOF_HTML_VERSION = "2026-05-17-ogimage";
+      window.AMISPOOF_HTML_VERSION = "2026-05-17-faq";
       setTimeout(function () {
         if (
           window.AMISPOOF_VERSION !== window.AMISPOOF_HTML_VERSION &&
@@ -874,6 +926,6 @@
         }
       }, 4000);
     </script>
-    <script type="module" src="./app.js?v=2026-05-17-ogimage"></script>
+    <script type="module" src="./app.js?v=2026-05-17-faq"></script>
   </body>
 </html>
