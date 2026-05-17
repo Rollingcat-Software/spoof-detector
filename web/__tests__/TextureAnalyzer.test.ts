@@ -90,5 +90,54 @@ describe("TextureAnalyzer", () => {
     expect(typeof r.details.texture_score).toBe("number");
     expect(typeof r.details.color_score).toBe("number");
     expect(typeof r.details.frequency_score).toBe("number");
+    expect(typeof r.details.color_drift_score).toBe("number");
+    expect(typeof r.details.color_drift_samples).toBe("number");
+  });
+
+  // ---- Phase C colour-drift behaviour ------------------------------------
+
+  it("colour_drift stays neutral 50 during warmup", () => {
+    const a = new TextureAnalyzer({
+      colorDriftHistoryLen: 60,
+    });
+    for (let i = 0; i < 20; i++) {
+      const r = a.analyze(noisyImage(42), face);
+      expect(r.details.color_drift_score).toBe(50);
+    }
+  });
+
+  it("colour_drift drops on repeated identical frames (photo)", () => {
+    const a = new TextureAnalyzer({
+      colorDriftHistoryLen: 60,
+    });
+    const img = uniformImage(140);
+    for (let i = 0; i < 60; i++) a.analyze(img, face);
+    const r = a.analyze(img, face);
+    expect(r.details.color_drift_score as number).toBeLessThan(10);
+  });
+
+  it("colour_drift rises when HSV channel means actually drift", () => {
+    const a = new TextureAnalyzer({
+      colorDriftHistoryLen: 60,
+      colorDriftGain: 8,
+    });
+    // Lighting drift simulation: walk a uniform colour through a range
+    // of brightness values, so meanV varies materially across the buffer.
+    for (let i = 0; i < 60; i++) {
+      const brightness = 100 + Math.floor((i / 60) * 80);
+      a.analyze(uniformImage(brightness), face);
+    }
+    const r = a.analyze(uniformImage(180), face);
+    expect(r.details.color_drift_score as number).toBeGreaterThan(10);
+    expect(r.details.color_drift_samples as number).toBeGreaterThanOrEqual(30);
+  });
+
+  it("reset() drops the colour-drift history", () => {
+    const a = new TextureAnalyzer({ colorDriftHistoryLen: 60 });
+    for (let i = 0; i < 60; i++) a.analyze(noisyImage(i), face);
+    a.reset();
+    const r = a.analyze(noisyImage(42), face);
+    expect(r.details.color_drift_score).toBe(50); // back to warmup
+    expect(r.details.color_drift_samples).toBe(1);
   });
 });

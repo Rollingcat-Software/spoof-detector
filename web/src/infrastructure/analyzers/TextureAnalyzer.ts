@@ -47,6 +47,17 @@ export interface TextureOptions {
    * and `cols//8` so the ratio remains comparable.
    */
   fftDownsample?: readonly [number, number];
+  /**
+   * Rolling window length for color-temperature drift tracking.
+   * Default 300 (= 10 s @ 30 fps). Phase C addition.
+   */
+  colorDriftHistoryLen?: number;
+  /**
+   * Stddev-to-score gain for the drift signal. The natural HSV channel
+   * mean drift on a real face under indoor lighting is ~3–10 units;
+   * gain 8 scales the upper end of natural variation to ~100. Phase C.
+   */
+  colorDriftGain?: number;
 }
 
 const DEFAULT_FFT_DOWNSAMPLE: readonly [number, number] = [48, 27];
@@ -59,13 +70,25 @@ export class TextureAnalyzer implements IFaceAnalyzer {
   private readonly frequencyThreshold: number;
   private readonly fftW: number;
   private readonly fftH: number;
+  private readonly colorDriftHistoryLen: number;
+  private readonly colorDriftGain: number;
   private currentFrame: SourceImage | null = null;
+  // Phase C — per-frame [meanH, meanS, meanV] of the face crop. Stddev
+  // over the window measures skin colour-temperature drift, which
+  // catches printed-photo and frozen-frame replay attacks (no drift)
+  // versus live skin (subtle drift under ambient lighting changes).
+  private colorDriftHistory: Array<[number, number, number]> = [];
+  private colorDriftLastDrift = 0;
 
-  // Verbatim from Python._weights.
+  // Phase C — rebalanced 4-way weights. Texture/color/frequency are
+  // scaled down by ~12% to make room for the new color_drift sub-score.
+  // The drift channel returns neutral 50 during warmup so existing tests
+  // that observe the fused score on the very first frame don't regress.
   private readonly weights = {
-    texture: 0.40,
-    color: 0.30,
-    frequency: 0.30,
+    texture: 0.35,
+    color: 0.27,
+    frequency: 0.27,
+    colorDrift: 0.11,
   } as const;
 
   constructor(options: TextureOptions = {}) {
@@ -75,6 +98,8 @@ export class TextureAnalyzer implements IFaceAnalyzer {
     const ds = options.fftDownsample ?? DEFAULT_FFT_DOWNSAMPLE;
     this.fftW = Math.max(8, Math.floor(ds[0]));
     this.fftH = Math.max(8, Math.floor(ds[1]));
+    this.colorDriftHistoryLen = options.colorDriftHistoryLen ?? 300;
+    this.colorDriftGain = options.colorDriftGain ?? 8;
   }
 
   /** Same setFrame() shape as ScreenFlickerAnalyzer / DeviceBoundary. */
@@ -116,10 +141,24 @@ export class TextureAnalyzer implements IFaceAnalyzer {
     const small = resizeGrayscale(gray, w, h, this.fftW, this.fftH);
     const frequencyScore = this.frequencyScore(small, this.fftW, this.fftH);
 
+    // Phase C — colour-temperature drift over the rolling window. Live
+    // skin shifts subtly with ambient lighting; a printed photo or
+    // frozen-frame replay holds the HSV channel means near constant.
+    // We use neutral 50 until enough samples accumulate so warmup
+    // doesn't penalise or credit a session unfairly.
+    const meanHsv = meanHsvChannels(hsv);
+    this.colorDriftHistory.push(meanHsv);
+    if (this.colorDriftHistory.length > this.colorDriftHistoryLen) {
+      this.colorDriftHistory.shift();
+    }
+    const colorDriftScore = this.computeColorDriftScore();
+    this.colorDriftLastDrift = colorDriftScore;
+
     const combined =
       textureScore * this.weights.texture +
       colorScore * this.weights.color +
-      frequencyScore * this.weights.frequency;
+      frequencyScore * this.weights.frequency +
+      colorDriftScore * this.weights.colorDrift;
     const score = Math.max(0.0, Math.min(100.0, combined));
 
     return makeAnalyzerResult(
@@ -129,13 +168,63 @@ export class TextureAnalyzer implements IFaceAnalyzer {
         texture_score: round(textureScore, 4),
         color_score: round(colorScore, 4),
         frequency_score: round(frequencyScore, 4),
+        color_drift_score: round(colorDriftScore, 4),
+        color_drift_samples: this.colorDriftHistory.length,
+        mean_h: round(meanHsv[0], 1),
+        mean_s: round(meanHsv[1], 3),
+        mean_v: round(meanHsv[2], 3),
       },
       performance.now() - start,
     );
   }
 
+  private computeColorDriftScore(): number {
+    if (this.colorDriftHistory.length < 30) return 50.0; // warmup neutral
+    // Stddev of the three channels, summed → single drift scalar.
+    let mH = 0;
+    let mS = 0;
+    let mV = 0;
+    for (const [h, s, v] of this.colorDriftHistory) {
+      mH += h;
+      mS += s;
+      mV += v;
+    }
+    const n = this.colorDriftHistory.length;
+    mH /= n;
+    mS /= n;
+    mV /= n;
+    let ssH = 0;
+    let ssS = 0;
+    let ssV = 0;
+    for (const [h, s, v] of this.colorDriftHistory) {
+      const dH = h - mH;
+      const dS = s - mS;
+      const dV = v - mV;
+      ssH += dH * dH;
+      ssS += dS * dS;
+      ssV += dV * dV;
+    }
+    const stdH = Math.sqrt(ssH / n); // [0, 360]
+    const stdS = Math.sqrt(ssS / n); // [0, 1]
+    const stdV = Math.sqrt(ssV / n); // [0, 1]
+    // Normalise H by 360 so all three contributions are comparable.
+    const drift = stdH / 360 + stdS + stdV;
+    return Math.max(0, Math.min(100, drift * this.colorDriftGain * 100));
+  }
+
   reset(): void {
     this.currentFrame = null;
+    this.colorDriftHistory = [];
+    this.colorDriftLastDrift = 0;
+  }
+
+  /**
+   * Test/debug accessor for the most recent colour-drift score (the value
+   * that was folded into the fused score on the last analyze() call).
+   * Returns 50 if no frames have been processed yet.
+   */
+  getLastColorDriftScore(): number {
+    return this.colorDriftHistory.length === 0 ? 50 : this.colorDriftLastDrift;
   }
 
   private resolveCrop(
@@ -446,6 +535,31 @@ function fft2Magnitude(
     }
   }
   return mag;
+}
+
+/**
+ * Mean H / S / V across all pixels of the crop. Returned as a single
+ * [meanH (0..360), meanS (0..1), meanV (0..1)] triple — convenient for
+ * the color-drift ring buffer math. H is converted from the cv2 0..179
+ * scale to 0..360 (degrees) so all three components share a continuous
+ * stddev interpretation when normalised.
+ */
+function meanHsvChannels(hsv: HsvBuffer): [number, number, number] {
+  const n = hsv.h.length;
+  if (n === 0) return [0, 0, 0];
+  let sumH = 0;
+  let sumS = 0;
+  let sumV = 0;
+  for (let i = 0; i < n; i++) {
+    sumH += hsv.h[i];
+    sumS += hsv.s[i];
+    sumV += hsv.v[i];
+  }
+  return [
+    (sumH / n) * (360 / 179), // cv2 → degrees
+    sumS / n / 255, // [0, 1]
+    sumV / n / 255, // [0, 1]
+  ];
 }
 
 /** np.fft.fftshift: swap quadrants so DC ends up at the centre. */
