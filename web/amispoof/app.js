@@ -14,12 +14,12 @@ import * as ort from "onnxruntime-web";
 import {
   createSpoofDetector,
   runCasiaFasdMicroBench,
-} from "./lib/spoof-detector.js?v=2026-05-17-cleanup";
+} from "./lib/spoof-detector.js?v=2026-05-17-phaseA";
 
 // Version handshake — checked by the inline script in index.html.
 // If the user is running a stale cached app.js (no AMISPOOF_VERSION),
 // the HTML triggers a one-shot reload after 4 s.
-window.AMISPOOF_VERSION = "2026-05-17-cleanup";
+window.AMISPOOF_VERSION = "2026-05-17-phaseA";
 
 // SessionEngine.getVerdict() returns a confidence in [0, 0.88] when the
 // LivenessProver is wired (structural ceiling — see SessionEngine.ts
@@ -76,6 +76,12 @@ const ANALYZER_DETAIL_KEYS = {
   texture: ["texture_score", "color_score", "frequency_score"],
   moire: ["moire_risk", "gabor_risk", "fft_risk"],
   minifasnet: ["p_real", "p_spoof"],
+  // Phase A analyzers — surface the headline details inline on hover.
+  eyebrow_motion: ["activation", "std", "frames"],
+  blink_symmetry: ["corr", "std_left", "std_right", "frames"],
+  gaze: ["gaze_x", "gaze_y", "saccade_count", "saccade_rate_per_sec"],
+  expression_dynamics: ["total", "std", "frames"],
+  pose_3d_consistency: ["ortho_residual", "ortho_score", "tz", "tz_std"],
 };
 
 function formatDetailValue(v) {
@@ -266,6 +272,42 @@ const ANALYZER_ORDER = [
     group: "video",
     desc: "Per-cell stability of the scene behind the face. A replay attack on a phone screen produces specular highlights and a too-stable backdrop.",
   },
+  // Phase A — blendshape / 3D matrix derived (MediaPipe free unlock).
+  {
+    name: "eyebrow_motion",
+    weight: 0,
+    label: "Eyebrow motion",
+    group: "video",
+    desc: "Rolling variance of 5 ARKit brow blendshapes (browInnerUp + 4 directional). 0 on a rigid-brow photo; climbs naturally during talking or thinking.",
+  },
+  {
+    name: "blink_symmetry",
+    weight: 0,
+    label: "Blink symmetry",
+    group: "video",
+    desc: "Pearson correlation of eyeBlinkLeft vs eyeBlinkRight across a 90-frame window. Real humans blink synchronously (≥ 0.7); deepfake/AR-filter avatars often desync per-eye.",
+  },
+  {
+    name: "gaze",
+    weight: 0,
+    label: "Gaze",
+    group: "video",
+    desc: "2D gaze vector derived from 8 eyeLook* blendshapes — rolling variance + saccade count. Fixed-gaze photos score 0; humans saccade ~3/s naturally.",
+  },
+  {
+    name: "expression_dynamics",
+    weight: 0,
+    label: "Expression dynamics",
+    group: "video",
+    desc: "Rolling variance of 15 mouth/cheek/nose blendshapes (smile/frown/dimple/squint/sneer). Passive emotion-change proxy — no dedicated classifier needed.",
+  },
+  {
+    name: "pose_3d_consistency",
+    weight: 0,
+    label: "3D pose consistency",
+    group: "video",
+    desc: "MediaPipe 4×4 facial transformation matrix — checks orthonormality of the rotation block + Z-translation motion. Catches tilted photos and flat-screen replays whose pose fit is degenerate.",
+  },
 ];
 
 const $ = (id) => document.getElementById(id);
@@ -393,6 +435,42 @@ const PROOF_AXES = [
     max: 8,
     section: "passive",
     desc: "Bbox/centroid drift over time. Credits natural face/body sway; 0 on a perfectly locked photo or frozen-frame replay.",
+  },
+  // Phase A — blendshape / 3D matrix derived axes.
+  {
+    name: "eyebrow_motion_points",
+    label: "Eyebrow motion",
+    max: 8,
+    section: "passive",
+    desc: "Awarded from the EyebrowAnalyzer 0–100 score. Credits any natural brow motion (raise, furrow, asymmetric lift).",
+  },
+  {
+    name: "blink_symmetry_points",
+    label: "Blink symmetry",
+    max: 6,
+    section: "passive",
+    desc: "Awarded when left/right blink correlation ≥ 0.7. Strong anti-deepfake / anti-AR-filter signal.",
+  },
+  {
+    name: "gaze_variation_points",
+    label: "Gaze variation",
+    max: 8,
+    section: "passive",
+    desc: "Awarded from the GazeAnalyzer score. Credits eye-movement variability + saccade rate.",
+  },
+  {
+    name: "expression_dynamics_points",
+    label: "Expression dynamics",
+    max: 8,
+    section: "passive",
+    desc: "Awarded from the ExpressionDynamicsAnalyzer score. Passive emotion-change proxy from 15 mouth/cheek/nose blendshapes.",
+  },
+  {
+    name: "pose_3d_consistency_points",
+    label: "3D pose",
+    max: 6,
+    section: "passive",
+    desc: "Awarded from the Pose3DConsistencyAnalyzer score. Credits well-formed orthonormal 3D pose + natural Z-translation motion.",
   },
   {
     name: "challenge_points",

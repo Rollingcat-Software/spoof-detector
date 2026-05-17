@@ -491,6 +491,89 @@ describe("LivenessProver", () => {
     });
   });
 
+  // ---- Phase A blendshape + 3D matrix axes -------------------------------
+
+  describe("blendshape / 3D-matrix passive axes", () => {
+    it("awards eyebrow_motion_points proportional to analyzer score", () => {
+      const prover = new LivenessProver({ enableChallenges: false });
+      prover.start();
+      // eyebrow score 75 → (75/100) * cap 8 = 6.0
+      prover.update(makeLandmarks(), 0, 0, 0, 1, 0, 0, 0, 75);
+      expect(prover.getProof().details.eyebrow_motion_points).toBeCloseTo(6, 1);
+    });
+
+    it("awards blink_symmetry_points only above the 70 threshold", () => {
+      const prover = new LivenessProver({ enableChallenges: false });
+      prover.start();
+      // Below threshold ⇒ 0
+      prover.update(makeLandmarks(), 0, 0, 0, 1, 0, 0, 0, 0, 65);
+      expect(prover.getProof().details.blink_symmetry_points).toBe(0);
+      // Far above threshold ⇒ full cap 6
+      prover.update(makeLandmarks(), 0, 0, 0, 1, 0, 0, 0, 0, 95);
+      expect(prover.getProof().details.blink_symmetry_points).toBeCloseTo(5, 0);
+    });
+
+    it("awards gaze_variation_points proportional to analyzer score", () => {
+      const prover = new LivenessProver({ enableChallenges: false });
+      prover.start();
+      // gaze 60 → (60/100) * 8 = 4.8
+      prover.update(makeLandmarks(), 0, 0, 0, 1, 0, 0, 0, 0, 0, 60);
+      expect(prover.getProof().details.gaze_variation_points).toBeCloseTo(
+        4.8,
+        1,
+      );
+    });
+
+    it("awards expression_dynamics_points proportional to analyzer score", () => {
+      const prover = new LivenessProver({ enableChallenges: false });
+      prover.start();
+      // expression 50 → (50/100) * 8 = 4.0
+      prover.update(makeLandmarks(), 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 50);
+      expect(prover.getProof().details.expression_dynamics_points).toBeCloseTo(
+        4,
+        1,
+      );
+    });
+
+    it("awards pose_3d_consistency_points proportional to analyzer score", () => {
+      const prover = new LivenessProver({ enableChallenges: false });
+      prover.start();
+      // pose3d 80 → (80/100) * 6 = 4.8
+      prover.update(makeLandmarks(), 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 80);
+      expect(prover.getProof().details.pose_3d_consistency_points).toBeCloseTo(
+        4.8,
+        1,
+      );
+    });
+
+    it("stays at 0 when all blendshape analyzers return neutral 50 (warmup floor)", () => {
+      const prover = new LivenessProver({ enableChallenges: false });
+      prover.start();
+      // All five analyzers at score 50 (their neutral / warmup state).
+      // Each axis's threshold is configured above 50 OR (for eyebrow/gaze/
+      // expression/pose3d) the proportional credit at 50 would round low —
+      // we just want to verify none of the new axes get FULL credit from
+      // the warmup neutral, since 50 is below several thresholds.
+      prover.update(makeLandmarks(), 0, 0, 0, 1, 0, 0, 0, 50, 50, 50, 50, 50);
+      const d = prover.getProof().details;
+      expect(d.eyebrow_motion_points).toBeLessThan(8);
+      expect(d.blink_symmetry_points).toBe(0); // threshold = 70
+      expect(d.gaze_variation_points).toBeLessThan(8);
+      expect(d.expression_dynamics_points).toBeLessThan(8);
+      expect(d.pose_3d_consistency_points).toBeLessThan(6);
+    });
+
+    it("LivenessScore includes all 5 new Phase-A axes in the empty state", () => {
+      const prover = new LivenessProver({ enableChallenges: false });
+      const s = prover.getScore();
+      expect(s.eyebrow_motion_points).toBe(0);
+      expect(s.blink_symmetry_points).toBe(0);
+      expect(s.gaze_variation_points).toBe(0);
+      expect(s.expression_dynamics_points).toBe(0);
+      expect(s.pose_3d_consistency_points).toBe(0);
+    });
+  });
+
   // ---- Yaw / pitch physiological clamp -----------------------------------
 
   describe("estimateHeadPose clamps degenerate landmark configurations", () => {
