@@ -14,12 +14,12 @@ import * as ort from "onnxruntime-web";
 import {
   createSpoofDetector,
   runCasiaFasdMicroBench,
-} from "./lib/spoof-detector.js?v=2026-05-17-phaseB";
+} from "./lib/spoof-detector.js?v=2026-05-17-phaseC";
 
 // Version handshake — checked by the inline script in index.html.
 // If the user is running a stale cached app.js (no AMISPOOF_VERSION),
 // the HTML triggers a one-shot reload after 4 s.
-window.AMISPOOF_VERSION = "2026-05-17-phaseB";
+window.AMISPOOF_VERSION = "2026-05-17-phaseC";
 
 // SessionEngine.getVerdict() returns a confidence in [0, 0.88] when the
 // LivenessProver is wired (structural ceiling — see SessionEngine.ts
@@ -73,7 +73,13 @@ const ANALYZER_DETAIL_KEYS = {
   ],
   device_boundary: ["boundary_score", "line_score", "n_lines"],
   screen_replay: ["fft_score", "laplacian_score", "skin_score"],
-  texture: ["texture_score", "color_score", "frequency_score"],
+  texture: [
+    "texture_score",
+    "color_score",
+    "frequency_score",
+    "color_drift_score",
+    "color_drift_samples",
+  ],
   moire: ["moire_risk", "gabor_risk", "fft_risk"],
   minifasnet: ["p_real", "p_spoof"],
   // Phase A analyzers — surface the headline details inline on hover.
