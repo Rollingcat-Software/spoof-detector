@@ -14,12 +14,12 @@ import * as ort from "onnxruntime-web";
 import {
   createSpoofDetector,
   runCasiaFasdMicroBench,
-} from "./lib/spoof-detector.js?v=2026-05-17-recorder";
+} from "./lib/spoof-detector.js?v=2026-05-17-replay";
 
 // Version handshake — checked by the inline script in index.html.
 // If the user is running a stale cached app.js (no AMISPOOF_VERSION),
 // the HTML triggers a one-shot reload after 4 s.
-window.AMISPOOF_VERSION = "2026-05-17-recorder";
+window.AMISPOOF_VERSION = "2026-05-17-replay";
 
 // SessionEngine.getVerdict() returns a confidence in [0, 0.88] when the
 // LivenessProver is wired (structural ceiling — see SessionEngine.ts
@@ -426,6 +426,13 @@ const els = {
   micToggle: $("micToggle"),
   handToggle: $("handToggle"),
   recordToggle: $("recordToggle"),
+  replayBtn: $("replayBtn"),
+  replayFile: $("replayFile"),
+  replayPanel: $("replayPanel"),
+  replayHeader: $("replayHeader"),
+  replayChart: $("replayChart"),
+  replayLegend: $("replayLegend"),
+  replayClose: $("replayClose"),
 };
 
 const analyzerRefs = {};
@@ -835,17 +842,58 @@ async function loop() {
   if (running) requestAnimationFrame(loop);
 }
 
-// Surface the backgrounded state in the status pill so the user
-// understands why the panel froze in place. The handler is idempotent
-// and reset on each session start; setStatus restores a normal label
-// when visibility returns.
+// Visibility change handler — pauses/resumes the run loop and, on
+// return, recovers a *frozen camera stream*. Mobile browsers (Chrome
+// / Brave Android, Safari iOS) commonly suspend the
+// MediaStreamTrack while the tab is backgrounded — when the tab
+// returns, the <video> element is still paused or the track is in
+// "muted" state, so analyzeFrame keeps draining the same captured
+// frame for many seconds. That looks like a static-photo attack to
+// the engine and decays the proof score (user observed 47/100 after
+// a 130s background interval). We:
+//   1. Call .play() on the <video> if it's paused.
+//   2. If the underlying MediaStreamTrack is "ended", re-acquire via
+//      getUserMedia and swap in the new stream.
+//   3. Surface the recovery status in the pill so the user knows.
+async function recoverCameraStream() {
+  try {
+    const v = els.video;
+    if (!v) return;
+    if (v.paused) await v.play().catch(() => {});
+    const stream = /** @type {MediaStream|null} */ (v.srcObject);
+    const track = stream?.getVideoTracks?.()[0];
+    const trackDead =
+      !stream || !stream.active || !track || track.readyState === "ended";
+    if (trackDead) {
+      setStatus("camera reacquiring…", "live");
+      const fresh = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: { ideal: 640 },
+          height: { ideal: 480 },
+          facingMode: "user",
+        },
+        audio: false,
+      });
+      v.srcObject = fresh;
+      await v.play().catch(() => {});
+    }
+    setStatus("running", "live");
+  } catch (err) {
+    console.error("camera recovery failed", err);
+    setStatus(`camera recovery failed: ${err.message || err}`, "error");
+  }
+}
+
 if (typeof document !== "undefined") {
   document.addEventListener("visibilitychange", () => {
     if (!running) return;
     if (document.hidden) {
       setStatus("paused (tab hidden)", "live");
     } else {
-      setStatus("running", "live");
+      // Don't trust that the camera survived the background interval.
+      // Asynchronously re-play / re-acquire as needed; the run loop
+      // resumes on the next requestAnimationFrame tick regardless.
+      void recoverCameraStream();
     }
   });
 }
@@ -1314,6 +1362,129 @@ function downloadBlob(blob, filename) {
   a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+// === Session replay (Phase E) ===
+// Loads a session JSON produced by the recorder and renders the final
+// verdict + a tiny SVG line chart of proof_total over the session.
+// Intentionally minimalist — no zoom, no scrub, no video sync — the
+// goal here is "did this session ever drop below proven-live, and
+// when?" not "build a full demo viewer". The recorded JSON is
+// already a complete time-series; a fancier in-page viewer is a
+// natural follow-up if reviewers need scrubbing.
+function renderReplay(payload) {
+  if (!payload || !Array.isArray(payload.timeline)) {
+    els.replayHeader.textContent = "Invalid replay file: no timeline.";
+    return;
+  }
+  const t = payload.timeline;
+  const finalVerdict = payload.final_verdict ?? {};
+  const live = finalVerdict.is_live ? "LIVE" : "SPOOF";
+  const conf = Math.round((finalVerdict.confidence ?? 0) * 100);
+  const dur = payload.recording_seconds ?? 0;
+  const frames = payload.frame_count ?? t.length;
+  els.replayHeader.innerHTML =
+    `<div><b style="color:${
+      finalVerdict.is_live ? "var(--green)" : "var(--red)"
+    }">${live}</b> · final conf ${conf}% · ${dur.toFixed
+      ? dur.toFixed(1)
+      : dur}s · ${frames} frames · recorded ` +
+    `${payload.generated_at ?? "(unknown time)"}</div>` +
+    `<div style="color: var(--muted); font-size: 11px; margin-top: 4px">` +
+    `amispoof version: ${payload.amispoof_version ?? "(unknown)"} · ` +
+    `user agent: ${
+      (payload.user_agent || "").slice(0, 60)
+    }${(payload.user_agent || "").length > 60 ? "…" : ""}` +
+    `</div>`;
+
+  // Tiny SVG chart: x = frame index, y = proof_total (0..100), plus
+  // a green/red dotted background indicating is_live=true/false.
+  const svg = els.replayChart;
+  const W = svg.clientWidth || 600;
+  const H = 120;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.innerHTML = "";
+
+  // Background bands per-frame: green tint when is_live, red when SPOOF.
+  const bandStrip = document.createElementNS("http://www.w3.org/2000/svg", "g");
+  const stepX = W / Math.max(1, t.length);
+  for (let i = 0; i < t.length; i++) {
+    const r = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    r.setAttribute("x", String(i * stepX));
+    r.setAttribute("y", "0");
+    r.setAttribute("width", String(stepX + 1));
+    r.setAttribute("height", String(H));
+    r.setAttribute(
+      "fill",
+      t[i].is_live ? "rgba(63,185,80,0.08)" : "rgba(248,81,73,0.18)",
+    );
+    bandStrip.appendChild(r);
+  }
+  svg.appendChild(bandStrip);
+
+  // Proof_total line.
+  let pathD = "";
+  for (let i = 0; i < t.length; i++) {
+    const pct = t[i].proof_total ?? 0;
+    const x = i * stepX;
+    const y = H - (pct / 100) * (H - 10) - 5;
+    pathD += i === 0 ? `M${x},${y}` : ` L${x},${y}`;
+  }
+  const p = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  p.setAttribute("d", pathD);
+  p.setAttribute("stroke", "var(--accent)");
+  p.setAttribute("stroke-width", "2");
+  p.setAttribute("fill", "none");
+  svg.appendChild(p);
+
+  // 60-point proven-live threshold dashed line.
+  const thr = document.createElementNS("http://www.w3.org/2000/svg", "line");
+  thr.setAttribute("x1", "0");
+  thr.setAttribute("x2", String(W));
+  thr.setAttribute("y1", String(H - (60 / 100) * (H - 10) - 5));
+  thr.setAttribute("y2", String(H - (60 / 100) * (H - 10) - 5));
+  thr.setAttribute("stroke", "var(--muted)");
+  thr.setAttribute("stroke-dasharray", "4 4");
+  thr.setAttribute("stroke-width", "1");
+  svg.appendChild(thr);
+
+  // Aggregate stats for the legend.
+  const proofs = t.map((x) => x.proof_total ?? 0);
+  const minProof = Math.min(...proofs);
+  const maxProof = Math.max(...proofs);
+  const liveFraction = t.filter((x) => x.is_live).length / Math.max(1, t.length);
+  els.replayLegend.textContent =
+    `proof_total: min ${minProof} · max ${maxProof} · ` +
+    `verdict was LIVE for ${(liveFraction * 100).toFixed(0)}% of frames · ` +
+    `green bands = LIVE, red = SPOOF, dashed line = 60-pt proven-live threshold`;
+}
+
+if (els.replayBtn && els.replayFile) {
+  els.replayBtn.addEventListener("click", () => els.replayFile.click());
+  els.replayFile.addEventListener("change", async () => {
+    const file = els.replayFile.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const payload = JSON.parse(text);
+      els.replayPanel.style.display = "";
+      renderReplay(payload);
+    } catch (err) {
+      console.error("replay parse failed", err);
+      els.replayPanel.style.display = "";
+      els.replayHeader.textContent = `Replay parse failed: ${err.message || err}`;
+      els.replayChart.innerHTML = "";
+      els.replayLegend.textContent = "";
+    } finally {
+      // Reset the file input so re-selecting the same file fires change again.
+      els.replayFile.value = "";
+    }
+  });
+}
+if (els.replayClose) {
+  els.replayClose.addEventListener("click", () => {
+    els.replayPanel.style.display = "none";
+  });
 }
 
 els.copyVerdict.addEventListener("click", async () => {

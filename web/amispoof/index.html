@@ -8,7 +8,7 @@
     <!-- Primary SEO -->
     <meta
       name="description"
-      content="amispoof is an open, browser-side face anti-spoof and liveness tester. It runs the FIVUCSAS / Rollingcat spoof-detector pipeline (17 analyzers: MiniFASNet, screen flicker, micro-tremor, blink, rPPG pulse, device boundary, moire, texture, screen replay, landmark variance, face motion, background grid, eyebrow motion, blink symmetry, gaze, expression dynamics, 3D pose consistency) plus a passive liveness-proof scorer (blink/landmark/head-rotation/expression/eye-motion/mouth-motion/face-motion/eyebrow/blink-symmetry/gaze/expression-dynamics/3D-pose points) and Ayşenur's face-usability gate, fully client-side. No server, no GPU, no upload — point your camera at a printed photo or another screen and watch the verdict in seconds."
+      content="Open browser face anti-spoof + liveness tester. 19 analyzers (MiniFASNet, blink, rPPG, gaze, blendshapes, 3D pose, audio-mouth sync, ...) + 15-axis passive liveness-proof scorer run entirely in the browser — no server, no upload. Point your camera at a photo and watch the verdict flip in seconds."
     />
     <meta
       name="keywords"
@@ -27,7 +27,7 @@
     <meta property="og:title" content="amispoof — Live face anti-spoof tester (browser, no server)" />
     <meta
       property="og:description"
-      content="Open browser tester for the FIVUCSAS spoof-detector pipeline. 17 analyzers + 3 gates + passive liveness-proof scorer run client-side via onnxruntime-web + MediaPipe. Test printed-photo, screen-replay, occlusion and dark-room attacks against a session verdict in seconds."
+      content="19 analyzers, 3 gates, and a 15-axis passive liveness-proof scorer running entirely in the browser via onnxruntime-web + MediaPipe. Test printed-photo, phone-screen replay, deepfake, occlusion and dark-room attacks against a live verdict in seconds. No server, no upload."
     />
     <meta property="og:locale" content="en_US" />
 
@@ -36,7 +36,7 @@
     <meta name="twitter:title" content="amispoof — browser face anti-spoof tester" />
     <meta
       name="twitter:description"
-      content="10-analyzer face anti-spoof pipeline running entirely in the browser. No server, no GPU, no upload. Open the page, point your camera at a photo, watch the verdict flip."
+      content="19-analyzer face anti-spoof + 15-axis liveness-proof pipeline running entirely in the browser. No server, no GPU, no upload. Open the page, point your camera at a photo, watch the verdict flip."
     />
 
     <!-- JSON-LD structured data — SoftwareApplication for Google + voice assistants -->
@@ -647,6 +647,26 @@
         <button id="micToggle" class="ghost" title="Phase D3: enable microphone for voice-activity + audio-mouth-sync analyzers (~strongest anti-replay signal). The mic stays on until you stop the session.">🎤 Enable mic</button>
         <button id="handToggle" class="ghost" title="Phase D2: enable MediaPipe HandLandmarker. ~6 MB model lazy-loads. Tracks hand gesture motion as an extra liveness signal, flags >2 hands per frame as a deepfake anomaly.">✋ Enable hand tracking</button>
         <button id="recordToggle" class="ghost" title="Phase E (experimental): record the session as a video + analytics JSON for later playback / audit.">⏺ Record session</button>
+        <button id="replayBtn" class="ghost" title="Replay a previously-recorded session JSON (from the ⏺ Record button). Shows the verdict timeline + per-axis proof trajectory.">▶ Replay JSON</button>
+        <input
+          id="replayFile"
+          type="file"
+          accept=".json,application/json"
+          style="display: none"
+        />
+      </div>
+
+      <!-- Replay overlay (Phase E) — hidden until the user loads a recorded
+           session JSON. Renders the final verdict header + a tiny SVG
+           timeline of proof_total across the session. -->
+      <div id="replayPanel" style="display: none; margin-top: 12px; padding: 12px; border: 1px solid var(--border); background: #21262d; border-radius: 6px; font-size: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <strong>Session replay</strong>
+          <button id="replayClose" class="ghost" style="padding: 2px 8px;">close ✕</button>
+        </div>
+        <div id="replayHeader" style="margin-bottom: 8px;"></div>
+        <svg id="replayChart" width="100%" height="120" style="background: #0d1117; border-radius: 4px;"></svg>
+        <div id="replayLegend" style="margin-top: 8px; color: var(--muted); font-size: 11px;"></div>
       </div>
 
       <!-- Phase 5E-3: per-sample bench output. Hidden until the user clicks
@@ -836,7 +856,7 @@
       // older cached copy (no AMISPOOF_VERSION export at all), force a
       // one-shot hard reload so the user doesn't get stuck on a broken
       // bundle. Guarded by sessionStorage to avoid infinite loops.
-      window.AMISPOOF_HTML_VERSION = "2026-05-17-recorder";
+      window.AMISPOOF_HTML_VERSION = "2026-05-17-replay";
       setTimeout(function () {
         if (
           window.AMISPOOF_VERSION !== window.AMISPOOF_HTML_VERSION &&
@@ -847,6 +867,6 @@
         }
       }, 4000);
     </script>
-    <script type="module" src="./app.js?v=2026-05-17-recorder"></script>
+    <script type="module" src="./app.js?v=2026-05-17-replay"></script>
   </body>
 </html>
