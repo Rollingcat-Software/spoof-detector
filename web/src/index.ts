@@ -29,6 +29,8 @@ import { FaceUsabilityGate } from "./gates/FaceUsabilityGate";
 import { BackgroundGridAnalyzer } from "./infrastructure/analyzers/BackgroundGridAnalyzer";
 import { BackgroundMotionAnalyzer } from "./infrastructure/analyzers/BackgroundMotionAnalyzer";
 import { MediaPipeSelfieSegmenter } from "./infrastructure/detection/MediaPipeSelfieSegmenter";
+import { HandTrackingAnalyzer } from "./infrastructure/analyzers/HandTrackingAnalyzer";
+import { MediaPipeHandDetector } from "./infrastructure/detection/MediaPipeHandDetector";
 import { BehavioralPatternAnalyzer } from "./infrastructure/analyzers/BehavioralPatternAnalyzer";
 import { BlinkAnalyzer } from "./infrastructure/analyzers/BlinkAnalyzer";
 import { BlinkSymmetryAnalyzer } from "./infrastructure/analyzers/BlinkSymmetryAnalyzer";
@@ -178,6 +180,15 @@ export interface SpoofDetectorOptions {
   enableBackgroundSegmentation?: boolean;
   /** Optional override for the SelfieSegmenter .tflite URL. */
   selfieSegmenterModelUrl?: string;
+  /**
+   * Phase D2 (opt-in) — MediaPipe HandLandmarker for hand presence and
+   * gesture tracking. Default `false`: requires an additional ~6 MB
+   * model fetch on first use. Adds `hand_naturalness_points` (cap 8)
+   * to the LivenessProver passive ceiling when enabled.
+   */
+  enableHandTracking?: boolean;
+  /** Optional override for the HandLandmarker .task URL. */
+  handLandmarkerModelUrl?: string;
   /** Run Aysenur's face-usability gate. Result attached to each FrameAnalysis. Default true. */
   enableFaceUsabilityGate?: boolean;
   /** Run the LivenessProver passive proof scorer alongside the SessionEngine. Default true. */
@@ -266,6 +277,8 @@ export class SpoofDetector {
   private behavioralPattern: BehavioralPatternAnalyzer | null = null;
   private backgroundMotion: BackgroundMotionAnalyzer | null = null;
   private readonly selfieSegmenterModelUrl: string | undefined;
+  private handTracking: HandTrackingAnalyzer | null = null;
+  private readonly handLandmarkerModelUrl: string | undefined;
 
   private readonly fuser: MultiClassFuser;
   private readonly engine: SessionEngine;
@@ -290,6 +303,7 @@ export class SpoofDetector {
     pose3DConsistency: boolean;
     behavioralPattern: boolean;
     backgroundSegmentation: boolean;
+    handTracking: boolean;
   }>;
   private frameId = 0;
   private started = false;
@@ -339,6 +353,8 @@ export class SpoofDetector {
       behavioralPattern: opts.enableBehavioralPattern !== false,
       // Phase D1 default OFF — separate model fetch.
       backgroundSegmentation: opts.enableBackgroundSegmentation === true,
+      // Phase D2 default OFF — separate ~6 MB model fetch.
+      handTracking: opts.enableHandTracking === true,
     };
     // LivenessProver is owned by the SessionEngine so its `isProvenLive` gate
     // joins the verdict AND-condition (matches Python design). When the
@@ -364,6 +380,7 @@ export class SpoofDetector {
     );
     this.gateFrameSkip = Math.max(1, Math.floor(opts.gateFrameSkip ?? 5));
     this.selfieSegmenterModelUrl = opts.selfieSegmenterModelUrl;
+    this.handLandmarkerModelUrl = opts.handLandmarkerModelUrl;
   }
 
   /** Lazy-load both heavy models. Phase 2/3 analyzers don't need a warmup. */
@@ -422,6 +439,8 @@ export class SpoofDetector {
     if (this.toggles.backgroundGrid) this.ensureBackgroundGrid().setFrame(input);
     if (this.toggles.backgroundSegmentation)
       this.ensureBackgroundMotion().setFrame(input as never);
+    if (this.toggles.handTracking)
+      this.ensureHandTracking().setFrame(input as never);
     if (runHeavy && !this.enableHeavyWorker) {
       if (this.toggles.deviceBoundary) this.ensureDeviceBoundary().setFrame(input);
       if (this.toggles.screenReplay) (await this.ensureScreenReplay()).setFrame(input);
@@ -579,6 +598,10 @@ export class SpoofDetector {
         const a = this.ensureBackgroundMotion();
         results[a.name] = await a.analyze(crop, face);
       }
+      if (this.toggles.handTracking) {
+        const a = this.ensureHandTracking();
+        results[a.name] = await a.analyze(crop, face);
+      }
 
       // Heavy analyzers — inline path. (Worker path is awaited in Stage C.)
       if (runHeavy && !this.enableHeavyWorker) {
@@ -695,6 +718,7 @@ export class SpoofDetector {
     this.pose3DConsistency?.reset();
     this.behavioralPattern?.reset();
     this.backgroundMotion?.reset();
+    this.handTracking?.reset();
     // LivenessProver is reset inside SessionEngine.reset() (single source of truth).
     // MoireAnalyzer has no reset() — it's stateless per-frame.
     // Gates are stateful (streak counters) — replace with a fresh instance.
@@ -774,6 +798,20 @@ export class SpoofDetector {
     if (!this.behavioralPattern)
       this.behavioralPattern = new BehavioralPatternAnalyzer();
     return this.behavioralPattern;
+  }
+  private ensureHandTracking(): HandTrackingAnalyzer {
+    if (!this.handTracking) {
+      this.handTracking = new HandTrackingAnalyzer(
+        this.handLandmarkerModelUrl
+          ? {
+              detector: new MediaPipeHandDetector({
+                modelAssetPath: this.handLandmarkerModelUrl,
+              }),
+            }
+          : {},
+      );
+    }
+    return this.handTracking;
   }
   private ensureBackgroundMotion(): BackgroundMotionAnalyzer {
     if (!this.backgroundMotion) {

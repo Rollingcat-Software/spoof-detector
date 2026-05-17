@@ -14,12 +14,12 @@ import * as ort from "onnxruntime-web";
 import {
   createSpoofDetector,
   runCasiaFasdMicroBench,
-} from "./lib/spoof-detector.js?v=2026-05-17-phaseD1";
+} from "./lib/spoof-detector.js?v=2026-05-17-phaseD2";
 
 // Version handshake — checked by the inline script in index.html.
 // If the user is running a stale cached app.js (no AMISPOOF_VERSION),
 // the HTML triggers a one-shot reload after 4 s.
-window.AMISPOOF_VERSION = "2026-05-17-phaseD1";
+window.AMISPOOF_VERSION = "2026-05-17-phaseD2";
 
 // SessionEngine.getVerdict() returns a confidence in [0, 0.88] when the
 // LivenessProver is wired (structural ceiling — see SessionEngine.ts
@@ -101,6 +101,13 @@ const ANALYZER_DETAIL_KEYS = {
     "std_g",
     "std_b",
     "drift",
+  ],
+  hand_tracking: [
+    "hand_count",
+    "handedness",
+    "wrist_std",
+    "samples",
+    "anomaly_third_hand",
   ],
 };
 
@@ -342,6 +349,13 @@ const ANALYZER_ORDER = [
     group: "video",
     desc: "MediaPipe SelfieSegmenter masks the user out; the analyzer tracks mean RGB drift of the remaining background pixels over a ~10 s window. Real environments shift subtly; a phone-screen replay holds the background constant.",
   },
+  {
+    name: "hand_tracking",
+    weight: 0,
+    label: "Hand tracking",
+    group: "video",
+    desc: "MediaPipe HandLandmarker tracks per-hand wrist position; rolling stddev → natural gesture credit. Flags >2 hands per frame as a deepfake artefact. Opt-in: append ?hand=1 to the URL (loads ~6 MB).",
+  },
 ];
 
 const $ = (id) => document.getElementById(id);
@@ -521,6 +535,13 @@ const PROOF_AXES = [
     desc: "Awarded from the BackgroundMotionAnalyzer score (Phase D1, opt-in). Credits drift in background RGB across the rolling window; 0 on a stationary replay.",
   },
   {
+    name: "hand_naturalness_points",
+    label: "Hand naturalness",
+    max: 8,
+    section: "passive",
+    desc: "Awarded from the HandTrackingAnalyzer score (Phase D2, opt-in via ?hand=1). Credits natural hand gesture; caps low on the deepfake third-hand anomaly.",
+  },
+  {
     name: "challenge_points",
     label: "Challenges",
     max: 40,
@@ -652,6 +673,10 @@ async function ensureDetector() {
     // background-motion row populates. The ~250 KB SelfieSegmenter
     // model lazy-loads from MediaPipe's CDN on first frame.
     enableBackgroundSegmentation: true,
+    // Phase D2 — hand tracking pulls a ~6 MB model. Off by default for
+    // the demo page; enable with ?hand=1 in the URL to test.
+    enableHandTracking:
+      new URLSearchParams(window.location.search).get("hand") === "1",
   });
   return detector;
 }
