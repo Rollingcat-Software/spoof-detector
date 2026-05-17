@@ -568,6 +568,19 @@ export class LivenessProver {
       pitch = (Math.asin(clamped) * 180) / Math.PI;
     }
 
+    // Physiological clamp — MediaPipe occasionally returns degenerate
+    // landmark configurations (face partially out-of-frame, low-light
+    // glitch) that produce yaw/pitch readings outside the human range
+    // of motion for a webcam session. Without this, the monotonic
+    // `yawRangeSeen` peak tracker wedges at outlier values (a Chrome
+    // mobile run reported yaw=112.8° on a clearly-live face), which
+    // doesn't affect the rotation_points score (already capped) but
+    // surfaces to consumers as an obviously-wrong "head motion" number.
+    const yawClamp = 60.0;
+    const pitchClamp = 60.0;
+    yaw = Math.max(-yawClamp, Math.min(yawClamp, yaw));
+    pitch = Math.max(-pitchClamp, Math.min(pitchClamp, pitch));
+
     return [yaw, pitch];
   }
 

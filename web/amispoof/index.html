@@ -332,6 +332,7 @@
         overflow: hidden;
       }
       .analyzer-row .fill {
+        display: block; /* inline spans ignore width — promote to block. */
         height: 100%;
         background: linear-gradient(
           90deg,
@@ -362,6 +363,7 @@
         overflow: hidden;
       }
       .cat-row .fill {
+        display: block; /* inline spans ignore width — promote to block. */
         height: 100%;
         background: var(--red);
         transition: width 120ms linear;
@@ -495,6 +497,7 @@
         overflow: hidden;
       }
       .proof-row .fill {
+        display: block; /* inline spans ignore width — promote to block. */
         height: 100%;
         background: var(--green);
         opacity: 0.85;
@@ -830,7 +833,7 @@
       // older cached copy (no AMISPOOF_VERSION export at all), force a
       // one-shot hard reload so the user doesn't get stuck on a broken
       // bundle. Guarded by sessionStorage to avoid infinite loops.
-      window.AMISPOOF_HTML_VERSION = "2026-05-16-passive";
+      window.AMISPOOF_HTML_VERSION = "2026-05-17-cleanup";
       setTimeout(function () {
         if (
           window.AMISPOOF_VERSION !== window.AMISPOOF_HTML_VERSION &&
@@ -841,6 +844,6 @@
         }
       }, 4000);
     </script>
-    <script type="module" src="./app.js?v=2026-05-16-passive"></script>
+    <script type="module" src="./app.js?v=2026-05-17-cleanup"></script>
   </body>
 </html>
