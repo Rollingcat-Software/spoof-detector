@@ -2,8 +2,33 @@
 
 **Project**: FIVUCSAS Session-Based Face Presentation Attack Detection
 **Paper Target**: BIOSIG 2026 / IJCB 2026
-**Demo**: amispoof.com (also live at https://fivucsas.com/amispoof/ — browser-side reference implementation)
-**Last Updated**: 2026-05-16 (PR #23 — Phase 4 quality + perf overhaul: 12 analyzers, LivenessProver, Web Worker, WebGPU, lazy chunks, validation harness)
+**Demo**: https://amispoof.fivucsas.com/ — browser-side reference implementation (migrated 2026-05-17 from fivucsas.com/amispoof/; old URL 301s)
+**Last Updated**: 2026-05-17 (PRs #25–#48 — full multi-signal roadmap shipped: 19 analyzers + 15-axis passive liveness-proof scorer, subdomain migration, recorder + replay UI, browser-first paper reframe)
+
+## Status (2026-05-17)
+
+| Surface | State |
+|---|---|
+| **Browser bundle** (`@rollingcat/spoof-detector` on npm, live at amispoof.fivucsas.com) | **Production** — 19 analyzers, 15-axis proof scorer, 185-pt ceiling; 6.7–9.5 fps Pixel-class Android, 25–30 fps desktop Chrome WebGPU; 217 vitest green |
+| **Python reference** (`src/`) | **Production** — calibration source-of-truth + ISO/IEC 30107-3 benchmark harness for §6–§8 of the paper; 138 pytest green |
+| **Paper** (`paper/sections/`) | **Browser-first reframe** complete (PR #45); §0/§1/§10 lead with the client-side bundle, Python framed as starting-point + evaluation reference; §7.6 updated with measured browser-port perf numbers |
+| **iBeta PAD-Level-1 submission package** | Scoped to the Python pipeline; re-scope to the browser bundle is a planned next iteration |
+
+### Phases shipped this iteration (2026-05-16 / 17)
+
+| Phase | Scope | Adds |
+|---|---|---|
+| **A** (PR #31) | MediaPipe blendshape + 3D matrix unlock | EyebrowAnalyzer, BlinkSymmetryAnalyzer, GazeAnalyzer, ExpressionDynamicsAnalyzer, Pose3DConsistencyAnalyzer + 5 LivenessProver axes |
+| **B** (PR #32) | Behavioural temporal patterns | BehavioralPatternAnalyzer (blink-CV + saccade rate + Shannon entropy) + 1 axis |
+| **C** (PR #33) | Skin colour-temperature drift | folded into TextureAnalyzer |
+| **D1** (PR #34) | SelfieSegmenter background motion | BackgroundMotionAnalyzer + 1 axis (opt-in) |
+| **D2** (PR #35) | HandLandmarker | HandTrackingAnalyzer + 1 axis (opt-in) |
+| **D3** (PR #36) | Audio + audio-mouth sync | AudioCapture + VoiceActivityAnalyzer + AudioMouthSyncAnalyzer + 2 axes (opt-in) |
+| Polish (PRs #37–#43) | Decoupling head pose from eye/mouth axes, rate-aware blink_points, tab-visibility pause + camera-recovery, mobile button labels, FileReader fallback, recorder + replay UI | — |
+| Subdomain (PRs #44–#47) | amispoof.fivucsas.com cutover | sitemap.xml + robots.txt, 301 from old URL, og:image, paper §4/§6 honesty pass |
+
+Deployment runbook: [`web/amispoof/SUBDOMAIN_MIGRATION.md`](./web/amispoof/SUBDOMAIN_MIGRATION.md).
+.htaccess template: [`web/amispoof/SUBDOMAIN_HTACCESS_TEMPLATE.txt`](./web/amispoof/SUBDOMAIN_HTACCESS_TEMPLATE.txt).
 
 ## Where things live
 
