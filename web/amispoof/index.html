@@ -642,12 +642,12 @@
         <button id="start">Start</button>
         <button id="stop" class="ghost" disabled>Stop</button>
         <button id="reset" class="ghost" disabled>Reset</button>
-        <button id="download" class="ghost" disabled>Download report</button>
-        <button id="bench" class="ghost" title="Runs the in-browser CASIA-FASD micro-bench. Requires sample images at ./samples/live_*.jpg + spoof_*.jpg; not bundled with this deploy.">Run accuracy bench</button>
-        <button id="micToggle" class="ghost" title="Phase D3: enable microphone for voice-activity + audio-mouth-sync analyzers (~strongest anti-replay signal). The mic stays on until you stop the session.">🎤 Enable mic</button>
-        <button id="handToggle" class="ghost" title="Phase D2: enable MediaPipe HandLandmarker. ~6 MB model lazy-loads. Tracks hand gesture motion as an extra liveness signal, flags >2 hands per frame as a deepfake anomaly.">✋ Enable hand tracking</button>
-        <button id="recordToggle" class="ghost" title="Phase E (experimental): record the session as a video + analytics JSON for later playback / audit.">⏺ Record session</button>
-        <button id="replayBtn" class="ghost" title="Replay a previously-recorded session JSON (from the ⏺ Record button). Shows the verdict timeline + per-axis proof trajectory.">▶ Replay JSON</button>
+        <button id="download" class="ghost" disabled title="Download the current session as JSON.">↓ Report</button>
+        <button id="bench" class="ghost" title="Runs the in-browser CASIA-FASD micro-bench. Requires sample images at ./samples/live_*.jpg + spoof_*.jpg; not bundled with this deploy.">Bench</button>
+        <button id="micToggle" class="ghost" title="Phase D3: enable microphone for voice-activity + audio-mouth-sync analyzers (~strongest anti-replay signal). The mic stays on until you stop the session.">🎤 Mic</button>
+        <button id="handToggle" class="ghost" title="Phase D2: enable MediaPipe HandLandmarker. ~6 MB model lazy-loads. Tracks hand gesture motion as an extra liveness signal, flags >2 hands per frame as a deepfake anomaly.">✋ Hand</button>
+        <button id="recordToggle" class="ghost" title="Phase E (experimental): record the session as a video + analytics JSON for later playback / audit. Append ?autorec=1 to the URL to auto-start recording when a session begins.">⏺ Rec</button>
+        <button id="replayBtn" class="ghost" title="Replay a previously-recorded session JSON (from the ⏺ Record button). Shows the verdict timeline + per-axis proof trajectory.">▶ Replay</button>
         <input
           id="replayFile"
           type="file"
@@ -856,7 +856,7 @@
       // older cached copy (no AMISPOOF_VERSION export at all), force a
       // one-shot hard reload so the user doesn't get stuck on a broken
       // bundle. Guarded by sessionStorage to avoid infinite loops.
-      window.AMISPOOF_HTML_VERSION = "2026-05-17-replay";
+      window.AMISPOOF_HTML_VERSION = "2026-05-17-mobile";
       setTimeout(function () {
         if (
           window.AMISPOOF_VERSION !== window.AMISPOOF_HTML_VERSION &&
@@ -867,6 +867,6 @@
         }
       }, 4000);
     </script>
-    <script type="module" src="./app.js?v=2026-05-17-replay"></script>
+    <script type="module" src="./app.js?v=2026-05-17-mobile"></script>
   </body>
 </html>

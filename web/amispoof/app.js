@@ -14,12 +14,12 @@ import * as ort from "onnxruntime-web";
 import {
   createSpoofDetector,
   runCasiaFasdMicroBench,
-} from "./lib/spoof-detector.js?v=2026-05-17-replay";
+} from "./lib/spoof-detector.js?v=2026-05-17-mobile";
 
 // Version handshake — checked by the inline script in index.html.
 // If the user is running a stale cached app.js (no AMISPOOF_VERSION),
 // the HTML triggers a one-shot reload after 4 s.
-window.AMISPOOF_VERSION = "2026-05-17-replay";
+window.AMISPOOF_VERSION = "2026-05-17-mobile";
 
 // SessionEngine.getVerdict() returns a confidence in [0, 0.88] when the
 // LivenessProver is wired (structural ceiling — see SessionEngine.ts
@@ -787,6 +787,20 @@ async function start() {
 
     running = true;
     loop();
+
+    // Auto-record (?autorec=1): kick the recorder once the camera + loop
+    // are running. The first ondataavailable fires ~1 s later, so we need
+    // the stream to be live before clicking. Done after running = true
+    // so the loop is collecting timeline samples by the time chunks land.
+    const autoRec =
+      new URLSearchParams(window.location.search).get("autorec") === "1";
+    if (autoRec && els.recordToggle && !recordingActive) {
+      // Defer one tick so the user sees the page settle first; also lets
+      // any rAF/getUserMedia plumbing finish before MediaRecorder starts.
+      setTimeout(() => {
+        if (running && !recordingActive) els.recordToggle.click();
+      }, 200);
+    }
   } catch (err) {
     console.error(err);
     setStatus(`error: ${err.message || err}`, "error");
@@ -797,6 +811,16 @@ async function start() {
 
 function stop() {
   running = false;
+  // If a recording is still running (auto-record mode or the user
+  // forgot to click ⏹), stop it so the .webm + .json downloads fire
+  // automatically. The MediaRecorder.onstop handler does the work.
+  if (recordingActive && mediaRecorder && mediaRecorder.state !== "inactive") {
+    try {
+      mediaRecorder.stop();
+    } catch (err) {
+      console.error("auto-stop recording failed", err);
+    }
+  }
   const stream = els.video.srcObject;
   if (stream && typeof stream.getTracks === "function") {
     for (const track of stream.getTracks()) track.stop();
@@ -1232,7 +1256,7 @@ if (els.micToggle) {
   const audioPreEnabled =
     new URLSearchParams(window.location.search).get("audio") === "1";
   if (!audioPreEnabled) {
-    els.micToggle.textContent = "🎤 Reload with mic";
+    els.micToggle.textContent = "🎤 Mic";
     els.micToggle.addEventListener("click", () => {
       const u = new URL(window.location.href);
       u.searchParams.set("audio", "1");
@@ -1247,11 +1271,11 @@ if (els.micToggle) {
           els.micToggle.textContent = "🎤 Enable mic";
         } else {
           await detector.startAudio();
-          els.micToggle.textContent = "🎤 Mic on";
+          els.micToggle.textContent = "🎤 On";
         }
       } catch (e) {
         console.error("mic toggle failed", e);
-        els.micToggle.textContent = "🎤 Mic failed";
+        els.micToggle.textContent = "🎤 Failed";
       }
     });
   }
@@ -1260,20 +1284,20 @@ if (els.micToggle) {
 // === Hand tracking toggle (Phase D2) ===
 // Same two-step UX as the mic button — the SDK needs the toggle at
 // construction time, so the first click reloads with ?hand=1. After
-// reload the button shows "✋ Hand tracking on" to acknowledge that
+// reload the button shows "✋ On" to acknowledge that
 // the ~6 MB HandLandmarker model is wired and lazy-fetching.
 if (els.handToggle) {
   const handPreEnabled =
     new URLSearchParams(window.location.search).get("hand") === "1";
   if (!handPreEnabled) {
-    els.handToggle.textContent = "✋ Reload with hand tracking";
+    els.handToggle.textContent = "✋ Hand";
     els.handToggle.addEventListener("click", () => {
       const u = new URL(window.location.href);
       u.searchParams.set("hand", "1");
       window.location.href = u.toString();
     });
   } else {
-    els.handToggle.textContent = "✋ Hand tracking on";
+    els.handToggle.textContent = "✋ On";
     els.handToggle.disabled = true;
   }
 }
@@ -1299,9 +1323,9 @@ if (els.recordToggle) {
       // no stream to record). The user clicks Start, *then* Record.
       const stream = els.video.srcObject;
       if (!stream) {
-        els.recordToggle.textContent = "⏺ start camera first";
+        els.recordToggle.textContent = "⏺ camera off";
         setTimeout(() => {
-          els.recordToggle.textContent = "⏺ Record session";
+          els.recordToggle.textContent = "⏺ Rec";
         }, 2000);
         return;
       }
@@ -1316,7 +1340,7 @@ if (els.recordToggle) {
       };
       mediaRecorder.onstop = () => {
         recordingActive = false;
-        els.recordToggle.textContent = "⏺ Record session";
+        els.recordToggle.textContent = "⏺ Rec";
         const stamp = Date.now();
         // 1) Download the webm.
         const videoBlob = new Blob(recordedChunks, { type: "video/webm" });
@@ -1343,13 +1367,13 @@ if (els.recordToggle) {
       };
       mediaRecorder.start(1000); // chunk every 1 s
       recordingActive = true;
-      els.recordToggle.textContent = "⏹ Stop recording";
+      els.recordToggle.textContent = "⏹ Stop";
     } catch (err) {
       console.error("record error", err);
-      els.recordToggle.textContent = "⏺ record failed";
+      els.recordToggle.textContent = "⏺ Failed";
       recordingActive = false;
       setTimeout(() => {
-        els.recordToggle.textContent = "⏺ Record session";
+        els.recordToggle.textContent = "⏺ Rec";
       }, 2000);
     }
   });
