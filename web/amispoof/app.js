@@ -14,12 +14,12 @@ import * as ort from "onnxruntime-web";
 import {
   createSpoofDetector,
   runCasiaFasdMicroBench,
-} from "./lib/spoof-detector.js?v=2026-05-17-rate-vis";
+} from "./lib/spoof-detector.js?v=2026-05-17-recorder";
 
 // Version handshake — checked by the inline script in index.html.
 // If the user is running a stale cached app.js (no AMISPOOF_VERSION),
 // the HTML triggers a one-shot reload after 4 s.
-window.AMISPOOF_VERSION = "2026-05-17-rate-vis";
+window.AMISPOOF_VERSION = "2026-05-17-recorder";
 
 // SessionEngine.getVerdict() returns a confidence in [0, 0.88] when the
 // LivenessProver is wired (structural ceiling — see SessionEngine.ts
@@ -424,6 +424,8 @@ const els = {
   proofChallenge: $("proofChallenge"),
   proofRows: $("proofRows"),
   micToggle: $("micToggle"),
+  handToggle: $("handToggle"),
+  recordToggle: $("recordToggle"),
 };
 
 const analyzerRefs = {};
@@ -676,6 +678,19 @@ let lastAnalyzerScores = null;
 let lastGateResult = null;
 let lastProof = null;
 let knownIncidentIds = new Set();
+
+// === Recording state (Phase E — minimal video + analytics playback) ===
+// Recording is OFF by default. When the user clicks ⏺ Record session:
+//   * MediaRecorder captures the camera stream to a webm in-memory buffer
+//   * sessionTimeline.push({t, verdict, analyzers, proof}) on each frame
+// On ⏹ Stop recording, we trigger two downloads (.webm + .json) and
+// release the recorder. The two files together form a deterministic
+// "session demo" — replay the video alongside the analytics log to
+// audit any session frame-by-frame.
+let mediaRecorder = null;
+let recordedChunks = [];
+let sessionTimeline = [];
+let recordingActive = false;
 // Gate-stability smoother — the per-frame gate state oscillates between
 // CLEAR and OCCLUDED_PENDING under modest landmark jitter. We keep the
 // "usable" flag visible to the user only after it's held for >=5 frames,
@@ -935,6 +950,24 @@ function updateUI(analysis, v) {
   renderProofPanel(proof);
   lastProof = proof;
 
+  // Recording timeline — capture lightweight per-frame snapshot. We
+  // keep this O(1) per frame (no JSON serialisation in the hot path)
+  // and only stringify at download time. Bounded at 10k entries to
+  // avoid runaway memory on hour-long sessions.
+  if (recordingActive && sessionTimeline.length < 10000) {
+    sessionTimeline.push({
+      t_ms: Math.round(performance.now()),
+      t_sec: Number(v.session_duration_sec.toFixed(2)),
+      frame_id: analysis.frame_id,
+      is_live: v.is_live,
+      confidence: Number(v.confidence.toFixed(3)),
+      proof_total: proof ? Math.round(proof.score) : null,
+      proof_breakdown: proof ? proof.details : null,
+      analyzer_scores: snapshot,
+      incident_count: v.incidents.length,
+    });
+  }
+
   // Per-category P(spoof)
   for (const cat of CATEGORIES) {
     const p = v.category_scores?.[cat] ?? 0;
@@ -1095,6 +1128,17 @@ async function runBench() {
   els.benchHeadline.textContent = "Bench: running…";
   els.benchRows.innerHTML = "";
   try {
+    // Pre-flight: confirm sample images exist before warming up the
+    // detector. CASIA-FASD samples are NOT bundled in this deploy
+    // (license + size) — without this check the bench fails per-row
+    // with confusing fetch errors. Probing one URL is cheap.
+    const probe = await fetch(BENCH_SAMPLE_URLS[0], { method: "HEAD" });
+    if (!probe.ok) {
+      els.benchHeadline.textContent =
+        "Bench unavailable: sample images (./samples/live_*.jpg, spoof_*.jpg) are not bundled with this build. The bench harness ships in the SDK; this page deliberately omits the dataset.";
+      els.benchRows.innerHTML = "";
+      return;
+    }
     await ensureDetector();
     const result = await runCasiaFasdMicroBench(detector, BENCH_SAMPLE_URLS);
     const pct = Math.round(result.accuracy * 100);
@@ -1163,6 +1207,113 @@ if (els.micToggle) {
       }
     });
   }
+}
+
+// === Hand tracking toggle (Phase D2) ===
+// Same two-step UX as the mic button — the SDK needs the toggle at
+// construction time, so the first click reloads with ?hand=1. After
+// reload the button shows "✋ Hand tracking on" to acknowledge that
+// the ~6 MB HandLandmarker model is wired and lazy-fetching.
+if (els.handToggle) {
+  const handPreEnabled =
+    new URLSearchParams(window.location.search).get("hand") === "1";
+  if (!handPreEnabled) {
+    els.handToggle.textContent = "✋ Reload with hand tracking";
+    els.handToggle.addEventListener("click", () => {
+      const u = new URL(window.location.href);
+      u.searchParams.set("hand", "1");
+      window.location.href = u.toString();
+    });
+  } else {
+    els.handToggle.textContent = "✋ Hand tracking on";
+    els.handToggle.disabled = true;
+  }
+}
+
+// === Record session (Phase E, experimental) ===
+// Toggles MediaRecorder on the camera stream + a parallel per-frame
+// analytics buffer. On stop, downloads two artefacts the user can
+// later replay together: a .webm of the camera view and a .json log
+// of every frame's scores. Either file is independently useful — the
+// .json alone is a complete time-series of every analyzer + proof
+// axis, enough for offline review without needing the video.
+if (els.recordToggle) {
+  els.recordToggle.addEventListener("click", async () => {
+    try {
+      if (recordingActive) {
+        // Stop + download.
+        if (mediaRecorder && mediaRecorder.state !== "inactive") {
+          mediaRecorder.stop();
+        }
+        return; // The onstop handler does the rest.
+      }
+      // Start. Requires that the camera session is running (else there's
+      // no stream to record). The user clicks Start, *then* Record.
+      const stream = els.video.srcObject;
+      if (!stream) {
+        els.recordToggle.textContent = "⏺ start camera first";
+        setTimeout(() => {
+          els.recordToggle.textContent = "⏺ Record session";
+        }, 2000);
+        return;
+      }
+      recordedChunks = [];
+      sessionTimeline = [];
+      const mime = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
+        ? "video/webm;codecs=vp9"
+        : "video/webm";
+      mediaRecorder = new MediaRecorder(stream, { mimeType: mime });
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) recordedChunks.push(e.data);
+      };
+      mediaRecorder.onstop = () => {
+        recordingActive = false;
+        els.recordToggle.textContent = "⏺ Record session";
+        const stamp = Date.now();
+        // 1) Download the webm.
+        const videoBlob = new Blob(recordedChunks, { type: "video/webm" });
+        downloadBlob(videoBlob, `amispoof-recording-${stamp}.webm`);
+        // 2) Download the analytics timeline + a session footer.
+        const finalVerdict = lastVerdict ?? detector?.getVerdict() ?? null;
+        const finalProof = detector?.getProof?.() ?? null;
+        const payload = {
+          generated_at: new Date(stamp).toISOString(),
+          user_agent: navigator.userAgent,
+          amispoof_version: window.AMISPOOF_VERSION,
+          recording_seconds:
+            finalVerdict?.session_duration_sec ??
+            (sessionTimeline.at(-1)?.t_sec ?? 0),
+          frame_count: sessionTimeline.length,
+          final_verdict: finalVerdict,
+          final_proof: finalProof,
+          timeline: sessionTimeline,
+        };
+        const jsonBlob = new Blob([JSON.stringify(payload, null, 2)], {
+          type: "application/json",
+        });
+        downloadBlob(jsonBlob, `amispoof-recording-${stamp}.json`);
+      };
+      mediaRecorder.start(1000); // chunk every 1 s
+      recordingActive = true;
+      els.recordToggle.textContent = "⏹ Stop recording";
+    } catch (err) {
+      console.error("record error", err);
+      els.recordToggle.textContent = "⏺ record failed";
+      recordingActive = false;
+      setTimeout(() => {
+        els.recordToggle.textContent = "⏺ Record session";
+      }, 2000);
+    }
+  });
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 els.copyVerdict.addEventListener("click", async () => {
