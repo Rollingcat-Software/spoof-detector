@@ -574,6 +574,28 @@ describe("LivenessProver", () => {
     });
   });
 
+  // ---- Phase B behavioral-pattern axis ----------------------------------
+
+  describe("behavioral pattern axis", () => {
+    it("awards behavioral_pattern_points proportional to analyzer score", () => {
+      const prover = new LivenessProver({ enableChallenges: false });
+      prover.start();
+      // behavioral 50 → (50/100) * 10 = 5
+      prover.update(makeLandmarks(), 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 50);
+      expect(prover.getProof().details.behavioral_pattern_points).toBeCloseTo(
+        5,
+        1,
+      );
+    });
+
+    it("stays at 0 below the 15-pt threshold (noise floor)", () => {
+      const prover = new LivenessProver({ enableChallenges: false });
+      prover.start();
+      prover.update(makeLandmarks(), 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 10);
+      expect(prover.getProof().details.behavioral_pattern_points).toBe(0);
+    });
+  });
+
   // ---- Yaw / pitch physiological clamp -----------------------------------
 
   describe("estimateHeadPose clamps degenerate landmark configurations", () => {
