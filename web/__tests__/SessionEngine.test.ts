@@ -302,4 +302,90 @@ describe("SessionEngine", () => {
     expect(prover.getScore().blink_points).toBe(0);
     expect(prover.getScore().total).toBe(0);
   });
+
+  // ---- no-blink alert is fps-aware --------------------------------------
+
+  describe("checkNoBlink fps-aware threshold", () => {
+    // Helper: pick out only the static-image / no-blink incidents
+    // (other paths — motion-naturalness, MFN-instability — can fire on
+    // synthetic frames and aren't what this section is testing).
+    function noBlinkIncidents(verdict: ReturnType<typeof firstNoBlinkVerdict>) {
+      return verdict.incidents.filter((i) =>
+        (i.description ?? "").startsWith("No blink for"),
+      );
+    }
+    // Avoid TS "verdict implicitly any" — name the verdict type by example.
+    function firstNoBlinkVerdict() {
+      const e = new SessionEngine();
+      return e.getVerdict();
+    }
+
+    it("at 30 fps, fires the no-blink incident at the documented 15s mark", () => {
+      const engine = new SessionEngine();
+      engine.start();
+      // 30 fps × 16s = 480 frames, never a blink → expect a no-blink
+      // incident after 15s. `drift` keeps motion-naturalness from firing.
+      for (let i = 1; i <= 480; i++) {
+        tick(33);
+        engine.ingest(
+          buildFrame({
+            frameId: i,
+            pReal: 0.9,
+            blinks: 0,
+            miniFasNetScore: 95,
+            drift: (i % 10) * 0.5,
+          }),
+        );
+      }
+      const v = engine.getVerdict();
+      const nb = noBlinkIncidents(v);
+      expect(nb.length).toBeGreaterThanOrEqual(1);
+      expect(nb[0].timestamp).toBeGreaterThanOrEqual(15);
+    });
+
+    it("at 7 fps, holds the alert past 15s — a slow-camera user who misses the first blink isn't flagged", () => {
+      // Replay of the 2026-05-17 Chrome-mobile trace: 6.7 fps, the user
+      // blinks 22 times but BlinkAnalyzer misses the first one for ~16s.
+      // At 7 fps the threshold stretches to 15 × (15/7) ≈ 32s, so the
+      // window from 15s → 16s (first detected blink) no longer fires.
+      const engine = new SessionEngine();
+      engine.start();
+      for (let i = 1; i <= 112; i++) {
+        tick(143); // ~7 fps × 16s ≈ 112 frames
+        engine.ingest(
+          buildFrame({
+            frameId: i,
+            pReal: 0.9,
+            blinks: 0,
+            miniFasNetScore: 95,
+            drift: (i % 10) * 0.5,
+          }),
+        );
+      }
+      const v = engine.getVerdict();
+      expect(noBlinkIncidents(v).length).toBe(0);
+    });
+
+    it("at 7 fps, still flags a true static-image attack (no blinks for >60s)", () => {
+      // Sanity check that stretching the threshold doesn't disable the
+      // detector — a real photo attack with no blinks for 70 seconds at
+      // 7 fps must still raise the no-blink incident.
+      const engine = new SessionEngine();
+      engine.start();
+      for (let i = 1; i <= 490; i++) {
+        tick(143); // ~7 fps × 70s ≈ 490 frames
+        engine.ingest(
+          buildFrame({
+            frameId: i,
+            pReal: 0.9,
+            blinks: 0,
+            miniFasNetScore: 95,
+            drift: (i % 10) * 0.5,
+          }),
+        );
+      }
+      const v = engine.getVerdict();
+      expect(noBlinkIncidents(v).length).toBeGreaterThanOrEqual(1);
+    });
+  });
 });

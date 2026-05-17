@@ -491,6 +491,44 @@ describe("LivenessProver", () => {
     });
   });
 
+  // ---- Yaw / pitch physiological clamp -----------------------------------
+
+  describe("estimateHeadPose clamps degenerate landmark configurations", () => {
+    it("clamps yaw_range_seen_deg to <=60° even when MediaPipe returns ±90° outliers", () => {
+      // yawPx=100 makes the arcsin saturate at 90° pre-clamp; combined
+      // with yawPx=-100 below, the un-clamped range would be 180°.
+      // After clamping each per-frame yaw to ±60°, the observed range
+      // can be at most 120° — but our reading of "head motion: yaw N°"
+      // surfaces this single-axis number to users, so 60° must be the
+      // ceiling per direction.
+      const prover = new LivenessProver({ enableChallenges: false });
+      prover.start();
+      // Feed 30 frames alternating extreme left/right pose — without
+      // the clamp, yaw_range_seen_deg would be ≈ 180°.
+      for (let i = 0; i < 30; i++) {
+        const sign = i % 2 === 0 ? 1 : -1;
+        prover.update(makeLandmarks({ yawPx: 100 * sign }), 0, 0, 0, 1);
+      }
+      const proof = prover.getProof();
+      // 60° × 2 = 120° upper bound on the *range*; each side capped at 60°.
+      expect(proof.yaw_range_seen_deg).toBeLessThanOrEqual(120 + 1e-6);
+    });
+
+    it("does not over-clamp normal head motion (≤45° per side passes through)", () => {
+      const prover = new LivenessProver({ enableChallenges: false });
+      prover.start();
+      // yawPx=50 → arcsin(0.5)=30°. Should be untouched by the clamp.
+      for (let i = 0; i < 30; i++) {
+        const sign = i % 2 === 0 ? 1 : -1;
+        prover.update(makeLandmarks({ yawPx: 50 * sign }), 0, 0, 0, 1);
+      }
+      const proof = prover.getProof();
+      // Range should be ≈ 60° (±30°). Allow generous tolerance.
+      expect(proof.yaw_range_seen_deg).toBeGreaterThan(50);
+      expect(proof.yaw_range_seen_deg).toBeLessThan(70);
+    });
+  });
+
   // ---- Configurable thresholds + proctoring profile -----------------------
 
   describe("configurable thresholds", () => {

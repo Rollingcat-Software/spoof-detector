@@ -267,10 +267,21 @@ export class SessionEngine {
     // checkNoBlink only runs when a face is in this frame (caller loop
     // iterates over analysis.faces), so face-presence is implicit. Use
     // wall-clock elapsed time directly.
-    if (elapsed < SessionEngine.NO_BLINK_ALERT_SEC) return;
+    //
+    // FPS-aware threshold: the BlinkAnalyzer can only catch a 100-ms blink
+    // if a frame lands inside that window. At 30 fps detection is ~100%,
+    // at 7 fps it drops to ~70%, and the statistical wait for the first
+    // *detected* blink scales inversely with fps. NO_BLINK_ALERT_SEC is
+    // calibrated for 30 fps; on slow mobile cameras we scale it up so a
+    // real user doesn't accumulate a "static-image attack suspected"
+    // incident just because the camera dropped frames covering their
+    // first blink. Bug surfaced on a Chrome-mobile run at 6.7 fps where
+    // the user blinked 22 times in 143s but had a 15-s alert anyway.
+    const fpsAwareAlertSec = this.fpsAwareNoBlinkAlertSec();
+    if (elapsed < fpsAwareAlertSec) return;
 
     const sinceBlink = elapsed - this.lastBlinkObservedAt;
-    if (sinceBlink < SessionEngine.NO_BLINK_ALERT_SEC) return;
+    if (sinceBlink < fpsAwareAlertSec) return;
 
     // Throttle: once we've raised the alert, re-raise every 5s so a steady
     // print attack accumulates enough incidents to trip the >=3 override
@@ -574,6 +585,22 @@ export class SessionEngine {
     }
 
     return Math.min(1.0, total / 2.0);
+  }
+
+  /**
+   * Scale `NO_BLINK_ALERT_SEC` to the session's measured fps. Below the
+   * 15-fps reference the threshold is stretched linearly so a slow camera
+   * doesn't false-positive on missed blinks. Clamped at 4× to avoid the
+   * alert never firing on a real stuck-photo attack.
+   */
+  private fpsAwareNoBlinkAlertSec(): number {
+    const elapsed = this.elapsedSec;
+    if (elapsed < 1.0) return SessionEngine.NO_BLINK_ALERT_SEC;
+    const fps = this.frameCount / elapsed;
+    const reference = 15.0;
+    if (fps >= reference) return SessionEngine.NO_BLINK_ALERT_SEC;
+    const stretch = Math.min(4.0, reference / Math.max(fps, 1.0));
+    return SessionEngine.NO_BLINK_ALERT_SEC * stretch;
   }
 
   /** Conclude the session and return the final verdict. */
