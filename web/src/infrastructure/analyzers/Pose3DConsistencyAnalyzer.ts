@@ -85,19 +85,26 @@ export class Pose3DConsistencyAnalyzer implements IFaceAnalyzer {
       );
     }
 
-    // Row-major 4×4. Upper-left 3×3 is the rotation; column 3 (indices
-    // 3, 7, 11) is the translation; (15) is the homogeneous scale.
+    // MediaPipe FaceLandmarker `facialTransformationMatrixes[i].data`
+    // is COLUMN-MAJOR (OpenGL convention). For a column-major 4×4 flat
+    // array the layout is:
+    //   col 0: m[0]  m[1]  m[2]  m[3]    ← [m00 m10 m20 0]
+    //   col 1: m[4]  m[5]  m[6]  m[7]    ← [m01 m11 m21 0]
+    //   col 2: m[8]  m[9]  m[10] m[11]   ← [m02 m12 m22 0]
+    //   col 3: m[12] m[13] m[14] m[15]   ← [tx  ty  tz  1]
     //
-    //   [ m00 m01 m02 | tx ]
-    //   [ m10 m11 m12 | ty ]
-    //   [ m20 m21 m22 | tz ]
-    //   [  0   0   0  |  1 ]
+    // So r[i][j] = m[j*4 + i] and the translation lives at [12, 13, 14].
+    // The pre-2026-05-17 version of this analyzer assumed row-major and
+    // read tz at index 11 — which for any valid SE(3) is always 0 because
+    // index 11 in column-major is the bottom-row 3rd cell. That made
+    // `tz_std` look stuck at zero on real sessions even when the user
+    // was clearly moving in Z.
     const r = [
-      [m[0], m[1], m[2]],
-      [m[4], m[5], m[6]],
-      [m[8], m[9], m[10]],
+      [m[0], m[4], m[8]],   // row 0
+      [m[1], m[5], m[9]],   // row 1
+      [m[2], m[6], m[10]],  // row 2
     ];
-    const tz = m[11];
+    const tz = m[14];
 
     // Compute Rᵀ R and its Frobenius distance to the identity matrix.
     let orthoResidual = 0;
