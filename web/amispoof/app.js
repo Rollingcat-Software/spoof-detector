@@ -14,12 +14,12 @@ import * as ort from "onnxruntime-web";
 import {
   createSpoofDetector,
   runCasiaFasdMicroBench,
-} from "./lib/spoof-detector.js?v=2026-05-17-phaseC";
+} from "./lib/spoof-detector.js?v=2026-05-17-phaseD1";
 
 // Version handshake — checked by the inline script in index.html.
 // If the user is running a stale cached app.js (no AMISPOOF_VERSION),
 // the HTML triggers a one-shot reload after 4 s.
-window.AMISPOOF_VERSION = "2026-05-17-phaseC";
+window.AMISPOOF_VERSION = "2026-05-17-phaseD1";
 
 // SessionEngine.getVerdict() returns a confidence in [0, 0.88] when the
 // LivenessProver is wired (structural ceiling — see SessionEngine.ts
@@ -93,6 +93,14 @@ const ANALYZER_DETAIL_KEYS = {
     "saccade_rate_per_sec",
     "entropy_score",
     "fps",
+  ],
+  background_motion: [
+    "samples",
+    "bg_pixel_ratio",
+    "std_r",
+    "std_g",
+    "std_b",
+    "drift",
   ],
 };
 
@@ -327,6 +335,13 @@ const ANALYZER_ORDER = [
     group: "video",
     desc: "Temporal-distribution check: blink-interval coefficient of variation + saccade rate + Shannon entropy of the composite jaw/brow/blink signal. Catches looped videos / animated avatars whose individual frames pass but whose distributions are too regular.",
   },
+  {
+    name: "background_motion",
+    weight: 0,
+    label: "Background motion",
+    group: "video",
+    desc: "MediaPipe SelfieSegmenter masks the user out; the analyzer tracks mean RGB drift of the remaining background pixels over a ~10 s window. Real environments shift subtly; a phone-screen replay holds the background constant.",
+  },
 ];
 
 const $ = (id) => document.getElementById(id);
@@ -499,6 +514,13 @@ const PROOF_AXES = [
     desc: "Awarded from the BehavioralPatternAnalyzer score. Credits human-like temporal distributions (irregular blink intervals, natural saccade rate, high signal entropy).",
   },
   {
+    name: "background_motion_points",
+    label: "Background motion",
+    max: 8,
+    section: "passive",
+    desc: "Awarded from the BackgroundMotionAnalyzer score (Phase D1, opt-in). Credits drift in background RGB across the rolling window; 0 on a stationary replay.",
+  },
+  {
     name: "challenge_points",
     label: "Challenges",
     max: 40,
@@ -626,6 +648,10 @@ async function ensureDetector() {
       rotationThreshold: 2.0,
       landmarkVarThreshold: 0.5,
     },
+    // Phase D1 — on by default for the demo page so the new
+    // background-motion row populates. The ~250 KB SelfieSegmenter
+    // model lazy-loads from MediaPipe's CDN on first frame.
+    enableBackgroundSegmentation: true,
   });
   return detector;
 }
