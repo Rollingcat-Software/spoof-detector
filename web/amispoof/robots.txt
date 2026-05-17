@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+# Lazy-loaded ONNX + tflite models are static assets — fine to crawl;
+# the lib/*.js chunks are content-hashed and immutable.
+Allow: /lib/
+Allow: /models/
+
+Sitemap: https://amispoof.fivucsas.com/sitemap.xml
