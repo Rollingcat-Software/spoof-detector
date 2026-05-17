@@ -1,0 +1,25 @@
+# 301 redirect from fivucsas.com/amispoof/ → amispoof.fivucsas.com/
+#
+# How to use:
+#   1. Copy the body of this file (everything below the dashed line)
+#   2. Save it as `.htaccess` at:
+#        ~/domains/fivucsas.com/public_html/amispoof/.htaccess
+#      on the Hostinger box
+#   3. Hostinger's Apache server picks it up immediately — no restart needed
+#   4. Verify: `curl -sI https://fivucsas.com/amispoof/` should show
+#      `HTTP/2 301` with `location: https://amispoof.fivucsas.com/`
+#
+# DO NOT add this file BEFORE the new subdomain is serving — you'll
+# create a redirect to a 404 page.
+#
+# DO NOT remove the existing files in public_html/amispoof/ — leave
+# them in place as a fallback during the migration window.
+#
+# To roll back: just delete the .htaccess file.
+# --------------------------------------------------------------------
+
+RewriteEngine On
+
+# Permanent redirect with path passthrough — anyone hitting an old
+# /amispoof/foo URL goes to /foo on the new subdomain.
+RewriteRule ^(.*)$ https://amispoof.fivucsas.com/$1 [R=301,L]
