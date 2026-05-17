@@ -154,6 +154,13 @@ export interface LivenessScore {
    * isn't enabled or when the scene is genuinely still.
    */
   background_motion_points: number;
+  /**
+   * Max 8 — hand-presence + gesture motion from MediaPipe HandLandmarker
+   * (Phase D2, opt-in). Credits natural hand movement; caps low on the
+   * deepfake "third hand" anomaly. 0 when hands are absent (neutral) or
+   * when tracking is off.
+   */
+  hand_naturalness_points: number;
 }
 
 /** Concise history record for reporting (mirrors `get_challenge_history`). */
@@ -297,6 +304,8 @@ export class LivenessProver {
   static readonly BEHAVIORAL_PATTERN_THRESHOLD = 15.0;
   static readonly BACKGROUND_MOTION_POINT_CAP = 8.0;
   static readonly BACKGROUND_MOTION_THRESHOLD = 15.0;
+  static readonly HAND_NATURALNESS_POINT_CAP = 8.0;
+  static readonly HAND_NATURALNESS_THRESHOLD = 15.0;
 
   private readonly enableChallenges: boolean;
   private readonly random: () => number;
@@ -446,6 +455,7 @@ export class LivenessProver {
     const pose3dScore = readAnalyzerScore(cls, "pose_3d_consistency");
     const behavioralScore = readAnalyzerScore(cls, "behavioral_pattern");
     const backgroundMotionScore = readAnalyzerScore(cls, "background_motion");
+    const handTrackingScore = readAnalyzerScore(cls, "hand_tracking");
 
     this.lastSeenBlinkCount = blinkCount;
 
@@ -465,6 +475,7 @@ export class LivenessProver {
       pose3dScore,
       behavioralScore,
       backgroundMotionScore,
+      handTrackingScore,
     );
   }
 
@@ -490,6 +501,7 @@ export class LivenessProver {
     pose3dScore: number = 0,
     behavioralScore: number = 0,
     backgroundMotionScore: number = 0,
+    handTrackingScore: number = 0,
   ): void {
     const elapsed = this.elapsedSec;
 
@@ -599,6 +611,13 @@ export class LivenessProver {
           LivenessProver.BACKGROUND_MOTION_POINT_CAP,
       );
     }
+    if (handTrackingScore > LivenessProver.HAND_NATURALNESS_THRESHOLD) {
+      this.score.hand_naturalness_points = Math.min(
+        LivenessProver.HAND_NATURALNESS_POINT_CAP,
+        (handTrackingScore / 100) *
+          LivenessProver.HAND_NATURALNESS_POINT_CAP,
+      );
+    }
 
     // === Passive Proof: Head Rotation ===
     // landmarks are stored flat [x0, y0, x1, y1, ...]. The Python check
@@ -663,6 +682,7 @@ export class LivenessProver {
       pose_3d_consistency_points: 0,
       behavioral_pattern_points: 0,
       background_motion_points: 0,
+      hand_naturalness_points: 0,
     };
   }
 
@@ -683,7 +703,8 @@ export class LivenessProver {
         this.score.expression_dynamics_points +
         this.score.pose_3d_consistency_points +
         this.score.behavioral_pattern_points +
-        this.score.background_motion_points,
+        this.score.background_motion_points +
+        this.score.hand_naturalness_points,
     );
   }
 
