@@ -260,6 +260,18 @@ export class LivenessProver {
   static readonly MAX_CHALLENGES = 5;
   static readonly BLINK_AWARD = 5.0;
   static readonly MAX_BLINK_POINTS = 25.0;
+  /**
+   * Phase post-D3: blink_points is now a rolling-window rate, not a
+   * cumulative count. We track blink event timestamps and award points
+   * proportional to the count of blinks in the last `BLINK_RATE_WINDOW_SEC`
+   * seconds. This makes the axis decay if the user stops blinking
+   * mid-session (e.g., live → static-photo swap during a long exam),
+   * which the old cumulative-count semantics could not catch.
+   *
+   * Saturates at 5 blinks per 60-second window (5 × BLINK_AWARD = 25),
+   * matching the original short-session behaviour for back-compat.
+   */
+  static readonly BLINK_RATE_WINDOW_SEC = 60.0;
   static readonly LANDMARK_VAR_THRESHOLD = 1.0;
   static readonly ROTATION_THRESHOLD = 3.0;
   static readonly CHALLENGE_AWARD = 10.0;
@@ -357,6 +369,18 @@ export class LivenessProver {
   // analyzer in `ingest()` and remember it for hand-off into the lower-level
   // `update()` signature).
   private lastSeenBlinkCount = 0;
+  /**
+   * Sliding window of blink-event timestamps (seconds since session
+   * start). Used by the rate-aware blink_points scorer. We carry at most
+   * 200 events — more than enough for a 30-min session at human blink
+   * rates and keeps any single update() pruning loop tiny.
+   */
+  private blinkEventTimes: number[] = [];
+  /**
+   * Tracks blinks already pushed into `blinkEventTimes` so we don't
+   * double-record when the same totalBlinks value appears across frames.
+   */
+  private lastRecordedBlinkCount = 0;
 
   constructor(options: LivenessProverOptions = {}) {
     this.enableChallenges = options.enableChallenges ?? true;
@@ -434,6 +458,8 @@ export class LivenessProver {
     this.baselinePitch = null;
     this.blinkCountAtChallenge = 0;
     this.lastSeenBlinkCount = 0;
+    this.blinkEventTimes = [];
+    this.lastRecordedBlinkCount = 0;
   }
 
   /**
@@ -536,13 +562,35 @@ export class LivenessProver {
   ): void {
     const elapsed = this.elapsedSec;
 
-    // === Passive Proof: Blinks ===
-    if (blinkCount > 0) {
-      this.score.blink_points = Math.min(
-        LivenessProver.MAX_BLINK_POINTS,
-        blinkCount * LivenessProver.BLINK_AWARD,
-      );
+    // === Passive Proof: Blinks (rolling-window rate) ===
+    // Record any new blink events that came in since the last update,
+    // then prune events older than BLINK_RATE_WINDOW_SEC, then award
+    // points proportional to recent-window count. This makes the axis
+    // *decay* if the user stops blinking mid-session — closing the
+    // "live start, dead middle" attack class. For short sessions where
+    // the user blinks 5+ times within the window the behaviour matches
+    // the old cumulative semantics (saturates at 25).
+    if (blinkCount > this.lastRecordedBlinkCount) {
+      const delta = blinkCount - this.lastRecordedBlinkCount;
+      for (let i = 0; i < delta; i++) {
+        this.blinkEventTimes.push(elapsed);
+      }
+      this.lastRecordedBlinkCount = blinkCount;
     }
+    const cutoff = elapsed - LivenessProver.BLINK_RATE_WINDOW_SEC;
+    // Sliding-window prune. Events are pushed in monotonic order, so
+    // we can shift from the front until we hit an in-window event.
+    while (
+      this.blinkEventTimes.length > 0 &&
+      this.blinkEventTimes[0] < cutoff
+    ) {
+      this.blinkEventTimes.shift();
+    }
+    const recentBlinks = this.blinkEventTimes.length;
+    this.score.blink_points = Math.min(
+      LivenessProver.MAX_BLINK_POINTS,
+      recentBlinks * LivenessProver.BLINK_AWARD,
+    );
 
     // === Passive Proof: Landmark Variance ===
     if (landmarkVariance > this.landmarkVarThreshold) {
