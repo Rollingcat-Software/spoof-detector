@@ -161,6 +161,19 @@ export interface LivenessScore {
    * when tracking is off.
    */
   hand_naturalness_points: number;
+  /**
+   * Max 6 — voice-activity fraction over the recent audio window
+   * (Phase D3, opt-in). Strong defensive signal against silent video
+   * replays. 0 when audio is off or unavailable.
+   */
+  voice_activity_points: number;
+  /**
+   * Max 12 — Pearson correlation of audio RMS vs jawOpen blendshape
+   * over the rolling window (Phase D3, opt-in). Strongest single
+   * anti-video-replay signal — replay attacks either lack audio or
+   * have audio that's desynced from the visible mouth motion.
+   */
+  audio_mouth_sync_points: number;
 }
 
 /** Concise history record for reporting (mirrors `get_challenge_history`). */
@@ -306,6 +319,10 @@ export class LivenessProver {
   static readonly BACKGROUND_MOTION_THRESHOLD = 15.0;
   static readonly HAND_NATURALNESS_POINT_CAP = 8.0;
   static readonly HAND_NATURALNESS_THRESHOLD = 15.0;
+  static readonly VOICE_ACTIVITY_POINT_CAP = 6.0;
+  static readonly VOICE_ACTIVITY_THRESHOLD = 20.0;
+  static readonly AUDIO_MOUTH_SYNC_POINT_CAP = 12.0;
+  static readonly AUDIO_MOUTH_SYNC_THRESHOLD = 50.0; // corr ≥ 0.5
 
   private readonly enableChallenges: boolean;
   private readonly random: () => number;
@@ -456,6 +473,8 @@ export class LivenessProver {
     const behavioralScore = readAnalyzerScore(cls, "behavioral_pattern");
     const backgroundMotionScore = readAnalyzerScore(cls, "background_motion");
     const handTrackingScore = readAnalyzerScore(cls, "hand_tracking");
+    const voiceActivityScore = readAnalyzerScore(cls, "voice_activity");
+    const audioMouthSyncScore = readAnalyzerScore(cls, "audio_mouth_sync");
 
     this.lastSeenBlinkCount = blinkCount;
 
@@ -476,6 +495,8 @@ export class LivenessProver {
       behavioralScore,
       backgroundMotionScore,
       handTrackingScore,
+      voiceActivityScore,
+      audioMouthSyncScore,
     );
   }
 
@@ -502,6 +523,8 @@ export class LivenessProver {
     behavioralScore: number = 0,
     backgroundMotionScore: number = 0,
     handTrackingScore: number = 0,
+    voiceActivityScore: number = 0,
+    audioMouthSyncScore: number = 0,
   ): void {
     const elapsed = this.elapsedSec;
 
@@ -618,6 +641,21 @@ export class LivenessProver {
           LivenessProver.HAND_NATURALNESS_POINT_CAP,
       );
     }
+    if (voiceActivityScore > LivenessProver.VOICE_ACTIVITY_THRESHOLD) {
+      this.score.voice_activity_points = Math.min(
+        LivenessProver.VOICE_ACTIVITY_POINT_CAP,
+        (voiceActivityScore / 100) *
+          LivenessProver.VOICE_ACTIVITY_POINT_CAP,
+      );
+    }
+    if (audioMouthSyncScore > LivenessProver.AUDIO_MOUTH_SYNC_THRESHOLD) {
+      this.score.audio_mouth_sync_points = Math.min(
+        LivenessProver.AUDIO_MOUTH_SYNC_POINT_CAP,
+        ((audioMouthSyncScore - LivenessProver.AUDIO_MOUTH_SYNC_THRESHOLD) /
+          (100 - LivenessProver.AUDIO_MOUTH_SYNC_THRESHOLD)) *
+          LivenessProver.AUDIO_MOUTH_SYNC_POINT_CAP,
+      );
+    }
 
     // === Passive Proof: Head Rotation ===
     // landmarks are stored flat [x0, y0, x1, y1, ...]. The Python check
@@ -683,6 +721,8 @@ export class LivenessProver {
       behavioral_pattern_points: 0,
       background_motion_points: 0,
       hand_naturalness_points: 0,
+      voice_activity_points: 0,
+      audio_mouth_sync_points: 0,
     };
   }
 
@@ -704,7 +744,9 @@ export class LivenessProver {
         this.score.pose_3d_consistency_points +
         this.score.behavioral_pattern_points +
         this.score.background_motion_points +
-        this.score.hand_naturalness_points,
+        this.score.hand_naturalness_points +
+        this.score.voice_activity_points +
+        this.score.audio_mouth_sync_points,
     );
   }
 

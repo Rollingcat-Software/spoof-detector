@@ -31,6 +31,9 @@ import { BackgroundMotionAnalyzer } from "./infrastructure/analyzers/BackgroundM
 import { MediaPipeSelfieSegmenter } from "./infrastructure/detection/MediaPipeSelfieSegmenter";
 import { HandTrackingAnalyzer } from "./infrastructure/analyzers/HandTrackingAnalyzer";
 import { MediaPipeHandDetector } from "./infrastructure/detection/MediaPipeHandDetector";
+import { AudioCapture } from "./infrastructure/audio/AudioCapture";
+import { VoiceActivityAnalyzer } from "./infrastructure/analyzers/VoiceActivityAnalyzer";
+import { AudioMouthSyncAnalyzer } from "./infrastructure/analyzers/AudioMouthSyncAnalyzer";
 import { BehavioralPatternAnalyzer } from "./infrastructure/analyzers/BehavioralPatternAnalyzer";
 import { BlinkAnalyzer } from "./infrastructure/analyzers/BlinkAnalyzer";
 import { BlinkSymmetryAnalyzer } from "./infrastructure/analyzers/BlinkSymmetryAnalyzer";
@@ -189,6 +192,15 @@ export interface SpoofDetectorOptions {
   enableHandTracking?: boolean;
   /** Optional override for the HandLandmarker .task URL. */
   handLandmarkerModelUrl?: string;
+  /**
+   * Phase D3 (opt-in) — microphone capture + voice-activity detection
+   * + audio-mouth-sync analyzer. Default `false`: prompts the user for
+   * mic permission on `detector.startAudio()`. Until that's called the
+   * VoiceActivity and AudioMouthSync analyzers return neutral 50.
+   * Adds `voice_activity_points` (cap 6) and `audio_mouth_sync_points`
+   * (cap 12) to the LivenessProver passive ceiling.
+   */
+  enableAudio?: boolean;
   /** Run Aysenur's face-usability gate. Result attached to each FrameAnalysis. Default true. */
   enableFaceUsabilityGate?: boolean;
   /** Run the LivenessProver passive proof scorer alongside the SessionEngine. Default true. */
@@ -279,6 +291,9 @@ export class SpoofDetector {
   private readonly selfieSegmenterModelUrl: string | undefined;
   private handTracking: HandTrackingAnalyzer | null = null;
   private readonly handLandmarkerModelUrl: string | undefined;
+  private audioCapture: AudioCapture | null = null;
+  private voiceActivity: VoiceActivityAnalyzer | null = null;
+  private audioMouthSync: AudioMouthSyncAnalyzer | null = null;
 
   private readonly fuser: MultiClassFuser;
   private readonly engine: SessionEngine;
@@ -304,6 +319,7 @@ export class SpoofDetector {
     behavioralPattern: boolean;
     backgroundSegmentation: boolean;
     handTracking: boolean;
+    audio: boolean;
   }>;
   private frameId = 0;
   private started = false;
@@ -355,6 +371,8 @@ export class SpoofDetector {
       backgroundSegmentation: opts.enableBackgroundSegmentation === true,
       // Phase D2 default OFF — separate ~6 MB model fetch.
       handTracking: opts.enableHandTracking === true,
+      // Phase D3 default OFF — mic permission UX.
+      audio: opts.enableAudio === true,
     };
     // LivenessProver is owned by the SessionEngine so its `isProvenLive` gate
     // joins the verdict AND-condition (matches Python design). When the
@@ -602,6 +620,12 @@ export class SpoofDetector {
         const a = this.ensureHandTracking();
         results[a.name] = await a.analyze(crop, face);
       }
+      if (this.toggles.audio) {
+        const va = this.ensureVoiceActivity();
+        results[va.name] = await asyncify(va.analyze(crop, face));
+        const ms = this.ensureAudioMouthSync();
+        results[ms.name] = await asyncify(ms.analyze(crop, face));
+      }
 
       // Heavy analyzers — inline path. (Worker path is awaited in Stage C.)
       if (runHeavy && !this.enableHeavyWorker) {
@@ -719,6 +743,8 @@ export class SpoofDetector {
     this.behavioralPattern?.reset();
     this.backgroundMotion?.reset();
     this.handTracking?.reset();
+    this.audioMouthSync?.reset();
+    // VoiceActivity is stateless (just reads AudioCapture).
     // LivenessProver is reset inside SessionEngine.reset() (single source of truth).
     // MoireAnalyzer has no reset() — it's stateless per-frame.
     // Gates are stateful (streak counters) — replace with a fresh instance.
@@ -799,6 +825,42 @@ export class SpoofDetector {
       this.behavioralPattern = new BehavioralPatternAnalyzer();
     return this.behavioralPattern;
   }
+  private ensureAudioCapture(): AudioCapture {
+    if (!this.audioCapture) this.audioCapture = new AudioCapture();
+    return this.audioCapture;
+  }
+  private ensureVoiceActivity(): VoiceActivityAnalyzer {
+    if (!this.voiceActivity)
+      this.voiceActivity = new VoiceActivityAnalyzer({
+        audio: this.ensureAudioCapture(),
+      });
+    return this.voiceActivity;
+  }
+  private ensureAudioMouthSync(): AudioMouthSyncAnalyzer {
+    if (!this.audioMouthSync)
+      this.audioMouthSync = new AudioMouthSyncAnalyzer({
+        audio: this.ensureAudioCapture(),
+      });
+    return this.audioMouthSync;
+  }
+  /**
+   * Phase D3 public API. Consumer prompts for mic permission by calling
+   * this; nothing happens automatically because mic permission is
+   * intentionally a deliberate user action. No-op if `enableAudio` is
+   * false or audio is already active.
+   */
+  async startAudio(): Promise<void> {
+    if (!this.toggles.audio) return;
+    await this.ensureAudioCapture().start();
+  }
+  async stopAudio(): Promise<void> {
+    if (this.audioCapture) await this.audioCapture.stop();
+  }
+  /** True if the mic capture is currently running. */
+  get audioActive(): boolean {
+    return this.audioCapture?.isActive === true;
+  }
+
   private ensureHandTracking(): HandTrackingAnalyzer {
     if (!this.handTracking) {
       this.handTracking = new HandTrackingAnalyzer(
