@@ -14,12 +14,12 @@ import * as ort from "onnxruntime-web";
 import {
   createSpoofDetector,
   runCasiaFasdMicroBench,
-} from "./lib/spoof-detector.js?v=2026-05-17-faq";
+} from "./lib/spoof-detector.js?v=2026-05-18-replayfix";
 
 // Version handshake — checked by the inline script in index.html.
 // If the user is running a stale cached app.js (no AMISPOOF_VERSION),
 // the HTML triggers a one-shot reload after 4 s.
-window.AMISPOOF_VERSION = "2026-05-17-faq";
+window.AMISPOOF_VERSION = "2026-05-18-replayfix";
 
 // SessionEngine.getVerdict() returns a confidence in [0, 0.88] when the
 // LivenessProver is wired (structural ceiling — see SessionEngine.ts
@@ -1485,51 +1485,154 @@ function renderReplay(payload) {
 
 if (els.replayBtn && els.replayFile) {
   els.replayBtn.addEventListener("click", () => els.replayFile.click());
-  els.replayFile.addEventListener("change", async () => {
+
+  // Android Chrome 148 (and some iOS Safari builds) can revoke the underlying
+  // file handle the moment the picker dismisses — before ANY async read has
+  // a chance to land its bytes. Mitigation has three layers:
+  //   1. snapshotFile() races Blob.arrayBuffer() AND FileReader in parallel,
+  //      both kicked off synchronously inside the change handler. Whichever
+  //      resolves first wins; we only fail if BOTH paths reject.
+  //   2. Drag-and-drop onto the replay panel uses DataTransfer.files, which
+  //      on most platforms holds a stronger handle than the picker FileList.
+  //   3. On hard failure, the user is offered a clipboard-paste fallback —
+  //      they can paste the JSON text directly with no file-handle hop.
+  els.replayFile.addEventListener("change", () => {
     const file = els.replayFile.files?.[0];
     if (!file) return;
+    handleReplayPick(file);
+  });
+
+  if (els.replayPanel) {
+    const setDropStyle = (active) => {
+      els.replayPanel.style.outline = active ? "2px dashed #58a6ff" : "";
+      els.replayPanel.style.outlineOffset = active ? "4px" : "";
+    };
+    els.replayPanel.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      setDropStyle(true);
+    });
+    els.replayPanel.addEventListener("dragleave", () => setDropStyle(false));
+    els.replayPanel.addEventListener("drop", (e) => {
+      e.preventDefault();
+      setDropStyle(false);
+      const file = e.dataTransfer?.files?.[0];
+      if (file) handleReplayPick(file);
+    });
+  }
+
+  function handleReplayPick(file) {
+    // Kick off BOTH readers synchronously inside the gesture/change event,
+    // BEFORE any UI work or await — minimises the window in which the OS
+    // can drop the handle.
+    const snapshot = snapshotFile(file);
+    const filename = file.name || "recording.json";
+    const filesize = file.size || 0;
+    finishReplayLoad(snapshot, filename, filesize);
+  }
+
+  function snapshotFile(file) {
+    // Both reads invoked synchronously in this stack frame.
+    const fromBlob = (
+      typeof file.arrayBuffer === "function"
+        ? file.arrayBuffer()
+        : Promise.reject(new Error("Blob.arrayBuffer unsupported"))
+    ).then(
+      (buf) => ({ ok: true, buf }),
+      (err) => ({ ok: false, err }),
+    );
+    const fromReader = new Promise((resolve) => {
+      let settled = false;
+      const settle = (v) => {
+        if (settled) return;
+        settled = true;
+        resolve(v);
+      };
+      const reader = new FileReader();
+      reader.onload = () => settle({ ok: true, buf: reader.result });
+      reader.onerror = () =>
+        settle({ ok: false, err: reader.error ?? new Error("FileReader failed") });
+      reader.onabort = () => settle({ ok: false, err: new Error("FileReader aborted") });
+      try {
+        reader.readAsArrayBuffer(file);
+      } catch (e) {
+        settle({ ok: false, err: e });
+      }
+    });
+    return Promise.all([fromBlob, fromReader]).then(([a, b]) => {
+      if (a.ok) return a.buf;
+      if (b.ok) return b.buf;
+      const err = (b.err && b.err.message) ? b.err : a.err;
+      throw err ?? new Error("Both file readers failed");
+    });
+  }
+
+  async function finishReplayLoad(snapshot, filename, filesize) {
+    els.replayPanel.style.display = "";
+    els.replayHeader.textContent =
+      `Loading ${filename} (${(filesize / 1024).toFixed(1)} KB)…`;
+    els.replayChart.innerHTML = "";
+    els.replayLegend.textContent = "";
     try {
-      // Mobile Chrome (and some Safari builds) can revoke the underlying
-      // file handle by the time `.text()` async resolves — surfaces as
-      // NotFoundError "A requested file or directory could not be found".
-      // Reading immediately into an ArrayBuffer via FileReader is more
-      // reliable: the browser snapshots the file synchronously when
-      // readAsArrayBuffer() is called. Decoding to text afterwards is
-      // pure JS and cannot hit the OS layer again.
-      const buf = await readFileAsArrayBuffer(file);
+      const buf = await snapshot;
       const text = new TextDecoder("utf-8").decode(buf);
       const payload = JSON.parse(text);
-      els.replayPanel.style.display = "";
       renderReplay(payload);
     } catch (err) {
       console.error("replay parse failed", err);
-      els.replayPanel.style.display = "";
-      const msg = err.message || String(err);
+      const msg = err?.message || String(err);
       const isNotFound =
         msg.includes("could not be found") ||
-        err.name === "NotFoundError" ||
-        err.code === 1 ||
-        err.code === 11;
-      els.replayHeader.textContent = isNotFound
-        ? "Replay parse failed: the file appears to have been moved or revoked by the OS. Re-download the recording and try again (mobile browsers sometimes release file handles after the picker closes)."
-        : `Replay parse failed: ${msg}`;
-      els.replayChart.innerHTML = "";
-      els.replayLegend.textContent = "";
+        err?.name === "NotFoundError" ||
+        err?.code === 1 ||
+        err?.code === 11;
+      els.replayHeader.innerHTML = isNotFound
+        ? `Replay load failed: the OS released the file handle before we could read it (common on Android Chrome). ` +
+          `<strong>Fallback:</strong> drag the JSON file onto this panel, or ` +
+          `<button id="replayPasteBtn" style="background:#238636;color:#fff;border:1px solid #2ea043;border-radius:4px;padding:2px 10px;font-size:12px;cursor:pointer;">paste JSON from clipboard</button>.`
+        : `Replay parse failed: ${escapeReplayMsg(msg)}`;
+      const pasteBtn = document.getElementById("replayPasteBtn");
+      if (pasteBtn) {
+        pasteBtn.addEventListener("click", pasteReplayFromClipboard);
+      }
     } finally {
-      // Reset the file input so re-selecting the same file fires change again.
       els.replayFile.value = "";
     }
-  });
+  }
 
-  function readFileAsArrayBuffer(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(/** @type {ArrayBuffer} */ (reader.result));
-      reader.onerror = () =>
-        reject(reader.error ?? new Error("FileReader failed"));
-      reader.onabort = () => reject(new Error("FileReader aborted"));
-      reader.readAsArrayBuffer(file);
-    });
+  async function pasteReplayFromClipboard() {
+    try {
+      if (!navigator.clipboard || !navigator.clipboard.readText) {
+        throw new Error(
+          "Clipboard API unavailable in this browser — try drag-and-drop instead.",
+        );
+      }
+      const text = await navigator.clipboard.readText();
+      if (!text || !text.trim()) {
+        els.replayHeader.textContent = "Clipboard is empty.";
+        return;
+      }
+      const payload = JSON.parse(text);
+      els.replayChart.innerHTML = "";
+      els.replayLegend.textContent = "";
+      renderReplay(payload);
+    } catch (e) {
+      console.error("clipboard replay parse failed", e);
+      els.replayHeader.textContent = `Paste failed: ${e?.message || e}`;
+    }
+  }
+
+  function escapeReplayMsg(s) {
+    return String(s).replace(
+      /[&<>"']/g,
+      (c) =>
+        ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;",
+        }[c]),
+    );
   }
 }
 if (els.replayClose) {
