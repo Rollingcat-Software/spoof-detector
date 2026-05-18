@@ -680,6 +680,16 @@
     </script>
   </head>
   <body>
+    <!-- FIVUCSAS suite bar — cross-site navigation back to landing + sister tools -->
+    <nav aria-label="FIVUCSAS suite" style="background:#0a0d12;border-bottom:1px solid #21262d;padding:6px 16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:12px;line-height:1.4;">
+      <a href="https://fivucsas.com/" style="color:#58a6ff;text-decoration:none;font-weight:600;">← FIVUCSAS</a>
+      <span style="color:#30363d;">·</span>
+      <a href="https://app.fivucsas.com/" style="color:#c9d1d9;text-decoration:none;">Dashboard</a>
+      <a href="https://demo.fivucsas.com/" style="color:#c9d1d9;text-decoration:none;">Demo</a>
+      <a href="https://verify.fivucsas.com/" style="color:#c9d1d9;text-decoration:none;">Widget</a>
+      <a href="https://amispoof.fivucsas.com/" style="color:#8b949e;text-decoration:none;" aria-current="page">amispoof</a>
+      <a href="https://status.fivucsas.com/" style="color:#c9d1d9;text-decoration:none;margin-left:auto;">Status ↗</a>
+    </nav>
     <header>
       <h1>
         <span class="tag">amispoof</span> — <strong>Am I spoof?</strong> · Browser face anti-spoof + liveness tester
@@ -915,7 +925,7 @@
       // older cached copy (no AMISPOOF_VERSION export at all), force a
       // one-shot hard reload so the user doesn't get stuck on a broken
       // bundle. Guarded by sessionStorage to avoid infinite loops.
-      window.AMISPOOF_HTML_VERSION = "2026-05-18-replayfix";
+      window.AMISPOOF_HTML_VERSION = "2026-05-18-suite-nav";
       setTimeout(function () {
         if (
           window.AMISPOOF_VERSION !== window.AMISPOOF_HTML_VERSION &&
@@ -926,6 +936,6 @@
         }
       }, 4000);
     </script>
-    <script type="module" src="./app.js?v=2026-05-18-replayfix"></script>
+    <script type="module" src="./app.js?v=2026-05-18-suite-nav"></script>
   </body>
 </html>
