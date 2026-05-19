@@ -2,6 +2,8 @@
 
 This section ablates each design decision. Numbers come from `tests/benchmark/ablation_leave_one_out.py` and the per-dataset `tests/benchmark/run.py` runs in §7.
 
+> **Status (2026-05-19, capstone submission cut-off).** §8.1–§8.3 (image-only vs hybrid, per-analyzer leave-one-out, calibrated vs uniform weights) and §8.7 (CI tightness) are **fully populated** from CASIA-FASD + CelebA-Spoof + in-house runs. **§8.4 (peak-sensitive vs mean), §8.5 (active-challenge real-data rows) and §8.6 (session-length curve) remain pending** OULU-NPU / SiW dataset licensing (see §7 Status block and §9.4). `[TBD]` cells reflect data acquisition status, not incomplete analysis — the harness `tests/benchmark/run.py` is one-command reproducible the moment access is granted.
+
 ## 8.1 Image-only vs. video-only vs. hybrid (Table 5)
 
 The most direct ablation: what does each track contribute? Three pipelines with identical face detection + tracking + fuser, differing only in the analyzer set:
@@ -25,6 +27,8 @@ The intra-dataset finding (in-house): hybrid does not regress beneath either inp
 **ROC curves** for each (dataset, protocol) overlay the three pipelines: `paper/figures/roc_casia_fasd_test_n500.png`, `roc_celeba_spoof_hf_eval_n200.png`, `roc_in_house_replay_n100.png`.
 
 ## 8.2 Per-analyzer leave-one-out (Table 8)
+
+> **Critical finding.** Two auxiliary analyzers designed for in-house capture *harm* out-of-distribution generalization on CASIA-FASD zero-shot: removing `device_boundary` (bezel detector) *improves* AUC by 0.027; removing `micro_tremor` (head-tremor detector) *improves* AUC by 0.021. Mechanism: both calibrated thresholds presume 2026-era phone bezels and tripod tremor patterns, absent in 2012-era CASIA-FASD imagery. `background_grid` is the sole in-house-calibrated analyzer that transfers positively (its removal *reduces* AUC by 0.014). **Operator implication: per-domain recalibration is mandatory before deployment to any new capture environment (see §5.5 calibration harness).** This finding directly limits the headline numbers' transferability and is the principal reason §5–§9 advocate per-operator weight calibration rather than shipping a single universal weight vector.
 
 For each analyzer, set its fuser weight to zero and re-evaluate. ACER delta = the analyzer's contribution to the final classification.
 
