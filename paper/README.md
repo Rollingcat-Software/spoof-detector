@@ -61,9 +61,9 @@ The skeleton in `sections/` is publishable as-is; only the §7 and §8 tables wa
 ```bibtex
 @misc{gultekin2026spoof,
   title  = {Beyond Single Frames: Session-Based Hybrid Image-and-Video Face Anti-Spoofing with Calibrated Multi-Class Fusion},
-  author = {Gültekin, Ahmet Abdullah and Akar, Aysenur and Eren, Ay{\c{s}}e Gül{\c{s}}üm},
+  author = {Gültekin, Ahmet Abdullah and Ar{\i}c{\i}, Ay{\c{s}}enur and Eren, Ay{\c{s}}e Gül{\c{s}}üm and A{\u{g}}ao{\u{g}}lu, Mustafa},
   year   = {2026},
-  note   = {Marmara University FIVUCSAS Programme. Code at \url{https://github.com/Rollingcat-Software/spoof-detector}.}
+  note   = {Marmara University Computer Engineering, CSE4297/CSE4298 Capstone Project. Advisor: Doç. Dr. Mustafa Ağaoğlu. Code at \url{https://github.com/Rollingcat-Software/spoof-detector}.}
 }
 ```
 

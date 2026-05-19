@@ -12,6 +12,14 @@ Despite a decade of academic FAS research and six widely-cited benchmarks (CASIA
 
 **Gap 4 — Deployment topology.** Production face-PAD is overwhelmingly assumed to be a server-side service: the client uploads a video, a GPU-backed inference server runs the model, and a verdict is returned. That topology has hard structural costs: every uploaded frame is a data-transfer event subject to GDPR / KVKK consent, every concurrent session is a GPU rent line on the operator's cloud bill, and every server outage takes the liveness check down with it. For an in-browser identity check on consumer hardware, the right deployment topology is the *inverse*: the model runs in the browser tab, no frame leaves the device, no GPU is required, and the operator pays nothing per-session for inference. The literature has not yet addressed how to make a hybrid session-PAD engine — nineteen analyzers, fifteen liveness-proof axes, MediaPipe pose tracking, ONNX inference — fit inside a 173 kB WebAssembly bundle that runs at 6–9 fps on a mid-tier Android device. That is the engineering contribution we report below.
 
+## Scope and Capstone Context
+
+This work was carried out as the Spring 2025–2026 CSE4297 / CSE4298 capstone project at Marmara University, advised by Doç. Dr. Mustafa Ağaoğlu. It is a scoped engineering investigation, not a domain-breakthrough claim: we do not benchmark on OULU-NPU or SiW (both EULA-blocked at the time of submission — see §9.4) and the in-house calibration set is N = 43 (27 bona-fide + 16 attacks). The contributions below are therefore tied to (a) session-level architecture design with formal spoof-burst-dilution resistance, (b) a calibration-transfer safety finding about texture / moire anti-correlation, and (c) a client-side browser deployment topology — and the headline numbers (AUC 0.945 / 0.782) are zero-shot on two public datasets, to be read with the cross-dataset taxonomy caveat in §9.2 and the per-operator recalibration requirement in §9.3.
+
+### Mapping gaps to contributions
+
+We address each gap with a corresponding contribution: **Gap 1 (per-frame bias) → Contribution 1 (peak-sensitive session verdict, §4.4)**; **Gap 2 (single-modality discriminator) → Contribution 1 (hybrid twelve-analyzer architecture, §4.2)**; **Gap 3 (anti-correlated calibration signals) → Contribution 2 (texture / moire calibration finding, §5.3)**; **Gap 4 (server-side GPU topology) → Contribution 4 (client-side WebAssembly browser bundle, §10.1)**.
+
 ## Contributions
 
 This paper makes four contributions:

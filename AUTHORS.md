@@ -11,7 +11,7 @@ contributions are welcome — open a pull request.
 
 ### Core extraction & maintenance (v0.1.0 → present)
 
-- **Ahmet Abdullah Gultekin** — [@ahabgu](https://github.com/ahabgu)
+- **Ahmet Abdullah Gultekin** — [@ahmetabdullahgultekin](https://github.com/ahmetabdullahgultekin)
   - Initial extraction from FIVUCSAS (2026-05-09).
   - Session engine + analyzer wiring + ISO 30107-3 calibration.
   - Continuous integration with FIVUCSAS biometric-processor.
@@ -75,7 +75,7 @@ branches. Specific contributions interleaved per commit; see
 `research/ayse-gulsum-eren/README.md` for the `git log --author` recipe to
 enumerate her commits in `biometric-processor`.
 
-#### Ahmet Abdullah Gultekin — [@ahabgu](https://github.com/ahabgu)
+#### Ahmet Abdullah Gultekin — [@ahmetabdullahgultekin](https://github.com/ahmetabdullahgultekin)
 
 Lead, original `spoof-detector` author. The session engine, ISO 30107-3
 calibration, and the assembler pipeline now under `src/` were extracted from

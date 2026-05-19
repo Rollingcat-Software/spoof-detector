@@ -1,6 +1,6 @@
 # 7. Results
 
-> **Status (2026-05-09):** all numbers below are real benchmark output, computed with bootstrap-stratified 95% CIs on 1500 resamples. Rows marked TBD await dataset acquisition (OULU-NPU / SiW / CASIA-SURF require institutional EULAs we have not yet obtained). The remaining cells are populated from `paper/figures/results_*.json` by `paper/figures/build_tables.py`.
+> **Status (2026-05-19, capstone submission cut-off).** §7.1 (CASIA-FASD, N = 2 408) and §7.2 / §7.3 (in-house replay sub-protocol N = 100; in-house full transparency set N = 325) are **fully populated** with stratified bootstrap 95 % CIs on 1 500 resamples; CelebA-Spoof eval (N = 2 611) headline AUC is populated. **§7.4 per-spoof-type CelebA-Spoof breakdown, §7.5 cross-dataset generalization matrix, §8.4 peak-sensitive-vs-mean session table, §8.5 active-challenge ablation real-data rows, and §8.6 session-length curve remain pending** OULU-NPU / SiW / CASIA-SURF institutional licensing that was not obtained within the capstone timeline (§9.4). `TBD` cells therefore reflect data acquisition status, not incomplete analysis — the harness `tests/benchmark/run.py --dataset {oulu_npu,siw,casia_surf}` is in place and one-shot reproducible the moment access is granted. All populated numbers below are computed from `paper/figures/results_*.json` via `paper/figures/build_tables.py`.
 
 ## 7.1 Public-dataset cross-evaluation (paper headline)
 
