@@ -1,7 +1,7 @@
 # Ayşe Gülsüm Eren — contribution map
 
-**Email**: aysegulsumeren@gmail.com
-**GitHub**: TBD (please open an issue to add)
+**Email**: ayse.gulsum@marun.edu.tr (academic) · aysegulsumeren@gmail.com (public)
+**GitHub**: [@aysegulsum](https://github.com/aysegulsum)
 **Commit-message style**: Conventional Commits
 
 Ayşe Gülsüm Eren is a co-author on the FIVUCSAS liveness/anti-spoof R&D track.

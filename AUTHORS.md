@@ -64,10 +64,10 @@ and are mirrored under `from_biometric_processor/` for unified consumption:
 `cutout_anomaly_detector.py`, `device_spoof_risk_evaluator.py`,
 `light_challenge_service.py`, `screen_replay_anti_spoof.py`.
 
-#### Ayşe Gülsüm Eren
+#### Ayşe Gülsüm Eren — [@aysegulsum](https://github.com/aysegulsum)
 
-- **Email**: aysegulsumeren@gmail.com
-- **GitHub**: TBD (please open an issue to add)
+- **Email**: ayse.gulsum@marun.edu.tr (academic) · aysegulsumeren@gmail.com (public)
+- **GitHub**: [@aysegulsum](https://github.com/aysegulsum)
 - **Style**: Conventional Commits
 
 Co-author on Aysenur's `liveness_capture` and `working_spoof_detection`

@@ -1785,9 +1785,9 @@ Areas (full source under `research/aysenur/`):
   (co-authored with Ayşe Gülsüm Eren).
 - Multiple False-Reject reduction branches.
 
-##### Ayşe Gülsüm Eren
+##### Ayşe Gülsüm Eren — [@aysegulsum](https://github.com/aysegulsum)
 
-- **Email:** aysegulsumeren@gmail.com
+- **Email:** ayse.gulsum@marun.edu.tr (academic) · aysegulsumeren@gmail.com (public)
 - Co-author on Aysenur's `liveness_capture` and
   `working_spoof_detection` branches.
 
