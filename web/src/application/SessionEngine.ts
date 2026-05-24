@@ -85,7 +85,12 @@ export class SessionEngine {
   // analyzer is actively measuring (head/print rotating), means a flat
   // surface — printed photo or screen. Throttled so a sustained flat
   // presentation accrues the >=3 incidents that flip the verdict to SPOOF.
-  static readonly PLANAR_SPOOF_SCORE = 25;
+  // Calibrated live 2026-05-24: a tilted printed photo measures 21-31 (the
+  // MediaPipe 3D-model fit keeps it off a perfect 0), a real rotating face
+  // measures ~100 — so 45 catches the whole print range with wide margin
+  // from a genuine face. The analyzer abstains (measured:false) below its
+  // rotation gate, so a still face is never scored against this.
+  static readonly PLANAR_SPOOF_SCORE = 45;
   static readonly PLANAR_MIN_ELAPSED_SEC = 3.0;
   static readonly PLANAR_INCIDENT_THROTTLE_SEC = 2.5;
 
