@@ -92,6 +92,26 @@ describe("BlinkAnalyzer", () => {
     expect(r.details.warmup).toBe(true);
   });
 
+  it("rejects a shallow EAR dip (perspective fake-blink) but counts a true closure", () => {
+    const a = new BlinkAnalyzer();
+    const open = makeLandmarks(4); // EAR ≈ 0.40
+    // EAR = vOffset/10, so vOffset 1.8 → EAR 0.18: below the 0.20 closing
+    // threshold (so it enters a closure) but ABOVE the 0.16 true-closed gate —
+    // exactly the foreshortening a tilted flat photo produces. Must NOT count.
+    const shallow = makeLandmarks(1.8);
+    for (let i = 0; i < 30; i++) a.analyze(null, makeFace(open));
+    for (let i = 0; i < 4; i++) a.analyze(null, makeFace(shallow));
+    let r = a.analyze(null, makeFace(open));
+    expect(r.details.blinks).toBe(0);
+
+    // A genuine closure (EAR ≈ 0.05) clears the depth gate and counts.
+    const deep = makeLandmarks(0.5);
+    for (let i = 0; i < 6; i++) a.analyze(null, makeFace(open));
+    for (let i = 0; i < 4; i++) a.analyze(null, makeFace(deep));
+    r = a.analyze(null, makeFace(open));
+    expect(r.details.blinks as number).toBeGreaterThanOrEqual(1);
+  });
+
   it("no blinks for >5s → low score", () => {
     // Pin fps so the synthetic-loop frames produce a real duration_sec
     // (otherwise the measured-fps path would clamp to 120 and a 180-frame

@@ -45,6 +45,7 @@ import { LandmarkVarianceAnalyzer } from "./infrastructure/analyzers/LandmarkVar
 import { MicroTremorAnalyzer } from "./infrastructure/analyzers/MicroTremorAnalyzer";
 import { MiniFASNetAnalyzer } from "./infrastructure/analyzers/MiniFASNetAnalyzer";
 import { Pose3DConsistencyAnalyzer } from "./infrastructure/analyzers/Pose3DConsistencyAnalyzer";
+import { LandmarkPlanarityAnalyzer } from "./infrastructure/analyzers/LandmarkPlanarityAnalyzer";
 import { RppgAnalyzer } from "./infrastructure/analyzers/RppgAnalyzer";
 import { ScreenFlickerAnalyzer } from "./infrastructure/analyzers/ScreenFlickerAnalyzer";
 import { TemporalAnalyzer } from "./infrastructure/analyzers/TemporalAnalyzer";
@@ -76,6 +77,13 @@ export { DeviceBoundaryAnalyzer } from "./infrastructure/analyzers/DeviceBoundar
 export { MicroTremorAnalyzer } from "./infrastructure/analyzers/MicroTremorAnalyzer";
 export { ScreenFlickerAnalyzer } from "./infrastructure/analyzers/ScreenFlickerAnalyzer";
 export { RppgAnalyzer } from "./infrastructure/analyzers/RppgAnalyzer";
+export { LandmarkPlanarityAnalyzer } from "./infrastructure/analyzers/LandmarkPlanarityAnalyzer";
+export { FlashReflectionAnalyzer } from "./infrastructure/analyzers/FlashReflectionAnalyzer";
+export type {
+  FlashColor,
+  FlashReflectionResult,
+  FlashReflectionOptions,
+} from "./infrastructure/analyzers/FlashReflectionAnalyzer";
 export { BackgroundGridAnalyzer } from "./infrastructure/analyzers/BackgroundGridAnalyzer";
 export { TemporalAnalyzer } from "./infrastructure/analyzers/TemporalAnalyzer";
 export { LivenessProver } from "./application/LivenessProver";
@@ -172,6 +180,14 @@ export interface SpoofDetectorOptions {
   enableGaze?: boolean;
   enableExpressionDynamics?: boolean;
   enablePose3DConsistency?: boolean;
+  /**
+   * Camera-independent flat-surface (printed-photo / screen) detector. Fits
+   * an affine landmark-reprojection residual under head rotation: a flat
+   * print moves as one plane (low residual → spoof), a real 3D face has
+   * parallax that breaks the fit (high residual → live). Default true.
+   * Backed by a SessionEngine planar-print veto. See LandmarkPlanarityAnalyzer.
+   */
+  enablePlanarity?: boolean;
   // Phase B — temporal-pattern analyzer (no new MediaPipe data).
   enableBehavioralPattern?: boolean;
   /**
@@ -286,6 +302,7 @@ export class SpoofDetector {
   private gaze: GazeAnalyzer | null = null;
   private expressionDynamics: ExpressionDynamicsAnalyzer | null = null;
   private pose3DConsistency: Pose3DConsistencyAnalyzer | null = null;
+  private planarity: LandmarkPlanarityAnalyzer | null = null;
   private behavioralPattern: BehavioralPatternAnalyzer | null = null;
   private backgroundMotion: BackgroundMotionAnalyzer | null = null;
   private readonly selfieSegmenterModelUrl: string | undefined;
@@ -316,6 +333,7 @@ export class SpoofDetector {
     gaze: boolean;
     expressionDynamics: boolean;
     pose3DConsistency: boolean;
+    planarity: boolean;
     behavioralPattern: boolean;
     backgroundSegmentation: boolean;
     handTracking: boolean;
@@ -366,6 +384,7 @@ export class SpoofDetector {
       gaze: opts.enableGaze !== false,
       expressionDynamics: opts.enableExpressionDynamics !== false,
       pose3DConsistency: opts.enablePose3DConsistency !== false,
+      planarity: opts.enablePlanarity !== false,
       behavioralPattern: opts.enableBehavioralPattern !== false,
       // Phase D1 default OFF — separate model fetch.
       backgroundSegmentation: opts.enableBackgroundSegmentation === true,
@@ -608,6 +627,10 @@ export class SpoofDetector {
         const a = this.ensurePose3DConsistency();
         results[a.name] = await asyncify(a.analyze(crop, face));
       }
+      if (this.toggles.planarity) {
+        const a = this.ensurePlanarity();
+        results[a.name] = await asyncify(a.analyze(crop, face));
+      }
       if (this.toggles.behavioralPattern) {
         const a = this.ensureBehavioralPattern();
         results[a.name] = await asyncify(a.analyze(crop, face));
@@ -740,6 +763,7 @@ export class SpoofDetector {
     this.gaze?.reset();
     this.expressionDynamics?.reset();
     this.pose3DConsistency?.reset();
+    this.planarity?.reset();
     this.behavioralPattern?.reset();
     this.backgroundMotion?.reset();
     this.handTracking?.reset();
@@ -819,6 +843,10 @@ export class SpoofDetector {
     if (!this.pose3DConsistency)
       this.pose3DConsistency = new Pose3DConsistencyAnalyzer();
     return this.pose3DConsistency;
+  }
+  private ensurePlanarity(): LandmarkPlanarityAnalyzer {
+    if (!this.planarity) this.planarity = new LandmarkPlanarityAnalyzer();
+    return this.planarity;
   }
   private ensureBehavioralPattern(): BehavioralPatternAnalyzer {
     if (!this.behavioralPattern)

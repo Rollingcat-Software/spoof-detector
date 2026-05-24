@@ -164,4 +164,70 @@ describe("MultiClassFuser", () => {
     );
     expect(cls.dominant_category).toBe(SpoofCategory.VIDEO_REPLAY);
   });
+
+  it("Nyquist gate drops a frequency-domain analyzer below its fps floor", () => {
+    // At 8 fps screen_flicker is blind (8-35 Hz bands > Nyquist 4 Hz). Its
+    // confident score must NOT enter the fusion — result must match fusing
+    // without it at all.
+    const fuser = new MultiClassFuser();
+    const gated = fuser.fuse(
+      1,
+      results(
+        makeAnalyzerResult("minifasnet", 80.0),
+        makeAnalyzerResult("screen_flicker", 5.0, { measured_fps: 8 }),
+      ),
+    );
+    const without = fuser.fuse(
+      1,
+      results(makeAnalyzerResult("minifasnet", 80.0)),
+    );
+    for (const cat of Object.keys(gated.probabilities) as SpoofCategory[]) {
+      expect(
+        Math.abs(gated.probabilities[cat] - without.probabilities[cat]),
+      ).toBeLessThan(0.001);
+    }
+  });
+
+  it("Nyquist gate keeps a frequency-domain analyzer at adequate fps", () => {
+    const fuser = new MultiClassFuser();
+    const kept = fuser.fuse(
+      1,
+      results(
+        makeAnalyzerResult("minifasnet", 80.0),
+        makeAnalyzerResult("screen_flicker", 5.0, { measured_fps: 30 }),
+      ),
+    );
+    const without = fuser.fuse(
+      1,
+      results(makeAnalyzerResult("minifasnet", 80.0)),
+    );
+    // At 30 fps the low flicker score is trusted and shifts VIDEO_REPLAY up.
+    expect(
+      kept.probabilities[SpoofCategory.VIDEO_REPLAY] -
+        without.probabilities[SpoofCategory.VIDEO_REPLAY],
+    ).toBeGreaterThan(0.01);
+  });
+
+  it("Nyquist gate is inert when measured_fps is absent (back-compat)", () => {
+    const fuser = new MultiClassFuser();
+    const noFps = fuser.fuse(
+      1,
+      results(
+        makeAnalyzerResult("minifasnet", 80.0),
+        makeAnalyzerResult("screen_flicker", 5.0),
+      ),
+    );
+    const goodFps = fuser.fuse(
+      1,
+      results(
+        makeAnalyzerResult("minifasnet", 80.0),
+        makeAnalyzerResult("screen_flicker", 5.0, { measured_fps: 30 }),
+      ),
+    );
+    for (const cat of Object.keys(noFps.probabilities) as SpoofCategory[]) {
+      expect(
+        Math.abs(noFps.probabilities[cat] - goodFps.probabilities[cat]),
+      ).toBeLessThan(0.001);
+    }
+  });
 });

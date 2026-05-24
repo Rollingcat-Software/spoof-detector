@@ -81,6 +81,26 @@ export class SessionEngine {
   static readonly NO_BLINK_ALERT_SEC = 15.0;
   static readonly FACE_MISSING_ALERT_SEC = 5.0;
   static readonly IDENTITY_CHANGE_THRESHOLD = 0.35;
+  // Planar-print veto (2026-05-24). A planarity score below this, while the
+  // analyzer is actively measuring (head/print rotating), means a flat
+  // surface — printed photo or screen. Throttled so a sustained flat
+  // presentation accrues the >=3 incidents that flip the verdict to SPOOF.
+  // Calibrated live 2026-05-24: a tilted printed photo measures 21-31 (the
+  // MediaPipe 3D-model fit keeps it off a perfect 0), a real rotating face
+  // measures ~100 — so 45 catches the whole print range with wide margin
+  // from a genuine face. The analyzer abstains (measured:false) below its
+  // rotation gate, so a still face is never scored against this.
+  static readonly PLANAR_SPOOF_SCORE = 45;
+  static readonly PLANAR_MIN_ELAPSED_SEC = 3.0;
+  static readonly PLANAR_INCIDENT_THROTTLE_SEC = 2.5;
+  // Capture-quality floor (2026-05-24). A would-be-LIVE session whose capture
+  // quality is too poor (dark / occluded / no-face frames) is downgraded to
+  // UNCERTAIN (prompt a re-capture) rather than confidently classified LIVE.
+  // A genuine spoof (real spoof evidence) is NEVER downgraded — it stays SPOOF.
+  // illuminationScore is 0-1 from the FaceUsabilityGate (normal lit face ~0.8).
+  static readonly QUALITY_MIN_SAMPLES = 15;
+  static readonly QUALITY_USABLE_RATIO = 0.5;
+  static readonly QUALITY_ILLUM_FLOOR = 0.35;
 
   private readonly sessionId: string;
   private state: SessionState = SessionState.WARMING_UP;
@@ -101,6 +121,8 @@ export class SessionEngine {
   private lastBlinkCount = 0;
   private lastBlinkObservedAt = 0;
   private lastNoBlinkIncidentAt = -Infinity;
+  private lastPlanarIncidentAt = -Infinity;
+  private qualitySamples = new RingBuffer<{ usable: boolean; illum: number }>(90);
 
   private readonly prover: LivenessProver | null;
   private readonly requireProverLive: boolean;
@@ -155,6 +177,8 @@ export class SessionEngine {
     this.lastBlinkCount = 0;
     this.lastBlinkObservedAt = 0;
     this.lastNoBlinkIncidentAt = -Infinity;
+    this.lastPlanarIncidentAt = -Infinity;
+    this.qualitySamples.clear();
     this.prover?.reset();
   }
 
@@ -162,6 +186,10 @@ export class SessionEngine {
   ingest(analysis: FrameAnalysis): void {
     this.frameCount += 1;
     this.prover?.ingest(analysis);
+    const gr = analysis.gate_result;
+    if (gr) {
+      this.qualitySamples.append({ usable: gr.usable, illum: gr.illuminationScore });
+    }
     const elapsed = this.elapsedSec;
 
     if (
@@ -228,7 +256,51 @@ export class SessionEngine {
       this.checkMotionNaturalness(signals, analysis.frame_id, elapsed);
       this.checkMiniFasNetInstability(signals, analysis.frame_id, elapsed);
       this.checkNoBlink(cls, analysis.frame_id, elapsed);
+      this.checkPlanarPrint(cls, analysis.frame_id, elapsed);
     }
+  }
+
+  /**
+   * Raise a STATIC_IMAGE incident when the planarity analyzer reports a flat
+   * surface while it is actively measuring (head/print rotating). A real 3D
+   * face yields a HIGH planarity score under rotation, so this never fires on
+   * genuine users; the throttle lets a sustained flat presentation accrue the
+   * >=3 incidents that flip getVerdict() to SPOOF. This is the lever that
+   * overcomes a MiniFASNet fooled by a sharp, frame-filling printed photo —
+   * the 2026-05-24 amispoof false-accept (print → LIVE 90%, MiniFASNet 100).
+   */
+  private checkPlanarPrint(
+    cls: SpoofClassification,
+    frame_id: number,
+    elapsed: number,
+  ): void {
+    const planarity = cls.analyzer_results["planarity"];
+    if (!planarity) return;
+    // measured:false means there wasn't enough rotation to judge planarity —
+    // never penalise those frames (keeps the false-reject rate untouched).
+    if (planarity.details["measured"] !== true) return;
+    if (planarity.score >= SessionEngine.PLANAR_SPOOF_SCORE) return;
+    if (elapsed < SessionEngine.PLANAR_MIN_ELAPSED_SEC) return;
+    if (
+      elapsed - this.lastPlanarIncidentAt <
+      SessionEngine.PLANAR_INCIDENT_THROTTLE_SEC
+    ) {
+      return;
+    }
+
+    this.lastPlanarIncidentAt = elapsed;
+    this.addIncident(
+      frame_id,
+      Severity.HIGH,
+      SpoofCategory.STATIC_IMAGE,
+      `Flat surface under rotation (planarity=${Math.round(
+        planarity.score,
+      )}) — printed-photo / screen attack suspected`,
+      {
+        planarity_score: round(planarity.score, 1),
+        residual_norm: planarity.details["residual_norm"] ?? null,
+      },
+    );
   }
 
   /**
@@ -503,10 +575,16 @@ export class SessionEngine {
         ? true
         : (proverScore?.total ?? 0) >= 60;
     const incidentOverride = this.incidents.length >= 3;
-    const isLive = adjustedReal > 0.45 && proverLive && !incidentOverride;
+    const baseLive = adjustedReal > 0.45 && proverLive && !incidentOverride;
+    // Capture-quality floor: a would-be-LIVE poor-quality capture is reported
+    // UNCERTAIN (re-capture), never a confident LIVE. A genuine spoof
+    // (baseLive false) is NOT downgraded — it stays SPOOF.
+    const qualityOk = this.computeQualityOk();
+    const qualityUncertain = baseLive && !qualityOk;
+    const isLive = baseLive && qualityOk;
 
     const proverConfidence = proverScore ? proverScore.total / 100.0 : 0;
-    const confidence = this.prover
+    let confidence = this.prover
       ? Math.min(
           1.0,
           dataConfidence *
@@ -518,6 +596,10 @@ export class SessionEngine {
           1.0,
           dataConfidence * (0.5 + 0.4 * Math.max(0, adjustedReal - 0.3)),
         );
+
+    // An uncertain (poor-quality) verdict must read as low-confidence so the
+    // surface prompts a re-capture rather than showing a strong number.
+    if (qualityUncertain) confidence = Math.min(confidence, 0.3);
 
     // Blink count from blink analyzer details, if present in latest verdicts.
     let blinkCount = 0;
@@ -536,7 +618,7 @@ export class SessionEngine {
     const partial: Omit<SessionVerdict, "summary"> = {
       is_live: isLive,
       confidence,
-      dominant_threat: isLive ? null : dominantThreat,
+      dominant_threat: isLive || qualityUncertain ? null : dominantThreat,
       category_scores: categoryScores,
       incidents: this.incidents.slice(),
       session_duration_sec: elapsed,
@@ -545,6 +627,7 @@ export class SessionEngine {
       blink_count: blinkCount,
       estimated_bpm: estimatedBpm,
       identity_changes: 0,
+      quality_uncertain: qualityUncertain,
     };
     return { ...partial, summary: buildVerdictSummary(partial) };
   }
@@ -560,6 +643,30 @@ export class SessionEngine {
     let s = 0;
     for (const b of boosts) s += b;
     return s / boosts.length;
+  }
+
+  /**
+   * Capture-quality floor. Returns false when recent frames were too poor to
+   * trust a LIVE verdict (mostly unusable — dark / occluded / no-face — or
+   * mean illumination below the floor). Returns true when there isn't enough
+   * gate data yet, so quality only ever GATES a confident verdict, never
+   * fabricates one.
+   */
+  private computeQualityOk(): boolean {
+    const samples = this.qualitySamples.toArray();
+    if (samples.length < SessionEngine.QUALITY_MIN_SAMPLES) return true;
+    let usableCount = 0;
+    let illumSum = 0;
+    for (const s of samples) {
+      if (s.usable) usableCount += 1;
+      illumSum += s.illum;
+    }
+    const usableRatio = usableCount / samples.length;
+    const meanIllum = illumSum / samples.length;
+    return (
+      usableRatio >= SessionEngine.QUALITY_USABLE_RATIO &&
+      meanIllum >= SessionEngine.QUALITY_ILLUM_FLOOR
+    );
   }
 
   private computeIncidentPenalty(): number {

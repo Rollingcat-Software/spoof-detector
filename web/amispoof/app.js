@@ -14,6 +14,7 @@ import * as ort from "onnxruntime-web";
 import {
   createSpoofDetector,
   runCasiaFasdMicroBench,
+  FlashReflectionAnalyzer,
 } from "./lib/spoof-detector.js?v=2026-05-18-suite-nav";
 
 // Version handshake — checked by the inline script in index.html.
@@ -351,6 +352,13 @@ const ANALYZER_ORDER = [
     desc: "MediaPipe 4×4 facial transformation matrix — checks orthonormality of the rotation block + Z-translation motion. Catches tilted photos and flat-screen replays whose pose fit is degenerate.",
   },
   {
+    name: "planarity",
+    weight: 2.0,
+    label: "Planarity (flat-surface)",
+    group: "video",
+    desc: "Affine landmark-reprojection residual under head rotation. A flat printed photo or screen moves as one plane (low residual → SPOOF); a real 3D face has depth parallax that breaks the affine fit (high residual → live). Camera-focus-independent, so it catches the sharp PC-focused print MiniFASNet misses. Backed by a session-level planar-print veto.",
+  },
+  {
     name: "behavioral_pattern",
     weight: 0,
     label: "Behavioral pattern",
@@ -389,6 +397,9 @@ const ANALYZER_ORDER = [
 
 const $ = (id) => document.getElementById(id);
 
+// Last detected face bbox — used by the opt-in flash challenge to crop the face.
+let lastFaceBbox = null;
+
 const els = {
   videoWrap: $("videoWrap"),
   video: $("video"),
@@ -398,6 +409,11 @@ const els = {
   reset: $("reset"),
   download: $("download"),
   bench: $("bench"),
+  lightCheck: $("lightCheck"),
+  flashOverlay: $("flashOverlay"),
+  lightResult: $("lightResult"),
+  cameraToggle: $("cameraToggle"),
+  cameraPanel: $("cameraPanel"),
   benchPanel: $("benchPanel"),
   benchHeadline: $("benchHeadline"),
   benchRows: $("benchRows"),
@@ -855,6 +871,8 @@ async function loop() {
   try {
     ctx.drawImage(els.video, 0, 0, canvas.width, canvas.height);
     const analysis = await detector.analyzeFrame(canvas);
+    lastFaceBbox =
+      analysis.faces && analysis.faces[0] ? analysis.faces[0].bbox : null;
     const v = detector.getVerdict();
     lastVerdict = v;
     drawOverlay(analysis, v);
@@ -1245,6 +1263,287 @@ async function runBench() {
 
 if (els.bench) {
   els.bench.addEventListener("click", runBench);
+}
+
+// ===== Active-illumination (opt-in) flash challenge =====
+// Locks camera exposure (so auto-exposure can't compensate), captures a
+// baseline face crop, flashes the screen, captures the lit crop, then scores
+// the photometric response with FlashReflectionAnalyzer. A real 3D face
+// reflects the flash diffusely; a screen/replay emits its own light and won't.
+// Opt-in only — never part of the passive proctoring verdict.
+const flashAnalyzer = new FlashReflectionAnalyzer();
+let flashBusy = false;
+const flashSleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+function captureFaceCrop() {
+  const w = els.video.videoWidth;
+  const h = els.video.videoHeight;
+  if (!w || !h) return null;
+  const c = document.createElement("canvas");
+  c.width = w;
+  c.height = h;
+  const cx = c.getContext("2d");
+  if (!cx) return null;
+  cx.drawImage(els.video, 0, 0, w, h);
+  let bx0, by0, bw, bh;
+  if (lastFaceBbox) {
+    bx0 = Math.max(0, Math.floor(lastFaceBbox.x1));
+    by0 = Math.max(0, Math.floor(lastFaceBbox.y1));
+    bw = Math.min(w - bx0, Math.floor(lastFaceBbox.x2 - lastFaceBbox.x1));
+    bh = Math.min(h - by0, Math.floor(lastFaceBbox.y2 - lastFaceBbox.y1));
+  } else {
+    // No face yet — fall back to a centred crop where the face usually sits.
+    bw = Math.floor(w * 0.5);
+    bh = Math.floor(h * 0.6);
+    bx0 = Math.floor(w * 0.25);
+    by0 = Math.floor(h * 0.2);
+  }
+  if (bw <= 4 || bh <= 4) return null;
+  return cx.getImageData(bx0, by0, bw, bh);
+}
+
+async function runFlashChallenge() {
+  if (!running || !detector || flashBusy) return;
+  flashBusy = true;
+  if (els.lightCheck) els.lightCheck.disabled = true;
+  const track =
+    els.video.srcObject && els.video.srcObject.getVideoTracks
+      ? els.video.srcObject.getVideoTracks()[0]
+      : null;
+  const COLORS = { white: "#ffffff", green: "#00ff00", blue: "#0000ff", red: "#ff0000" };
+  const color = "white"; // strongest brightness delta; channel colours can be added later
+  let lockedExposure = false;
+  try {
+    els.lightResult.textContent = "💡 Light check: locking exposure…";
+    // 1. Lock exposure so the camera can't auto-compensate for the flash.
+    if (track && track.getCapabilities) {
+      const caps = track.getCapabilities();
+      if (caps.exposureMode && caps.exposureMode.includes("manual")) {
+        // exposureMode:'manual' ALONE silently reverts to continuous on some
+        // cameras; we must pass a valid exposureTime. An unaligned value is
+        // rejected ("out of range") since the camera quantises to a step, so
+        // clamp into [min,max] and snap to the step grid before applying.
+        const et = caps.exposureTime;
+        let exp =
+          track.getSettings().exposureTime || (et ? (et.min + et.max) / 2 : 156);
+        if (et) {
+          exp = Math.max(et.min, Math.min(et.max, exp));
+          exp = et.min + Math.round((exp - et.min) / et.step) * et.step;
+        }
+        await track.applyConstraints({
+          advanced: [{ exposureMode: "manual", exposureTime: exp }],
+        });
+        lockedExposure = track.getSettings().exposureMode === "manual";
+        await flashSleep(350); // let the lock settle
+      }
+    }
+    // 2. Baseline crop (screen at rest).
+    const baseline = captureFaceCrop();
+    // 3. Flash the screen, then capture the lit crop near the end of the flash.
+    els.flashOverlay.style.background = COLORS[color] || "#ffffff";
+    els.flashOverlay.style.display = "block";
+    await flashSleep(170);
+    const flash = captureFaceCrop();
+    els.flashOverlay.style.display = "none";
+    // 4. Restore auto-exposure.
+    if (lockedExposure && track) {
+      try {
+        await track.applyConstraints({ advanced: [{ exposureMode: "continuous" }] });
+      } catch (e) {
+        /* best-effort restore */
+      }
+    }
+    if (!baseline || !flash) {
+      els.lightResult.textContent =
+        "💡 Light check: couldn't capture a face crop — centre your face and retry.";
+      return;
+    }
+    const r = flashAnalyzer.scoreResponse(baseline, flash, color);
+    const verdict = r.isLive
+      ? "LIVE (diffuse reflection)"
+      : "SPOOF (no reflection — screen/replay)";
+    els.lightResult.textContent =
+      `💡 Light check (${color}): ${verdict} · score ${r.score} · ` +
+      `colorShift ${r.colorShift} · targetGain ${r.targetGain} · spread ${r.regionSpread}`;
+  } catch (e) {
+    els.flashOverlay.style.display = "none";
+    if (lockedExposure && track) {
+      try {
+        await track.applyConstraints({ advanced: [{ exposureMode: "continuous" }] });
+      } catch (_) {
+        /* ignore */
+      }
+    }
+    els.lightResult.textContent =
+      "💡 Light check error: " + (e && e.message ? e.message : e);
+  } finally {
+    flashBusy = false;
+    if (els.lightCheck) els.lightCheck.disabled = false;
+  }
+}
+
+if (els.lightCheck) {
+  els.lightCheck.addEventListener("click", runFlashChallenge);
+}
+
+// ===== Manual camera controls (operator experimentation) =====
+// Builds sliders/toggles from the live track's getCapabilities() so the
+// operator can lock/adjust exposure, white balance, colour temperature, and
+// the image params to probe what reveals a screen spoof (e.g. locking WB
+// exposes a phone screen's colour cast that auto-WB would otherwise hide).
+function camTrack() {
+  return els.video.srcObject && els.video.srcObject.getVideoTracks
+    ? els.video.srcObject.getVideoTracks()[0]
+    : null;
+}
+
+async function applyCam(constraint) {
+  const track = camTrack();
+  if (!track) return;
+  try {
+    await track.applyConstraints({ advanced: [constraint] });
+  } catch (e) {
+    console.warn("[camera] constraint rejected", constraint, e);
+  }
+  refreshCamReadout();
+}
+
+function refreshCamReadout() {
+  const el = document.getElementById("camReadout");
+  const track = camTrack();
+  if (!el || !track) return;
+  const s = track.getSettings();
+  el.textContent =
+    `exposure ${s.exposureMode}/${Math.round(s.exposureTime || 0)} · ` +
+    `WB ${s.whiteBalanceMode}/${s.colorTemperature || "-"}K · ` +
+    `bri ${s.brightness} · con ${s.contrast} · sat ${s.saturation} · shp ${s.sharpness}`;
+}
+
+function buildCameraControls() {
+  const track = camTrack();
+  const panel = els.cameraPanel;
+  if (!panel) return;
+  if (!track || !track.getCapabilities) {
+    panel.textContent = "Start the camera first.";
+    return;
+  }
+  const caps = track.getCapabilities();
+  const s = track.getSettings();
+  panel.innerHTML = "";
+  const row = () => {
+    const d = document.createElement("div");
+    d.style.cssText =
+      "display:flex;align-items:center;gap:8px;margin:5px 0;font-size:12px;";
+    return d;
+  };
+  const label = (t) => {
+    const l = document.createElement("label");
+    l.textContent = t;
+    l.style.cssText = "width:120px;flex:0 0 120px;";
+    return l;
+  };
+  const addMode = (key, text) => {
+    if (!Array.isArray(caps[key]) || caps[key].length < 2) return;
+    const r = row();
+    r.appendChild(label(text));
+    const sel = document.createElement("select");
+    caps[key].forEach((m) => {
+      const o = document.createElement("option");
+      o.value = m;
+      o.textContent = m;
+      if (m === s[key]) o.selected = true;
+      sel.appendChild(o);
+    });
+    sel.onchange = () => applyCam({ [key]: sel.value });
+    r.appendChild(sel);
+    panel.appendChild(r);
+  };
+  const addRange = (key, text, controllingMode) => {
+    const c = caps[key];
+    if (!c || typeof c.min !== "number") return;
+    const r = row();
+    r.appendChild(label(text));
+    const input = document.createElement("input");
+    input.type = "range";
+    input.min = c.min;
+    input.max = c.max;
+    input.step = c.step || 1;
+    input.value = s[key] != null ? s[key] : c.min;
+    input.style.flex = "1";
+    const val = document.createElement("span");
+    val.style.cssText = "width:64px;text-align:right;";
+    val.textContent = String(Math.round(input.value));
+    input.oninput = () => {
+      val.textContent = String(Math.round(input.value));
+    };
+    input.onchange = async () => {
+      // The value only applies if the controlling mode is manual.
+      if (controllingMode) {
+        const t = camTrack();
+        if (t) {
+          try {
+            await t.applyConstraints({ advanced: [{ [controllingMode]: "manual" }] });
+          } catch (e) {
+            /* ignore */
+          }
+        }
+      }
+      applyCam({ [key]: parseFloat(input.value) });
+    };
+    r.appendChild(input);
+    r.appendChild(val);
+    panel.appendChild(r);
+  };
+
+  addMode("exposureMode", "Exposure mode");
+  addRange("exposureTime", "Exposure time", "exposureMode");
+  addMode("whiteBalanceMode", "White balance");
+  addRange("colorTemperature", "Colour temp (K)", "whiteBalanceMode");
+  addRange("brightness", "Brightness");
+  addRange("contrast", "Contrast");
+  addRange("saturation", "Saturation");
+  addRange("sharpness", "Sharpness");
+
+  const resetRow = row();
+  const reset = document.createElement("button");
+  reset.textContent = "Auto (reset all)";
+  reset.className = "ghost";
+  reset.style.fontSize = "12px";
+  reset.onclick = async () => {
+    const t = camTrack();
+    if (t) {
+      try {
+        await t.applyConstraints({
+          advanced: [{ exposureMode: "continuous", whiteBalanceMode: "continuous" }],
+        });
+      } catch (e) {
+        /* ignore */
+      }
+    }
+    buildCameraControls();
+  };
+  resetRow.appendChild(reset);
+  panel.appendChild(resetRow);
+
+  const ro = document.createElement("div");
+  ro.id = "camReadout";
+  ro.style.cssText =
+    "font-size:11px;opacity:0.75;margin-top:8px;font-family:monospace;";
+  panel.appendChild(ro);
+  refreshCamReadout();
+}
+
+if (els.cameraToggle) {
+  els.cameraToggle.addEventListener("click", () => {
+    if (!els.cameraPanel) return;
+    const open = els.cameraPanel.style.display !== "none";
+    if (open) {
+      els.cameraPanel.style.display = "none";
+    } else {
+      els.cameraPanel.style.display = "block";
+      buildCameraControls();
+    }
+  });
 }
 
 // Phase D3 — wire the microphone toggle. The SDK requires audio to be

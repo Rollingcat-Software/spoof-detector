@@ -29,6 +29,8 @@ interface BlinkState {
   ear_history: RingBuffer<number>;
   blink_count: number;
   eyes_closed_frames: number;
+  /** Deepest (lowest) EAR seen during the current closure streak. */
+  min_ear_in_closure: number;
   last_blink_frame: number;
   frame_count: number;
 }
@@ -38,6 +40,15 @@ export interface BlinkAnalyzerOptions {
   earThreshold?: number;
   /** Reopen threshold to validate a blink. Default 0.22. */
   reopenThreshold?: number;
+  /**
+   * Minimum EAR the closure must REACH to count as a true blink. Default 0.16.
+   * A genuine blink drives EAR well below this (~0.10-0.15); a printed photo or
+   * screen tilted in front of the camera only foreshortens the eyes, dipping
+   * EAR to ~0.17-0.19 without a real closure. Requiring a true-closed depth
+   * rejects those perspective "fake blinks" (2026-05-24) that otherwise defeat
+   * the no-blink incident and inflate the liveness proof on a flat attack.
+   */
+  trueClosedThreshold?: number;
   /** Frames the eye must remain closed. Default 2 (matches CONSECUTIVE_FRAMES). */
   consecutiveFrames?: number;
   /** Min frames between blinks (anti-noise). Default 6. */
@@ -60,6 +71,7 @@ export class BlinkAnalyzer implements IFaceAnalyzer {
 
   private readonly earThreshold: number;
   private readonly reopenThreshold: number;
+  private readonly trueClosedThreshold: number;
   private readonly consecutiveFrames: number;
   private readonly minOpenBetween: number;
   private readonly warmupFrames: number;
@@ -74,6 +86,7 @@ export class BlinkAnalyzer implements IFaceAnalyzer {
   constructor(options: BlinkAnalyzerOptions = {}) {
     this.earThreshold = options.earThreshold ?? 0.20;
     this.reopenThreshold = options.reopenThreshold ?? 0.22;
+    this.trueClosedThreshold = options.trueClosedThreshold ?? 0.16;
     // Default 1 (was 2 to match the Python source at 30 fps). A typical
     // human blink lasts 100-400ms — at 30 fps that's 3-12 frames, at 4-5 fps
     // (mobile Android Chrome) it collapses to 1 frame, and a 2-frame
@@ -98,6 +111,7 @@ export class BlinkAnalyzer implements IFaceAnalyzer {
         ear_history: new RingBuffer<number>(this.historyLen),
         blink_count: 0,
         eyes_closed_frames: 0,
+        min_ear_in_closure: 1.0,
         last_blink_frame: 0,
         frame_count: 0,
       };
@@ -140,9 +154,13 @@ export class BlinkAnalyzer implements IFaceAnalyzer {
     // proper reopen above REOPEN_THRESHOLD, anti-debounce via MIN_OPEN_BETWEEN.
     if (avgEar < this.earThreshold) {
       state.eyes_closed_frames += 1;
+      if (avgEar < state.min_ear_in_closure) state.min_ear_in_closure = avgEar;
     } else {
       if (
         state.eyes_closed_frames >= this.consecutiveFrames &&
+        // True-closure depth gate: the eye must have actually reached a closed
+        // depth, not merely foreshortened from a tilted flat photo/screen.
+        state.min_ear_in_closure <= this.trueClosedThreshold &&
         avgEar >= this.reopenThreshold &&
         state.frame_count - state.last_blink_frame >= this.minOpenBetween
       ) {
@@ -150,6 +168,7 @@ export class BlinkAnalyzer implements IFaceAnalyzer {
         state.last_blink_frame = state.frame_count;
       }
       state.eyes_closed_frames = 0;
+      state.min_ear_in_closure = 1.0;
     }
 
     if (state.frame_count < this.warmupFrames) {

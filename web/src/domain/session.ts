@@ -57,6 +57,14 @@ export interface SessionVerdict {
   estimated_bpm: number | null;
   /** Number of suspected identity switches. */
   identity_changes: number;
+  /**
+   * True when fusion would have called the session LIVE but the capture
+   * quality was too poor to trust (dark / occluded / no-face frames). Surfaced
+   * as an UNCERTAIN verdict so a low-quality sample is re-captured rather than
+   * confidently classified — a genuine spoof (with real spoof evidence) is
+   * NOT downgraded to uncertain, it stays SPOOF.
+   */
+  quality_uncertain: boolean;
   /** Human-readable one-line summary. */
   summary: string;
 }
@@ -65,8 +73,18 @@ export interface SessionVerdict {
 export function buildVerdictSummary(
   v: Omit<SessionVerdict, "summary">,
 ): string {
-  const verdict = v.is_live ? "LIVE" : "SPOOF";
-  const threat = v.dominant_threat ? ` (${v.dominant_threat})` : "";
+  const verdict = v.is_live
+    ? "LIVE"
+    : v.quality_uncertain
+      ? "UNCERTAIN"
+      : "SPOOF";
+  const threat = v.is_live
+    ? ""
+    : v.quality_uncertain
+      ? " (low capture quality — re-capture)"
+      : v.dominant_threat
+        ? ` (${v.dominant_threat})`
+        : "";
   const conf = Math.round(v.confidence * 100);
   return (
     `${verdict}${threat} | conf=${conf}% | ` +

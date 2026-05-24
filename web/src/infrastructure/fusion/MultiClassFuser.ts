@@ -45,6 +45,7 @@ import { SPOOF_SIGNAL_MAP } from "../../domain/taxonomy";
  */
 export const DEFAULT_ANALYZER_WEIGHTS: Readonly<Record<string, number>> = {
   minifasnet: 5.0,        // PROVEN: +94.7 gap
+  planarity: 2.0,         // 2026-05-24: camera-independent flat-surface (print/screen) detector — see LandmarkPlanarityAnalyzer. Backed by a session-level veto.
   screen_flicker: 3.0,    // 50/60Hz temporal detection — catches ANY screen
   landmark_variance: 2.0, // STRONG: zero variance = photo
   background_grid: 1.5,   // PAPER LOO: +0.014 AUC, sole positive transfer
@@ -57,6 +58,25 @@ export const DEFAULT_ANALYZER_WEIGHTS: Readonly<Record<string, number>> = {
   temporal: 0.3,          // micro-motion
   texture: 0.0,           // PAPER ANTI-CORRELATED — disabled by default
   moire: 0.0,             // PAPER ANTI-CORRELATED — disabled by default
+};
+
+/**
+ * Nyquist floor (2026-05-24): the minimum measured frame rate at which each
+ * frequency-domain analyzer can actually resolve its target band. Below this
+ * the analyzer is BLIND (its band sits above fps/2) and its reading is
+ * meaningless — yet it still emits a confident score. On the ~8-13 fps this
+ * runs at in practice, `screen_flicker` (8-35 Hz bands) reports a confident
+ * "no flicker -> 85 (live)" that PROPS UP screen-replay attacks, and
+ * `micro_tremor` (8-12 Hz) / `rppg` (0.75-4 Hz) alias to a confident
+ * "spoof-like" LOW that drags genuine faces down. The fuser skips any of
+ * these whose `measured_fps` is below its floor, so a blind/aliased reading
+ * never enters the evidence — leaving the fps-independent signals (MiniFASNet,
+ * planarity, landmark variance, blink) to carry the verdict.
+ */
+export const NYQUIST_MIN_FPS: Readonly<Record<string, number>> = {
+  screen_flicker: 18, // lowest band 8 Hz needs fps/2 >= 8 → >=16; 18 for margin
+  micro_tremor: 20,   // 8-12 Hz tremor band
+  rppg: 10,           // 0.75-4 Hz pulse band (top alias guard)
 };
 
 /**
@@ -92,6 +112,16 @@ export class MultiClassFuser {
       const result = results[analyzer_name];
       const weight = this.weights[analyzer_name] ?? 0.5;
       if (weight <= 0) continue;
+
+      // Nyquist gate: drop a frequency-domain analyzer whose measured frame
+      // rate is too low to resolve its band — its score is blind/aliased and
+      // would otherwise inject false evidence (see NYQUIST_MIN_FPS).
+      const minFps = NYQUIST_MIN_FPS[analyzer_name];
+      if (minFps !== undefined) {
+        const fps = result.details["measured_fps"];
+        if (typeof fps === "number" && fps > 0 && fps < minFps) continue;
+      }
+
       total_weight += weight;
 
       const score = result.score; // 0-100, higher = more live
