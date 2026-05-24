@@ -713,6 +713,7 @@
         <button id="reset" class="ghost" disabled>Reset</button>
         <button id="download" class="ghost" disabled title="Download the current session as JSON.">↓ Report</button>
         <button id="bench" class="ghost" title="Runs the in-browser CASIA-FASD micro-bench. Requires sample images at ./samples/live_*.jpg + spoof_*.jpg; not bundled with this deploy.">Bench</button>
+        <button id="lightCheck" class="ghost" title="Active-illumination liveness (opt-in): locks camera exposure, flashes the screen, and measures the face's reflection. A real face reflects the flash diffusely; a screen emits its own light and won't. NOT used for passive proctoring.">💡 Light</button>
         <button id="micToggle" class="ghost" title="Phase D3: enable microphone for voice-activity + audio-mouth-sync analyzers (~strongest anti-replay signal). The mic stays on until you stop the session.">🎤 Mic</button>
         <button id="handToggle" class="ghost" title="Phase D2: enable MediaPipe HandLandmarker. ~6 MB model lazy-loads. Tracks hand gesture motion as an extra liveness signal, flags >2 hands per frame as a deepfake anomaly.">✋ Hand</button>
         <button id="recordToggle" class="ghost" title="Phase E (experimental): record the session as a video + analytics JSON for later playback / audit. Append ?autorec=1 to the URL to auto-start recording when a session begins.">⏺ Rec</button>
@@ -724,6 +725,14 @@
           style="display: none"
         />
       </div>
+
+      <!-- Active-illumination (opt-in) result line + full-screen flash overlay.
+           The overlay briefly fills the viewport with a colour so the screen
+           emits light onto the face; the camera (exposure locked) measures the
+           reflection. pointer-events:none so it never blocks clicks. -->
+      <div id="lightResult" class="light-result" aria-live="polite" style="margin-top:8px;font-size:13px;opacity:0.9;"></div>
+      <div id="flashOverlay" aria-hidden="true"
+           style="position:fixed;inset:0;z-index:99999;display:none;pointer-events:none;"></div>
 
       <!-- Replay overlay (Phase E) — hidden until the user loads a recorded
            session JSON. Renders the final verdict header + a tiny SVG
