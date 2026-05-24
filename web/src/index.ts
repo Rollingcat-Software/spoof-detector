@@ -78,6 +78,12 @@ export { MicroTremorAnalyzer } from "./infrastructure/analyzers/MicroTremorAnaly
 export { ScreenFlickerAnalyzer } from "./infrastructure/analyzers/ScreenFlickerAnalyzer";
 export { RppgAnalyzer } from "./infrastructure/analyzers/RppgAnalyzer";
 export { LandmarkPlanarityAnalyzer } from "./infrastructure/analyzers/LandmarkPlanarityAnalyzer";
+export { FlashReflectionAnalyzer } from "./infrastructure/analyzers/FlashReflectionAnalyzer";
+export type {
+  FlashColor,
+  FlashReflectionResult,
+  FlashReflectionOptions,
+} from "./infrastructure/analyzers/FlashReflectionAnalyzer";
 export { BackgroundGridAnalyzer } from "./infrastructure/analyzers/BackgroundGridAnalyzer";
 export { TemporalAnalyzer } from "./infrastructure/analyzers/TemporalAnalyzer";
 export { LivenessProver } from "./application/LivenessProver";
