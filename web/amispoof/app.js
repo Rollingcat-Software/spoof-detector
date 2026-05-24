@@ -15,12 +15,12 @@ import {
   createSpoofDetector,
   runCasiaFasdMicroBench,
   FlashReflectionAnalyzer,
-} from "./lib/spoof-detector.js?v=2026-05-18-suite-nav";
+} from "./lib/spoof-detector.js?v=2026-05-24-planarity-veto";
 
 // Version handshake — checked by the inline script in index.html.
 // If the user is running a stale cached app.js (no AMISPOOF_VERSION),
 // the HTML triggers a one-shot reload after 4 s.
-window.AMISPOOF_VERSION = "2026-05-18-suite-nav";
+window.AMISPOOF_VERSION = "2026-05-24-planarity-veto";
 
 // SessionEngine.getVerdict() returns a confidence in [0, 0.88] when the
 // LivenessProver is wired (structural ceiling — see SessionEngine.ts
