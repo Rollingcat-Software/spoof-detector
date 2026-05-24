@@ -93,6 +93,14 @@ export class SessionEngine {
   static readonly PLANAR_SPOOF_SCORE = 45;
   static readonly PLANAR_MIN_ELAPSED_SEC = 3.0;
   static readonly PLANAR_INCIDENT_THROTTLE_SEC = 2.5;
+  // Capture-quality floor (2026-05-24). A would-be-LIVE session whose capture
+  // quality is too poor (dark / occluded / no-face frames) is downgraded to
+  // UNCERTAIN (prompt a re-capture) rather than confidently classified LIVE.
+  // A genuine spoof (real spoof evidence) is NEVER downgraded — it stays SPOOF.
+  // illuminationScore is 0-1 from the FaceUsabilityGate (normal lit face ~0.8).
+  static readonly QUALITY_MIN_SAMPLES = 15;
+  static readonly QUALITY_USABLE_RATIO = 0.5;
+  static readonly QUALITY_ILLUM_FLOOR = 0.35;
 
   private readonly sessionId: string;
   private state: SessionState = SessionState.WARMING_UP;
@@ -114,6 +122,7 @@ export class SessionEngine {
   private lastBlinkObservedAt = 0;
   private lastNoBlinkIncidentAt = -Infinity;
   private lastPlanarIncidentAt = -Infinity;
+  private qualitySamples = new RingBuffer<{ usable: boolean; illum: number }>(90);
 
   private readonly prover: LivenessProver | null;
   private readonly requireProverLive: boolean;
@@ -169,6 +178,7 @@ export class SessionEngine {
     this.lastBlinkObservedAt = 0;
     this.lastNoBlinkIncidentAt = -Infinity;
     this.lastPlanarIncidentAt = -Infinity;
+    this.qualitySamples.clear();
     this.prover?.reset();
   }
 
@@ -176,6 +186,10 @@ export class SessionEngine {
   ingest(analysis: FrameAnalysis): void {
     this.frameCount += 1;
     this.prover?.ingest(analysis);
+    const gr = analysis.gate_result;
+    if (gr) {
+      this.qualitySamples.append({ usable: gr.usable, illum: gr.illuminationScore });
+    }
     const elapsed = this.elapsedSec;
 
     if (
@@ -561,10 +575,16 @@ export class SessionEngine {
         ? true
         : (proverScore?.total ?? 0) >= 60;
     const incidentOverride = this.incidents.length >= 3;
-    const isLive = adjustedReal > 0.45 && proverLive && !incidentOverride;
+    const baseLive = adjustedReal > 0.45 && proverLive && !incidentOverride;
+    // Capture-quality floor: a would-be-LIVE poor-quality capture is reported
+    // UNCERTAIN (re-capture), never a confident LIVE. A genuine spoof
+    // (baseLive false) is NOT downgraded — it stays SPOOF.
+    const qualityOk = this.computeQualityOk();
+    const qualityUncertain = baseLive && !qualityOk;
+    const isLive = baseLive && qualityOk;
 
     const proverConfidence = proverScore ? proverScore.total / 100.0 : 0;
-    const confidence = this.prover
+    let confidence = this.prover
       ? Math.min(
           1.0,
           dataConfidence *
@@ -576,6 +596,10 @@ export class SessionEngine {
           1.0,
           dataConfidence * (0.5 + 0.4 * Math.max(0, adjustedReal - 0.3)),
         );
+
+    // An uncertain (poor-quality) verdict must read as low-confidence so the
+    // surface prompts a re-capture rather than showing a strong number.
+    if (qualityUncertain) confidence = Math.min(confidence, 0.3);
 
     // Blink count from blink analyzer details, if present in latest verdicts.
     let blinkCount = 0;
@@ -594,7 +618,7 @@ export class SessionEngine {
     const partial: Omit<SessionVerdict, "summary"> = {
       is_live: isLive,
       confidence,
-      dominant_threat: isLive ? null : dominantThreat,
+      dominant_threat: isLive || qualityUncertain ? null : dominantThreat,
       category_scores: categoryScores,
       incidents: this.incidents.slice(),
       session_duration_sec: elapsed,
@@ -603,9 +627,7 @@ export class SessionEngine {
       blink_count: blinkCount,
       estimated_bpm: estimatedBpm,
       identity_changes: 0,
-      // Quality floor not yet wired (paused mid-implementation); a real
-      // capture is never downgraded to UNCERTAIN until that lands.
-      quality_uncertain: false,
+      quality_uncertain: qualityUncertain,
     };
     return { ...partial, summary: buildVerdictSummary(partial) };
   }
@@ -621,6 +643,30 @@ export class SessionEngine {
     let s = 0;
     for (const b of boosts) s += b;
     return s / boosts.length;
+  }
+
+  /**
+   * Capture-quality floor. Returns false when recent frames were too poor to
+   * trust a LIVE verdict (mostly unusable — dark / occluded / no-face — or
+   * mean illumination below the floor). Returns true when there isn't enough
+   * gate data yet, so quality only ever GATES a confident verdict, never
+   * fabricates one.
+   */
+  private computeQualityOk(): boolean {
+    const samples = this.qualitySamples.toArray();
+    if (samples.length < SessionEngine.QUALITY_MIN_SAMPLES) return true;
+    let usableCount = 0;
+    let illumSum = 0;
+    for (const s of samples) {
+      if (s.usable) usableCount += 1;
+      illumSum += s.illum;
+    }
+    const usableRatio = usableCount / samples.length;
+    const meanIllum = illumSum / samples.length;
+    return (
+      usableRatio >= SessionEngine.QUALITY_USABLE_RATIO &&
+      meanIllum >= SessionEngine.QUALITY_ILLUM_FLOOR
+    );
   }
 
   private computeIncidentPenalty(): number {
