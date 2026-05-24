@@ -81,6 +81,13 @@ export class SessionEngine {
   static readonly NO_BLINK_ALERT_SEC = 15.0;
   static readonly FACE_MISSING_ALERT_SEC = 5.0;
   static readonly IDENTITY_CHANGE_THRESHOLD = 0.35;
+  // Planar-print veto (2026-05-24). A planarity score below this, while the
+  // analyzer is actively measuring (head/print rotating), means a flat
+  // surface — printed photo or screen. Throttled so a sustained flat
+  // presentation accrues the >=3 incidents that flip the verdict to SPOOF.
+  static readonly PLANAR_SPOOF_SCORE = 25;
+  static readonly PLANAR_MIN_ELAPSED_SEC = 3.0;
+  static readonly PLANAR_INCIDENT_THROTTLE_SEC = 2.5;
 
   private readonly sessionId: string;
   private state: SessionState = SessionState.WARMING_UP;
@@ -101,6 +108,7 @@ export class SessionEngine {
   private lastBlinkCount = 0;
   private lastBlinkObservedAt = 0;
   private lastNoBlinkIncidentAt = -Infinity;
+  private lastPlanarIncidentAt = -Infinity;
 
   private readonly prover: LivenessProver | null;
   private readonly requireProverLive: boolean;
@@ -155,6 +163,7 @@ export class SessionEngine {
     this.lastBlinkCount = 0;
     this.lastBlinkObservedAt = 0;
     this.lastNoBlinkIncidentAt = -Infinity;
+    this.lastPlanarIncidentAt = -Infinity;
     this.prover?.reset();
   }
 
@@ -228,7 +237,51 @@ export class SessionEngine {
       this.checkMotionNaturalness(signals, analysis.frame_id, elapsed);
       this.checkMiniFasNetInstability(signals, analysis.frame_id, elapsed);
       this.checkNoBlink(cls, analysis.frame_id, elapsed);
+      this.checkPlanarPrint(cls, analysis.frame_id, elapsed);
     }
+  }
+
+  /**
+   * Raise a STATIC_IMAGE incident when the planarity analyzer reports a flat
+   * surface while it is actively measuring (head/print rotating). A real 3D
+   * face yields a HIGH planarity score under rotation, so this never fires on
+   * genuine users; the throttle lets a sustained flat presentation accrue the
+   * >=3 incidents that flip getVerdict() to SPOOF. This is the lever that
+   * overcomes a MiniFASNet fooled by a sharp, frame-filling printed photo —
+   * the 2026-05-24 amispoof false-accept (print → LIVE 90%, MiniFASNet 100).
+   */
+  private checkPlanarPrint(
+    cls: SpoofClassification,
+    frame_id: number,
+    elapsed: number,
+  ): void {
+    const planarity = cls.analyzer_results["planarity"];
+    if (!planarity) return;
+    // measured:false means there wasn't enough rotation to judge planarity —
+    // never penalise those frames (keeps the false-reject rate untouched).
+    if (planarity.details["measured"] !== true) return;
+    if (planarity.score >= SessionEngine.PLANAR_SPOOF_SCORE) return;
+    if (elapsed < SessionEngine.PLANAR_MIN_ELAPSED_SEC) return;
+    if (
+      elapsed - this.lastPlanarIncidentAt <
+      SessionEngine.PLANAR_INCIDENT_THROTTLE_SEC
+    ) {
+      return;
+    }
+
+    this.lastPlanarIncidentAt = elapsed;
+    this.addIncident(
+      frame_id,
+      Severity.HIGH,
+      SpoofCategory.STATIC_IMAGE,
+      `Flat surface under rotation (planarity=${Math.round(
+        planarity.score,
+      )}) — printed-photo / screen attack suspected`,
+      {
+        planarity_score: round(planarity.score, 1),
+        residual_norm: planarity.details["residual_norm"] ?? null,
+      },
+    );
   }
 
   /**

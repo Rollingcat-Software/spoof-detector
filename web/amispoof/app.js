@@ -351,6 +351,13 @@ const ANALYZER_ORDER = [
     desc: "MediaPipe 4×4 facial transformation matrix — checks orthonormality of the rotation block + Z-translation motion. Catches tilted photos and flat-screen replays whose pose fit is degenerate.",
   },
   {
+    name: "planarity",
+    weight: 2.0,
+    label: "Planarity (flat-surface)",
+    group: "video",
+    desc: "Affine landmark-reprojection residual under head rotation. A flat printed photo or screen moves as one plane (low residual → SPOOF); a real 3D face has depth parallax that breaks the affine fit (high residual → live). Camera-focus-independent, so it catches the sharp PC-focused print MiniFASNet misses. Backed by a session-level planar-print veto.",
+  },
+  {
     name: "behavioral_pattern",
     weight: 0,
     label: "Behavioral pattern",

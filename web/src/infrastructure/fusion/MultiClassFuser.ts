@@ -45,6 +45,7 @@ import { SPOOF_SIGNAL_MAP } from "../../domain/taxonomy";
  */
 export const DEFAULT_ANALYZER_WEIGHTS: Readonly<Record<string, number>> = {
   minifasnet: 5.0,        // PROVEN: +94.7 gap
+  planarity: 2.0,         // 2026-05-24: camera-independent flat-surface (print/screen) detector — see LandmarkPlanarityAnalyzer. Backed by a session-level veto.
   screen_flicker: 3.0,    // 50/60Hz temporal detection — catches ANY screen
   landmark_variance: 2.0, // STRONG: zero variance = photo
   background_grid: 1.5,   // PAPER LOO: +0.014 AUC, sole positive transfer

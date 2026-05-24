@@ -103,4 +103,13 @@ export const SPOOF_SIGNAL_MAP: Readonly<Record<string, SpoofSignalRow>> = {
     [SpoofCategory.VIDEO_REPLAY]: 0.40,
     [SpoofCategory.DEEPFAKE_INJECT]: 0.20,
   },
+  // A flat surface under rotation is a printed photo or a screen. Both are
+  // planar, so a low planarity score routes evidence to the two flat-attack
+  // categories. Masks are 3D and AR filters ride a real 3D face, so neither
+  // gets planarity weight.
+  planarity: {
+    [SpoofCategory.STATIC_IMAGE]: 0.50,
+    [SpoofCategory.VIDEO_REPLAY]: 0.40,
+    [SpoofCategory.DEEPFAKE_INJECT]: 0.10,
+  },
 };
