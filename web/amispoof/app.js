@@ -15,12 +15,12 @@ import {
   createSpoofDetector,
   runCasiaFasdMicroBench,
   FlashReflectionAnalyzer,
-} from "./lib/spoof-detector.js?v=2026-05-24-planarity-veto";
+} from "./lib/spoof-detector.js?v=2026-05-24-camera-restore";
 
 // Version handshake — checked by the inline script in index.html.
 // If the user is running a stale cached app.js (no AMISPOOF_VERSION),
 // the HTML triggers a one-shot reload after 4 s.
-window.AMISPOOF_VERSION = "2026-05-24-planarity-veto";
+window.AMISPOOF_VERSION = "2026-05-24-camera-restore";
 
 // SessionEngine.getVerdict() returns a confidence in [0, 0.88] when the
 // LivenessProver is wired (structural ceiling — see SessionEngine.ts
@@ -399,6 +399,11 @@ const $ = (id) => document.getElementById(id);
 
 // Last detected face bbox — used by the opt-in flash challenge to crop the face.
 let lastFaceBbox = null;
+
+// Snapshot of the camera's settings taken when the stream starts, so the
+// camera controls + on-exit can restore the webcam to how it began (rather
+// than leaving it in a manual/locked state from experimentation).
+let cameraDefaults = null;
 
 const els = {
   videoWrap: $("videoWrap"),
@@ -780,6 +785,16 @@ async function start() {
     );
     await els.video.play();
 
+    // Snapshot the camera's initial (auto) settings once — used by the 🎛
+    // panel's "Auto (reset all)" and the on-exit restore so the webcam is
+    // never stranded in a manual/locked state after experimentation.
+    try {
+      const vt0 = stream.getVideoTracks && stream.getVideoTracks()[0];
+      if (vt0 && vt0.getSettings) cameraDefaults = vt0.getSettings();
+    } catch (e) {
+      /* ignore */
+    }
+
     canvas = document.createElement("canvas");
     canvas.width = els.video.videoWidth || 640;
     canvas.height = els.video.videoHeight || 480;
@@ -825,7 +840,7 @@ async function start() {
   }
 }
 
-function stop() {
+async function stop() {
   running = false;
   // If a recording is still running (auto-record mode or the user
   // forgot to click ⏹), stop it so the .webm + .json downloads fire
@@ -837,6 +852,9 @@ function stop() {
       console.error("auto-stop recording failed", err);
     }
   }
+  // Restore the camera to auto + default image params BEFORE releasing the
+  // stream, so stopping never leaves the webcam stuck in a manual/locked state.
+  await restoreCameraDefaults();
   const stream = els.video.srcObject;
   if (stream && typeof stream.getTracks === "function") {
     for (const track of stream.getTracks()) track.stop();
@@ -1397,6 +1415,29 @@ function camTrack() {
     : null;
 }
 
+/**
+ * Restore the camera to auto (continuous exposure + white balance) and the
+ * image params (brightness/contrast/saturation/sharpness) captured at session
+ * start. Used by "Auto (reset all)" and on Stop / page-exit so manual locks
+ * never strand the webcam. Best-effort — a driver that latches a value may
+ * still need a hardware/OS reset.
+ */
+async function restoreCameraDefaults() {
+  const track = camTrack();
+  if (!track) return;
+  const c = { exposureMode: "continuous", whiteBalanceMode: "continuous" };
+  if (cameraDefaults) {
+    for (const k of ["brightness", "contrast", "saturation", "sharpness"]) {
+      if (typeof cameraDefaults[k] === "number") c[k] = cameraDefaults[k];
+    }
+  }
+  try {
+    await track.applyConstraints({ advanced: [c] });
+  } catch (e) {
+    /* best-effort */
+  }
+}
+
 async function applyCam(constraint) {
   const track = camTrack();
   if (!track) return;
@@ -1510,16 +1551,7 @@ function buildCameraControls() {
   reset.className = "ghost";
   reset.style.fontSize = "12px";
   reset.onclick = async () => {
-    const t = camTrack();
-    if (t) {
-      try {
-        await t.applyConstraints({
-          advanced: [{ exposureMode: "continuous", whiteBalanceMode: "continuous" }],
-        });
-      } catch (e) {
-        /* ignore */
-      }
-    }
+    await restoreCameraDefaults();
     buildCameraControls();
   };
   resetRow.appendChild(reset);
@@ -1545,6 +1577,12 @@ if (els.cameraToggle) {
     }
   });
 }
+
+// Best-effort: restore the camera to auto + default image params when the page
+// is hidden/closed, so leaving never strands the webcam in a manual lock.
+window.addEventListener("pagehide", () => {
+  restoreCameraDefaults();
+});
 
 // Phase D3 — wire the microphone toggle. The SDK requires audio to be
 // enabled at construction time (see createSpoofDetector opts). When the
