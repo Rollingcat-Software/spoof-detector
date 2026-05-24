@@ -412,6 +412,8 @@ const els = {
   lightCheck: $("lightCheck"),
   flashOverlay: $("flashOverlay"),
   lightResult: $("lightResult"),
+  cameraToggle: $("cameraToggle"),
+  cameraPanel: $("cameraPanel"),
   benchPanel: $("benchPanel"),
   benchHeadline: $("benchHeadline"),
   benchRows: $("benchRows"),
@@ -1382,6 +1384,166 @@ async function runFlashChallenge() {
 
 if (els.lightCheck) {
   els.lightCheck.addEventListener("click", runFlashChallenge);
+}
+
+// ===== Manual camera controls (operator experimentation) =====
+// Builds sliders/toggles from the live track's getCapabilities() so the
+// operator can lock/adjust exposure, white balance, colour temperature, and
+// the image params to probe what reveals a screen spoof (e.g. locking WB
+// exposes a phone screen's colour cast that auto-WB would otherwise hide).
+function camTrack() {
+  return els.video.srcObject && els.video.srcObject.getVideoTracks
+    ? els.video.srcObject.getVideoTracks()[0]
+    : null;
+}
+
+async function applyCam(constraint) {
+  const track = camTrack();
+  if (!track) return;
+  try {
+    await track.applyConstraints({ advanced: [constraint] });
+  } catch (e) {
+    console.warn("[camera] constraint rejected", constraint, e);
+  }
+  refreshCamReadout();
+}
+
+function refreshCamReadout() {
+  const el = document.getElementById("camReadout");
+  const track = camTrack();
+  if (!el || !track) return;
+  const s = track.getSettings();
+  el.textContent =
+    `exposure ${s.exposureMode}/${Math.round(s.exposureTime || 0)} · ` +
+    `WB ${s.whiteBalanceMode}/${s.colorTemperature || "-"}K · ` +
+    `bri ${s.brightness} · con ${s.contrast} · sat ${s.saturation} · shp ${s.sharpness}`;
+}
+
+function buildCameraControls() {
+  const track = camTrack();
+  const panel = els.cameraPanel;
+  if (!panel) return;
+  if (!track || !track.getCapabilities) {
+    panel.textContent = "Start the camera first.";
+    return;
+  }
+  const caps = track.getCapabilities();
+  const s = track.getSettings();
+  panel.innerHTML = "";
+  const row = () => {
+    const d = document.createElement("div");
+    d.style.cssText =
+      "display:flex;align-items:center;gap:8px;margin:5px 0;font-size:12px;";
+    return d;
+  };
+  const label = (t) => {
+    const l = document.createElement("label");
+    l.textContent = t;
+    l.style.cssText = "width:120px;flex:0 0 120px;";
+    return l;
+  };
+  const addMode = (key, text) => {
+    if (!Array.isArray(caps[key]) || caps[key].length < 2) return;
+    const r = row();
+    r.appendChild(label(text));
+    const sel = document.createElement("select");
+    caps[key].forEach((m) => {
+      const o = document.createElement("option");
+      o.value = m;
+      o.textContent = m;
+      if (m === s[key]) o.selected = true;
+      sel.appendChild(o);
+    });
+    sel.onchange = () => applyCam({ [key]: sel.value });
+    r.appendChild(sel);
+    panel.appendChild(r);
+  };
+  const addRange = (key, text, controllingMode) => {
+    const c = caps[key];
+    if (!c || typeof c.min !== "number") return;
+    const r = row();
+    r.appendChild(label(text));
+    const input = document.createElement("input");
+    input.type = "range";
+    input.min = c.min;
+    input.max = c.max;
+    input.step = c.step || 1;
+    input.value = s[key] != null ? s[key] : c.min;
+    input.style.flex = "1";
+    const val = document.createElement("span");
+    val.style.cssText = "width:64px;text-align:right;";
+    val.textContent = String(Math.round(input.value));
+    input.oninput = () => {
+      val.textContent = String(Math.round(input.value));
+    };
+    input.onchange = async () => {
+      // The value only applies if the controlling mode is manual.
+      if (controllingMode) {
+        const t = camTrack();
+        if (t) {
+          try {
+            await t.applyConstraints({ advanced: [{ [controllingMode]: "manual" }] });
+          } catch (e) {
+            /* ignore */
+          }
+        }
+      }
+      applyCam({ [key]: parseFloat(input.value) });
+    };
+    r.appendChild(input);
+    r.appendChild(val);
+    panel.appendChild(r);
+  };
+
+  addMode("exposureMode", "Exposure mode");
+  addRange("exposureTime", "Exposure time", "exposureMode");
+  addMode("whiteBalanceMode", "White balance");
+  addRange("colorTemperature", "Colour temp (K)", "whiteBalanceMode");
+  addRange("brightness", "Brightness");
+  addRange("contrast", "Contrast");
+  addRange("saturation", "Saturation");
+  addRange("sharpness", "Sharpness");
+
+  const resetRow = row();
+  const reset = document.createElement("button");
+  reset.textContent = "Auto (reset all)";
+  reset.className = "ghost";
+  reset.style.fontSize = "12px";
+  reset.onclick = async () => {
+    const t = camTrack();
+    if (t) {
+      try {
+        await t.applyConstraints({
+          advanced: [{ exposureMode: "continuous", whiteBalanceMode: "continuous" }],
+        });
+      } catch (e) {
+        /* ignore */
+      }
+    }
+    buildCameraControls();
+  };
+  resetRow.appendChild(reset);
+  panel.appendChild(resetRow);
+
+  const ro = document.createElement("div");
+  ro.id = "camReadout";
+  ro.style.cssText =
+    "font-size:11px;opacity:0.75;margin-top:8px;font-family:monospace;";
+  panel.appendChild(ro);
+  refreshCamReadout();
+}
+
+if (els.cameraToggle) {
+  els.cameraToggle.addEventListener("click", () => {
+    if (!els.cameraPanel) return;
+    const open = els.cameraPanel.style.display !== "none";
+    if (open) {
+      els.cameraPanel.style.display = "none";
+    } else {
+      els.cameraPanel.style.display = "block";
+      buildCameraControls();
+    }
+  });
 }
 
 // Phase D3 — wire the microphone toggle. The SDK requires audio to be
