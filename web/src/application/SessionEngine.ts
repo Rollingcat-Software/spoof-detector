@@ -603,6 +603,9 @@ export class SessionEngine {
       blink_count: blinkCount,
       estimated_bpm: estimatedBpm,
       identity_changes: 0,
+      // Quality floor not yet wired (paused mid-implementation); a real
+      // capture is never downgraded to UNCERTAIN until that lands.
+      quality_uncertain: false,
     };
     return { ...partial, summary: buildVerdictSummary(partial) };
   }

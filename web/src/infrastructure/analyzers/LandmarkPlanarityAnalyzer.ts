@@ -53,6 +53,14 @@ export interface LandmarkPlanarityAnalyzerOptions {
   motionGateNorm?: number;
   /** Normalised residual at which the score saturates to 100 (fully 3D). */
   residualSaturation?: number;
+  /**
+   * Rotation-INVARIANT calibration knob: the depth measure (residual divided
+   * by sin(rotation)) at which the score saturates to 100. Parallax residual
+   * scales with rotation angle, so a raw-residual threshold false-rejects a
+   * real face making only small head turns (2026-05-24 regression). Dividing
+   * by sin(rotation) yields a rotation-invariant depth proxy.
+   */
+  depthSaturation?: number;
   /** Landmarks beyond this index are ignored (drops the 10 iris points). */
   maxLandmarks?: number;
 }
@@ -67,6 +75,9 @@ interface FrameSample {
 }
 
 const NEUTRAL = 50;
+// Floor for sin(rotation) when rotation-normalising — guards the divide from
+// blowing up at tiny angles (~sin 8°). Rotation below the gate doesn't score.
+const MIN_SIN = 0.139;
 
 export class LandmarkPlanarityAnalyzer implements IFaceAnalyzer {
   readonly name = "planarity";
@@ -75,14 +86,16 @@ export class LandmarkPlanarityAnalyzer implements IFaceAnalyzer {
   private readonly rotationGateDeg: number;
   private readonly motionGateNorm: number;
   private readonly residualSaturation: number;
+  private readonly depthSaturation: number;
   private readonly maxLandmarks: number;
   private readonly histories: Map<number, FrameSample[]> = new Map();
 
   constructor(options: LandmarkPlanarityAnalyzerOptions = {}) {
     this.historyLen = options.historyLen ?? 60;
-    this.rotationGateDeg = options.rotationGateDeg ?? 4.0;
+    this.rotationGateDeg = options.rotationGateDeg ?? 15.0;
     this.motionGateNorm = options.motionGateNorm ?? 0.04;
     this.residualSaturation = options.residualSaturation ?? 0.02;
+    this.depthSaturation = options.depthSaturation ?? 0.045;
     this.maxLandmarks = options.maxLandmarks ?? 468;
   }
 
@@ -177,8 +190,24 @@ export class LandmarkPlanarityAnalyzer implements IFaceAnalyzer {
       );
     }
 
-    // residual 0 → flat (spoof) → 0; residual ≥ saturation → 3D (live) → 100.
-    const score = clamp01(residualNorm / this.residualSaturation) * 100;
+    // Rotation-INVARIANT depth measure. Parallax residual scales with the
+    // rotation angle, so a real 3D face at a small head-turn yields a small
+    // residual a raw threshold misreads as "flat". Dividing by sin(rotation)
+    // recovers a depth proxy that stays high for a genuine face at ANY turn
+    // and low for a flat surface. When rotation is available (transform
+    // matrix) we use it; the motion-gate fallback keeps the raw residual.
+    let depthMeasure: number;
+    let saturation: number;
+    if (haveRotation && bestRotDeg > 0) {
+      const sinRot = Math.sin((bestRotDeg * Math.PI) / 180);
+      depthMeasure = residualNorm / Math.max(sinRot, MIN_SIN);
+      saturation = this.depthSaturation;
+    } else {
+      depthMeasure = residualNorm;
+      saturation = this.residualSaturation;
+    }
+    // depthMeasure small → flat (spoof) → 0; >= saturation → 3D (live) → 100.
+    const score = clamp01(depthMeasure / saturation) * 100;
 
     return makeAnalyzerResult(
       this.name,
@@ -186,6 +215,8 @@ export class LandmarkPlanarityAnalyzer implements IFaceAnalyzer {
       {
         measured: true,
         residual_norm: round(residualNorm, 4),
+        depth_measure: round(depthMeasure, 4),
+        rotation_normalized: haveRotation,
         rot_deg: round(bestRotDeg, 2),
         motion_norm: round(bestMotion, 4),
         ref_lag_frames: refLag,

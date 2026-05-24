@@ -139,6 +139,25 @@ describe("LandmarkPlanarityAnalyzer", () => {
     expect(solid.score - flat.score).toBeGreaterThan(40);
   });
 
+  it("abstains below the 15° rotation gate — small head turns are never judged (no false-reject)", () => {
+    // The 2026-05-24 regression: a real face making ~8-10° turns scored as
+    // "flat" because parallax residual is tiny at small angles. The gate now
+    // abstains under 15° so genuine small movements can't trip the veto.
+    const a = new LandmarkPlanarityAnalyzer();
+    const r = sweep(a, BUMPY, 10); // only 10° of rotation
+    expect(r.details.measured).toBe(false);
+    expect(r.details.reason).toBe("insufficient_rotation");
+  });
+
+  it("3D depth reads live at small AND large turns once past the gate (rotation-invariant)", () => {
+    const near = sweep(new LandmarkPlanarityAnalyzer(), BUMPY, 16);
+    const far = sweep(new LandmarkPlanarityAnalyzer(), BUMPY, 30);
+    expect(near.details.measured).toBe(true);
+    expect(far.details.measured).toBe(true);
+    expect(near.score).toBeGreaterThan(50);
+    expect(far.score).toBeGreaterThan(50);
+  });
+
   it("reset() clears per-face history", () => {
     const a = new LandmarkPlanarityAnalyzer();
     sweep(a, BUMPY, 24);
