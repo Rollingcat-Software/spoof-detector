@@ -88,6 +88,15 @@ Both are aggressively cacheable via jsdelivr's `Cache-Control: public, max-age=3
   region-visibility, attached to each FrameAnalysis as a second opinion.
 - **LivenessProver** parallel verdict (`detector.getProof()`) — passive
   proof score with optional active challenges (BLINK / TURN / NOD / SMILE).
+- **Active flash-response probe** (💡 Light button + automatic session probe) —
+  the content-independent video-replay detector. Locks camera exposure, flashes
+  the screen white ~1.5 s, and measures **post-flash brightness persistence**: a
+  real 3-D face reflects instantly and drops straight back; a phone whose
+  auto-brightness latched its backlight stays elevated → SPOOF override.
+  PC-first (needs manual-exposure control); abstains (INCONCLUSIVE) when the
+  exposure can't lock, when too little light reaches the face, or on a maxed
+  screen. Opt-in/active — **not** part of the passive per-frame fusion. See
+  `src/infrastructure/analyzers/FlashTemporalAnalyzer.ts`.
 - **Per-category P(spoof)** for the 7-class taxonomy: static_image,
   video_replay, mask_3d, heavy_makeup, ar_filter, deepfake_injection.
 - **Session counters**: frames, FPS, duration, faces detected, blink

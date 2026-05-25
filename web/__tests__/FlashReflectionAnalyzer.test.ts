@@ -46,9 +46,10 @@ function diffuseRedFlash(): ImageData {
   });
 }
 
-/** Screen emitting its own light: essentially no response to our flash. */
+/** Screen / desktop in bright ambient: the flash barely registers (~+1/255
+ *  sensor noise), below the inconclusive floor. */
 function noResponseFlash(): ImageData {
-  return img(() => [103, 103, 103]);
+  return img(() => [101, 101, 101]);
 }
 
 /** Flat uniform rise (a bright but planar/uniform screen response): target
@@ -67,12 +68,13 @@ describe("FlashReflectionAnalyzer", () => {
     expect(r.score).toBeGreaterThan(50);
   });
 
-  it("screen with no photometric response → not live", () => {
+  it("no light reaching the face → inconclusive (NOT a false SPOOF)", () => {
     const a = new FlashReflectionAnalyzer();
     const r = a.scoreResponse(baseline, noResponseFlash(), "red");
-    expect(r.colorShift).toBeLessThan(0.05);
+    // A negligible photometric change means the flash never reached the face
+    // (desktop / bright room) — report inconclusive, never LIVE or SPOOF.
+    expect(r.inconclusive).toBe(true);
     expect(r.isLive).toBe(false);
-    expect(r.score).toBeLessThan(25);
   });
 
   it("diffuse 3D response outscores a flat uniform response of similar gain", () => {

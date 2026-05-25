@@ -144,6 +144,17 @@ Active challenges add a +30 to +50 percentage-point swing on hard screen-replay 
 
 The path to real numbers: Aysenur's evaluation data captured actual pre/flash frame pairs from real users + replay attacks under the `light_challenge_service` protocol. Once that capture set is consented for academic release, `tests/benchmark/active_challenge.py` will load the real pairs (replacing the synthesis step) and produce the paper-grade row above.
 
+### Temporal flash-response probe (live pilot, browser)
+
+The temporal-persistence probe of §4.5.1 was implemented in the browser bundle (`web/src/infrastructure/analyzers/FlashTemporalAnalyzer.ts`) and piloted live on a desktop webcam (Brave on PC) against the operator's own face and a phone video-replay, exposure locked mid-range. The normalised post-flash persistence separated the two with a wide margin:
+
+| Target | n (probes) | persistence (norm) | decision |
+|---|---:|---|---|
+| genuine face | 6 | ≤ 0.03 (cluster) | LIVE (0/6 false reject) |
+| phone video-replay | fresh | 0.74 – 0.98 | SPOOF (caught) |
+
+The decision threshold band (0.15–0.45) sits between with ≈ 5× margin on the genuine side, and the independent spatial reflection score agreed (genuine ≈ 100, replay ≈ 5). This is a single-subject single-device **pilot**, not a benchmark: it establishes the discriminator's sign and separation, not population APCER/BPCER. A consented multi-subject, multi-device capture — including auto-brightness-OFF screens (which the probe abstains on) and exposure-uncontrollable mobile front cameras (which it abstains on) — is required for paper-grade numbers and is tracked with the §8.5 TBD rows above.
+
 ## 8.6 Session length curve (Figure 4)
 
 ACER as a function of how many seconds of video are observed:
