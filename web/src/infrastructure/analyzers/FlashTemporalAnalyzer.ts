@@ -105,6 +105,15 @@ export interface FlashTemporalOptions {
    * Default 2.
    */
   afterSkip?: number;
+  /**
+   * Baseline brightness (0-255) above which the face is judged OVER-LIT and the
+   * probe abstains. When the room light already drives the face near sensor
+   * saturation there is no headroom for the flash to register, so the tiny rise
+   * yields a noise-dominated persistence (live runs in a bright room produced
+   * false positives at baseline ≈210-234). The reliable discriminator is the
+   * baseline, not the rise: clean reads sat at baseline ≤145. Default 185.
+   */
+  baselineCeiling?: number;
 }
 
 export class FlashTemporalAnalyzer {
@@ -117,6 +126,7 @@ export class FlashTemporalAnalyzer {
   private readonly screenThreshold: number;
   private readonly onsetFraction: number;
   private readonly afterSkip: number;
+  private readonly baselineCeiling: number;
 
   constructor(options: FlashTemporalOptions = {}) {
     this.sampleIntervalMs = options.sampleIntervalMs ?? 100;
@@ -126,6 +136,7 @@ export class FlashTemporalAnalyzer {
     this.screenThreshold = options.screenThreshold ?? 50;
     this.onsetFraction = options.onsetFraction ?? 0.8;
     this.afterSkip = options.afterSkip ?? 2;
+    this.baselineCeiling = options.baselineCeiling ?? 185;
   }
 
   /**
@@ -152,10 +163,13 @@ export class FlashTemporalAnalyzer {
     const peak = flashSamples.length ? Math.max(...flashSamples) : baselineMean;
     const riseTotal = peak - baselineMean;
 
-    // Flash never measurably reached the face → we can't judge.
+    // Can't judge when: no samples; the face is OVER-LIT (room light already
+    // near saturation → no headroom for the flash, so persistence is noise); or
+    // the flash produced too small a rise (didn't reach the face / maxed screen).
     if (
       flashSamples.length === 0 ||
       baselineSamples.length === 0 ||
+      baselineMean > this.baselineCeiling ||
       riseTotal < this.minRise
     ) {
       const persistenceInc = afterMean - baselineMean;

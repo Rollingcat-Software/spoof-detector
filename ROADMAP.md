@@ -29,11 +29,16 @@ which was content-dependent and unreliable.
   (persistence clustered ≤0.03), phone video-replay **caught** (persistence
   0.74–0.98). Threshold band 0.15–0.45 sits between with ~5× margin. Spatial
   reflection agrees independently (real refl ~100, phone ~5).
-- **Quality guards (abstain rather than guess):** `minRise` floor (tiny rise →
-  inconclusive, covers a maxed screen / bright room); `afterSkip=2` discards the
-  camera-latency tail; **abstain if exposure can't lock** (mobile front cameras);
-  the session **pauses** during a flash so washed-out frames don't spawn false
-  `face missing` / `static image` incidents.
+- **Quality guards (abstain rather than guess):** **baseline-saturation ceiling**
+  (face over-lit / near sensor saturation → no flash headroom → inconclusive;
+  fixes a bright-room false-positive where the tiny rise gave noisy persistence);
+  `minRise` floor (tiny rise → inconclusive, covers a maxed screen); `afterSkip=2`
+  discards the camera-latency tail; **abstain if exposure can't lock** (mobile
+  front cameras); the session **pauses** during a flash so washed-out frames don't
+  spawn false `face missing` / `static image` incidents.
+- **Lighting note:** the active flash check needs a **dim-to-moderate** room (so
+  the screen flash dominates); in a bright room it abstains (over-lit). The
+  passive verdict is unaffected and still wants normal light.
 - **Integration:** runs as a manual "💡 Light" probe AND an automatic session
   probe (post-warmup + 45 s cadence) that overrides the verdict to SPOOF on a
   clear screen detection. **Not** part of the passive SDK fusion (active/intrusive
