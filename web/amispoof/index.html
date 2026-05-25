@@ -705,6 +705,7 @@
 
       <div class="controls">
         <button id="start">Start</button>
+        <button id="beginSession" disabled style="display: none" title="Enabled once the readiness checks pass — the session won't start on an unusable capture.">Begin session</button>
         <button id="stop" class="ghost" disabled>Stop</button>
         <button id="reset" class="ghost" disabled>Reset</button>
         <button id="download" class="ghost" disabled title="Download the current session as JSON.">↓ Report</button>
@@ -721,6 +722,16 @@
           accept=".json,application/json"
           style="display: none"
         />
+      </div>
+
+      <!-- Pre-flight readiness gate — shown during preview; the session can't
+           begin until every check is green (abstain-first: fix conditions
+           before any verdict). -->
+      <div id="readinessPanel" style="display: none; margin-top: 10px">
+        <div id="readinessHeadline" class="gate-headline">
+          Getting ready — line up your face…
+        </div>
+        <div id="readinessList"></div>
       </div>
 
       <!-- Active-illumination (opt-in) result line + full-screen flash overlay.
@@ -936,7 +947,7 @@
       // older cached copy (no AMISPOOF_VERSION export at all), force a
       // one-shot hard reload so the user doesn't get stuck on a broken
       // bundle. Guarded by sessionStorage to avoid infinite loops.
-      window.AMISPOOF_HTML_VERSION = "2026-05-31-flash-temporal";
+      window.AMISPOOF_HTML_VERSION = "2026-05-31-readiness-gate";
       setTimeout(function () {
         if (
           window.AMISPOOF_VERSION !== window.AMISPOOF_HTML_VERSION &&
@@ -947,7 +958,7 @@
         }
       }, 4000);
     </script>
-    <script type="module" src="./app.js?v=2026-05-31-flash-temporal"></script>
+    <script type="module" src="./app.js?v=2026-05-31-readiness-gate"></script>
     <script src="https://app.fivucsas.com/launcher.js?v=2026-05-28" defer></script>
   </body>
 </html>
