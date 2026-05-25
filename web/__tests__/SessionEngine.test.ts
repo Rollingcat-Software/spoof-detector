@@ -104,6 +104,17 @@ function buildFrame(opts: FrameOpts): FrameAnalysis {
   };
 }
 
+/** A frame where face detection found nothing (camera dark / occluded). */
+function buildMissingFrame(frameId: number): FrameAnalysis {
+  return {
+    frame_id: frameId,
+    faces: [],
+    classifications: {},
+    frame_signals: {},
+    total_ms: 5,
+  };
+}
+
 /** Step `vi` fake clock forward by ms to mirror frame pacing. */
 function tick(ms: number): void {
   vi.advanceTimersByTime(ms);
@@ -301,6 +312,40 @@ describe("SessionEngine", () => {
     engine.reset();
     expect(prover.getScore().blink_points).toBe(0);
     expect(prover.getScore().total).toBe(0);
+  });
+
+  it("face-missing incident is throttled, not raised every frame (1,326-flood regression)", () => {
+    // Live 2026-05-25: a pitch-dark room (0 faces) at ~50 fps raised a "Face
+    // missing" incident EVERY frame — ~1,326 in 33s — instantly tripping the
+    // >=3-incident override and flagging a real visitor SPOOF. The throttle
+    // must cap it to roughly one incident per FACE_MISSING_ALERT_SEC.
+    const engine = new SessionEngine();
+    engine.start();
+    // ~6.6s of a clean, present, live face (past warmup + the 5s floor).
+    for (let i = 1; i <= 200; i++) {
+      tick(33);
+      engine.ingest(
+        buildFrame({
+          frameId: i,
+          pReal: 0.9,
+          blinks: Math.floor(i / 30),
+          miniFasNetScore: 95,
+          drift: (i % 10) * 0.5,
+        }),
+      );
+    }
+    // ~10s of NO face at ~50 fps — the dark-room scenario.
+    let fid = 201;
+    for (let i = 0; i < 500; i++, fid++) {
+      tick(20);
+      engine.ingest(buildMissingFrame(fid));
+    }
+    const v = engine.getVerdict();
+    const faceMissing = v.incidents.filter((i) =>
+      (i.description ?? "").startsWith("Face missing"),
+    );
+    expect(faceMissing.length).toBeGreaterThanOrEqual(1); // still alerts
+    expect(faceMissing.length).toBeLessThanOrEqual(5); // but throttled, not ~350
   });
 
   // ---- no-blink alert is fps-aware --------------------------------------
