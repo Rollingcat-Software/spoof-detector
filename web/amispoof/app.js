@@ -15,12 +15,13 @@ import {
   createSpoofDetector,
   runCasiaFasdMicroBench,
   FlashReflectionAnalyzer,
-} from "./lib/spoof-detector.js?v=2026-05-24-camera-restore";
+  FlashTemporalAnalyzer,
+} from "./lib/spoof-detector.js?v=2026-05-31-flash-temporal";
 
 // Version handshake — checked by the inline script in index.html.
 // If the user is running a stale cached app.js (no AMISPOOF_VERSION),
 // the HTML triggers a one-shot reload after 4 s.
-window.AMISPOOF_VERSION = "2026-05-31-uncertain-state";
+window.AMISPOOF_VERSION = "2026-05-31-flash-temporal";
 
 // SessionEngine.getVerdict() returns a confidence in [0, 0.88] when the
 // LivenessProver is wired (structural ceiling — see SessionEngine.ts
@@ -407,6 +408,47 @@ let lastFaceBbox = null;
 // camera controls + on-exit can restore the webcam to how it began (rather
 // than leaving it in a manual/locked state from experimentation).
 let cameraDefaults = null;
+
+// ===== Auto flash-response TEMPORAL probe (integrated video-replay detector) =====
+// The validated, content-INDEPENDENT screen detector. We lock exposure, flash
+// the screen white for ~1.5 s while sampling face-region brightness, then watch
+// what happens after the flash. A real 3D face reflects instantly and drops
+// straight back; a phone/replay's auto-brightness ramps up over ~1 s and stays
+// elevated (its sensor saw our flash and re-arranged its own backlight). Runs
+// automatically once past warmup, then on a cadence, and folds the result into
+// the verdict. See FlashTemporalAnalyzer for the physics + discriminators.
+const FLASH_PROBE_AT_FRAME = 90; // first probe ~a few seconds past warmup
+const FLASH_PROBE_INTERVAL_MS = 45000; // re-probe cadence (intrusive → infrequent)
+const FLASH_BASELINE_SAMPLES = 3; // pre-flash brightness samples
+const FLASH_DURING_SAMPLES = 15; // ~1.5 s of flash at 100 ms spacing
+const FLASH_AFTER_SAMPLES = 8; // post-flash drop-back samples
+const FLASH_SAMPLE_MS = 100; // spacing between brightness samples
+const flashTemporalAnalyzer = new FlashTemporalAnalyzer({ sampleIntervalMs: FLASH_SAMPLE_MS });
+const flashProbe = {
+  ran: false,
+  running: false,
+  lastAt: 0,
+  result: null, // FlashTemporalResult
+  reflection: null, // FlashReflectionResult (spatial, from the same flash)
+  screenSuspected: false,
+};
+
+// ===== WB-cast probe (dormant diagnostic) =====
+// Earlier attempt: lock white balance, measure the face colour cast. Found
+// CONTENT-DEPENDENT (a screen's cast varies with the replayed scene), so it no
+// longer drives the verdict — the flash-temporal probe above replaced it. Kept
+// callable from the console (runWbProbe()) for diagnostics only.
+const WB_PROBE_TEMP = 5000; // locked neutral white-balance temp (K)
+window.WB_CAST_THRESHOLD = 0.5;
+const wbProbe = {
+  ran: false,
+  running: false,
+  lastAt: 0,
+  faceRB: null,
+  faceGB: null,
+  cast: null,
+  screenSuspected: false,
+};
 
 const els = {
   videoWrap: $("videoWrap"),
@@ -889,6 +931,18 @@ async function loop() {
     requestAnimationFrame(loop);
     return;
   }
+  // === Flash-probe guard ===
+  // While an active flash probe runs (~3 s of locked exposure + a white
+  // screen flash), the face washes out / drops from detection. Feeding those
+  // frames to the SessionEngine spawns false "face missing" / "static image"
+  // incidents that latch the peak-sensitive verdict to SPOOF — a self-inflicted
+  // false reject. The probe samples the video itself (it doesn't need the
+  // detector), so we PAUSE the passive analysis for its duration and let the
+  // engine see a clean gap, exactly like the tab-hidden case above.
+  if (flashBusy) {
+    requestAnimationFrame(loop);
+    return;
+  }
   try {
     ctx.drawImage(els.video, 0, 0, canvas.width, canvas.height);
     const analysis = await detector.analyzeFrame(canvas);
@@ -896,6 +950,19 @@ async function loop() {
       analysis.faces && analysis.faces[0] ? analysis.faces[0].bbox : null;
     const v = detector.getVerdict();
     lastVerdict = v;
+
+    // Auto flash-response temporal probe — run a few seconds past warmup, then
+    // on a (longer, since it's intrusive) cadence, to catch a screen/video-
+    // replay swapped in mid-session. Fire-and-forget; it restores the camera.
+    if (running && !flashProbe.running && !flashBusy) {
+      const nowP = performance.now();
+      if (
+        (!flashProbe.ran && v.frames_analyzed >= FLASH_PROBE_AT_FRAME) ||
+        (flashProbe.ran && nowP - flashProbe.lastAt > FLASH_PROBE_INTERVAL_MS)
+      ) {
+        runFlashProbe(true); // auto=true: silent, no button toggling
+      }
+    }
     drawOverlay(analysis, v);
     updateUI(analysis, v);
   } catch (err) {
@@ -1023,6 +1090,21 @@ function updateUI(analysis, v) {
   els.verdict.classList.toggle("spoof", !warming && !v.is_live && !v.quality_uncertain);
   els.verdict.classList.toggle("uncertain", uncertain);
   els.verdict.classList.toggle("warming", warming);
+
+  // Integrated active probe: the flash-response temporal test. If the face-
+  // region brightness ramped up slowly and/or stayed elevated after the flash,
+  // a screen's auto-brightness re-arranged itself → video-replay. This is the
+  // one signal that bites on a still, well-lit video replay (where geometry,
+  // no-blink and the spatial reflection all fail). Calibrated live; tune via
+  // the FlashTemporalAnalyzer thresholds. Inconclusive ⇒ no override.
+  if (flashProbe.ran && flashProbe.result && flashProbe.result.isScreen) {
+    const t = flashProbe.result;
+    els.verdictText.textContent =
+      `SPOOF (video-replay — flash persistence ${t.persistenceNorm} · ` +
+      `screen ${t.screenScore} · onset ${t.onsetLagMs}ms)`;
+    els.verdict.classList.remove("live", "warming");
+    els.verdict.classList.add("spoof");
+  }
 
   els.state.textContent = warming ? "warming_up" : "analyzing";
   els.frames.textContent = String(v.frames_analyzed);
@@ -1179,6 +1261,15 @@ function reset() {
   lastTs = 0;
   lastProof = null;
   knownIncidentIds = new Set();
+  // Clear the active probes so a fresh session re-probes from scratch.
+  flashProbe.ran = false;
+  flashProbe.running = false;
+  flashProbe.result = null;
+  flashProbe.reflection = null;
+  flashProbe.screenSuspected = false;
+  wbProbe.ran = false;
+  wbProbe.screenSuspected = false;
+  wbProbe.cast = null;
   els.incidentList.innerHTML =
     '<div class="incident">No incidents yet.</div>';
   renderProofPanel(null);
@@ -1329,34 +1420,84 @@ function captureFaceCrop() {
   return cx.getImageData(bx0, by0, bw, bh);
 }
 
-async function runFlashChallenge() {
-  if (!running || !detector || flashBusy) return;
+/** Mean per-pixel brightness (max of R,G,B) over the current face crop, 0-255. */
+function brightnessOfImageData(img) {
+  if (!img) return null;
+  const d = img.data;
+  let s = 0;
+  let n = 0;
+  for (let i = 0; i < d.length; i += 4) {
+    const r = d[i];
+    const g = d[i + 1];
+    const b = d[i + 2];
+    s += r > g ? (r > b ? r : b) : g > b ? g : b;
+    n++;
+  }
+  return n ? s / n : null;
+}
+
+/** One face-region brightness sample from the live video. */
+function sampleBrightness() {
+  return brightnessOfImageData(captureFaceCrop());
+}
+
+// Choose a MID-RANGE exposureTime to lock and snap it onto the camera's
+// [min,max] step grid. Two camera gotchas drive this:
+//   • exposureMode:'manual' ALONE silently reverts to continuous, and an
+//     unaligned exposureTime is rejected ("out of range") — so we must pass
+//     a step-aligned value.
+//   • getSettings().exposureTime is UNRELIABLE in continuous mode (this
+//     webcam reports 10000 while caps cap at 1250). Locking to that clamps to
+//     MAX exposure → the sensor saturates under the flash and the webcam's
+//     auto-gain stays elevated afterwards, which mimics a screen's persistence
+//     (a real face then false-flags as a replay). A mid-range lock leaves
+//     headroom so a real face's brightness drops straight back after the flash.
+function alignedExposureTime(track) {
+  const caps = track.getCapabilities ? track.getCapabilities() : null;
+  if (!caps || !caps.exposureMode || !caps.exposureMode.includes("manual")) {
+    return null;
+  }
+  const et = caps.exposureTime;
+  if (!et || typeof et.min !== "number") return 156;
+  // ~45 % of the range: bright enough to read a reflection, far from saturation.
+  let exp = et.min + (et.max - et.min) * 0.45;
+  exp = Math.max(et.min, Math.min(et.max, exp));
+  exp = et.min + Math.round((exp - et.min) / et.step) * et.step;
+  return exp;
+}
+
+/**
+ * Active flash-response probe (opt-in). Locks exposure, flashes the screen
+ * white for ~1.5 s while sampling face-region brightness, then watches the
+ * drop-back. Scores BOTH:
+ *   • TEMPORAL (FlashTemporalAnalyzer) — onset lag + post-flash persistence.
+ *     A screen's auto-brightness ramps slowly and stays elevated; a real face
+ *     reflects instantly and drops straight back. The content-independent
+ *     video-replay detector — this drives the verdict override.
+ *   • SPATIAL (FlashReflectionAnalyzer) — diffuse region-spread of the lit
+ *     crop, reported as supporting evidence.
+ * `auto=true` runs it silently from the session loop (no button toggling).
+ * Always restores auto-exposure, even on error.
+ */
+async function runFlashProbe(auto = false) {
+  if (!running || !detector || flashBusy || flashProbe.running) return;
   flashBusy = true;
-  if (els.lightCheck) els.lightCheck.disabled = true;
+  flashProbe.running = true;
+  if (!auto && els.lightCheck) els.lightCheck.disabled = true;
   const track =
     els.video.srcObject && els.video.srcObject.getVideoTracks
       ? els.video.srcObject.getVideoTracks()[0]
       : null;
-  const COLORS = { white: "#ffffff", green: "#00ff00", blue: "#0000ff", red: "#ff0000" };
-  const color = "white"; // strongest brightness delta; channel colours can be added later
   let lockedExposure = false;
+  const setMsg = (m) => {
+    if (els.lightResult) els.lightResult.textContent = m;
+  };
   try {
-    els.lightResult.textContent = "💡 Light check: locking exposure…";
-    // 1. Lock exposure so the camera can't auto-compensate for the flash.
-    if (track && track.getCapabilities) {
-      const caps = track.getCapabilities();
-      if (caps.exposureMode && caps.exposureMode.includes("manual")) {
-        // exposureMode:'manual' ALONE silently reverts to continuous on some
-        // cameras; we must pass a valid exposureTime. An unaligned value is
-        // rejected ("out of range") since the camera quantises to a step, so
-        // clamp into [min,max] and snap to the step grid before applying.
-        const et = caps.exposureTime;
-        let exp =
-          track.getSettings().exposureTime || (et ? (et.min + et.max) / 2 : 156);
-        if (et) {
-          exp = Math.max(et.min, Math.min(et.max, exp));
-          exp = et.min + Math.round((exp - et.min) / et.step) * et.step;
-        }
+    setMsg("💡 Flash probe: locking exposure…");
+    // 1. Lock exposure so auto-exposure can't fight the flash.
+    if (track) {
+      const exp = alignedExposureTime(track);
+      if (exp != null) {
         await track.applyConstraints({
           advanced: [{ exposureMode: "manual", exposureTime: exp }],
         });
@@ -1364,15 +1505,40 @@ async function runFlashChallenge() {
         await flashSleep(350); // let the lock settle
       }
     }
-    // 2. Baseline crop (screen at rest).
-    const baseline = captureFaceCrop();
-    // 3. Flash the screen, then capture the lit crop near the end of the flash.
-    els.flashOverlay.style.background = COLORS[color] || "#ffffff";
+
+    // 2. Baseline: a crop (for the spatial test) + brightness samples (temporal).
+    const baselineCrop = captureFaceCrop();
+    const baselineSamples = [];
+    for (let i = 0; i < FLASH_BASELINE_SAMPLES; i++) {
+      const b = sampleBrightness();
+      if (b != null) baselineSamples.push(b);
+      await flashSleep(FLASH_SAMPLE_MS);
+    }
+
+    // 3. Flash white; sample brightness across the flash, grab a lit crop near
+    //    the end (settled) for the spatial reflection score.
+    setMsg("💡 Flash probe: flashing…");
+    els.flashOverlay.style.background = "#ffffff";
     els.flashOverlay.style.display = "block";
-    await flashSleep(170);
-    const flash = captureFaceCrop();
+    const flashSamples = [];
+    let peakCrop = null;
+    for (let i = 0; i < FLASH_DURING_SAMPLES; i++) {
+      const b = sampleBrightness();
+      if (b != null) flashSamples.push(b);
+      if (i === FLASH_DURING_SAMPLES - 2) peakCrop = captureFaceCrop();
+      await flashSleep(FLASH_SAMPLE_MS);
+    }
     els.flashOverlay.style.display = "none";
-    // 4. Restore auto-exposure.
+
+    // 4. After: brightness samples as the flash turns off (drop-back vs persist).
+    const afterSamples = [];
+    for (let i = 0; i < FLASH_AFTER_SAMPLES; i++) {
+      const b = sampleBrightness();
+      if (b != null) afterSamples.push(b);
+      await flashSleep(FLASH_SAMPLE_MS);
+    }
+
+    // 5. Restore auto-exposure.
     if (lockedExposure && track) {
       try {
         await track.applyConstraints({ advanced: [{ exposureMode: "continuous" }] });
@@ -1380,18 +1546,52 @@ async function runFlashChallenge() {
         /* best-effort restore */
       }
     }
-    if (!baseline || !flash) {
-      els.lightResult.textContent =
-        "💡 Light check: couldn't capture a face crop — centre your face and retry.";
-      return;
+
+    // 6. Score temporal (drives the verdict) + spatial (supporting evidence).
+    const temporal = flashTemporalAnalyzer.score(
+      baselineSamples,
+      flashSamples,
+      afterSamples,
+    );
+    // Quality constraint: without a genuine exposure lock the webcam's own
+    // auto-gain hunts after the flash and mimics a screen's persistence — so
+    // persistence can't be trusted and we must ABSTAIN rather than risk a false
+    // flag (this is what would otherwise bite cameras lacking manual exposure,
+    // e.g. most mobile front cameras). On PC/Brave the lock engages, so this
+    // never trips. Mirrors the FaceUsabilityGate principle: don't issue a
+    // confident verdict on input we couldn't control.
+    if (!lockedExposure) {
+      temporal.inconclusive = true;
+      temporal.isScreen = false;
     }
-    const r = flashAnalyzer.scoreResponse(baseline, flash, color);
-    const verdict = r.isLive
-      ? "LIVE (diffuse reflection)"
-      : "SPOOF (no reflection — screen/replay)";
-    els.lightResult.textContent =
-      `💡 Light check (${color}): ${verdict} · score ${r.score} · ` +
-      `colorShift ${r.colorShift} · targetGain ${r.targetGain} · spread ${r.regionSpread}`;
+    const reflection =
+      baselineCrop && peakCrop
+        ? flashAnalyzer.scoreResponse(baselineCrop, peakCrop, "white")
+        : null;
+    flashProbe.result = temporal;
+    flashProbe.reflection = reflection;
+    flashProbe.screenSuspected = temporal.isScreen;
+    flashProbe.lockFailed = !lockedExposure;
+    flashProbe.ran = true;
+    flashProbe.lastAt = performance.now();
+
+    // Debug hook for live calibration — exposes the raw brightness time-series
+    // so thresholds can be tuned against real vs screen captures.
+    window.__flashProbeRaw = { baselineSamples, flashSamples, afterSamples, temporal, lockedExposure };
+
+    const verdict = !lockedExposure
+      ? "INCONCLUSIVE — couldn't lock camera exposure (active probe needs a controllable camera)"
+      : temporal.inconclusive
+        ? "INCONCLUSIVE — flash didn't reach the face (dim the room / move closer)"
+        : temporal.isScreen
+          ? "SCREEN / VIDEO-REPLAY (auto-brightness ramp/persistence)"
+          : "LIVE (instant reflection, no persistence)";
+    setMsg(
+      `💡 Flash probe: ${verdict} · onset ${temporal.onsetLagMs}ms · ` +
+        `persistence ${temporal.persistenceNorm} · rise ${temporal.riseTotal} · ` +
+        `screen ${temporal.screenScore}` +
+        (reflection ? ` · refl ${reflection.score}` : ""),
+    );
   } catch (e) {
     els.flashOverlay.style.display = "none";
     if (lockedExposure && track) {
@@ -1401,17 +1601,19 @@ async function runFlashChallenge() {
         /* ignore */
       }
     }
-    els.lightResult.textContent =
-      "💡 Light check error: " + (e && e.message ? e.message : e);
+    setMsg("💡 Flash probe error: " + (e && e.message ? e.message : e));
   } finally {
     flashBusy = false;
-    if (els.lightCheck) els.lightCheck.disabled = false;
+    flashProbe.running = false;
+    if (!auto && els.lightCheck) els.lightCheck.disabled = false;
   }
 }
 
 if (els.lightCheck) {
-  els.lightCheck.addEventListener("click", runFlashChallenge);
+  els.lightCheck.addEventListener("click", () => runFlashProbe(false));
 }
+// Debug hook for live calibration — fire a probe on demand from the console.
+window.__runFlashProbe = () => runFlashProbe(false);
 
 // ===== Manual camera controls (operator experimentation) =====
 // Builds sliders/toggles from the live track's getCapabilities() so the
@@ -1592,6 +1794,98 @@ if (els.cameraToggle) {
 window.addEventListener("pagehide", () => {
   restoreCameraDefaults();
 });
+
+// Mean RGB over a fractional region of the live video frame.
+function probeRegionRGB(x0f, y0f, x1f, y1f) {
+  const vEl = els.video;
+  const w = vEl.videoWidth;
+  const h = vEl.videoHeight;
+  if (!w || !h) return null;
+  const c = document.createElement("canvas");
+  c.width = w;
+  c.height = h;
+  const cx = c.getContext("2d");
+  if (!cx) return null;
+  cx.drawImage(vEl, 0, 0, w, h);
+  const x0 = Math.max(0, Math.floor(x0f * w));
+  const y0 = Math.max(0, Math.floor(y0f * h));
+  const x1 = Math.min(w, Math.floor(x1f * w));
+  const y1 = Math.min(h, Math.floor(y1f * h));
+  if (x1 - x0 < 2 || y1 - y0 < 2) return null;
+  const d = cx.getImageData(x0, y0, x1 - x0, y1 - y0).data;
+  let R = 0,
+    G = 0,
+    B = 0,
+    n = 0;
+  for (let i = 0; i < d.length; i += 4) {
+    R += d[i];
+    G += d[i + 1];
+    B += d[i + 2];
+    n++;
+  }
+  return n ? { R: R / n, G: G / n, B: B / n } : null;
+}
+
+// Lock white balance to a fixed neutral temp, measure the face-region colour
+// cast, restore auto WB. A strong cast ⇒ a screen/replay (its own white point
+// isn't being corrected away). Always restores WB in `finally`.
+async function runWbProbe() {
+  if (!running || wbProbe.running) return;
+  const track = camTrack();
+  if (!track || !track.getCapabilities) return;
+  const caps = track.getCapabilities();
+  if (!(caps.whiteBalanceMode || []).includes("manual") || !caps.colorTemperature) {
+    return;
+  }
+  wbProbe.running = true;
+  try {
+    const t = Math.max(
+      caps.colorTemperature.min,
+      Math.min(caps.colorTemperature.max, WB_PROBE_TEMP),
+    );
+    await track.applyConstraints({
+      advanced: [{ whiteBalanceMode: "manual", colorTemperature: t }],
+    });
+    await flashSleep(450);
+    let reg = null;
+    if (lastFaceBbox && canvas) {
+      reg = probeRegionRGB(
+        lastFaceBbox.x1 / canvas.width,
+        lastFaceBbox.y1 / canvas.height,
+        lastFaceBbox.x2 / canvas.width,
+        lastFaceBbox.y2 / canvas.height,
+      );
+    }
+    if (!reg) reg = probeRegionRGB(0.3, 0.25, 0.7, 0.75);
+    if (reg) {
+      const rb = reg.R / Math.max(reg.B, 1);
+      const gb = reg.G / Math.max(reg.B, 1);
+      const cast = Math.abs(Math.log(rb)) + Math.abs(Math.log(gb));
+      wbProbe.faceRB = +rb.toFixed(2);
+      wbProbe.faceGB = +gb.toFixed(2);
+      wbProbe.cast = +cast.toFixed(3);
+      wbProbe.screenSuspected = cast >= (window.WB_CAST_THRESHOLD ?? 0.5);
+      wbProbe.ran = true;
+      wbProbe.lastAt = performance.now();
+      if (els.lightResult) {
+        els.lightResult.textContent =
+          `🔬 Screen probe (WB-cast): R/B ${wbProbe.faceRB} · cast ${wbProbe.cast} · ` +
+          (wbProbe.screenSuspected
+            ? "SCREEN / VIDEO-REPLAY suspected"
+            : "clear (real-scene colour)");
+      }
+    }
+  } catch (e) {
+    /* best-effort */
+  } finally {
+    try {
+      await track.applyConstraints({ advanced: [{ whiteBalanceMode: "continuous" }] });
+    } catch (e) {
+      /* ignore */
+    }
+    wbProbe.running = false;
+  }
+}
 
 // Phase D3 — wire the microphone toggle. The SDK requires audio to be
 // enabled at construction time (see createSpoofDetector opts). When the

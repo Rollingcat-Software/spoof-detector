@@ -936,7 +936,7 @@
       // older cached copy (no AMISPOOF_VERSION export at all), force a
       // one-shot hard reload so the user doesn't get stuck on a broken
       // bundle. Guarded by sessionStorage to avoid infinite loops.
-      window.AMISPOOF_HTML_VERSION = "2026-05-24-camera-restore";
+      window.AMISPOOF_HTML_VERSION = "2026-05-31-flash-temporal";
       setTimeout(function () {
         if (
           window.AMISPOOF_VERSION !== window.AMISPOOF_HTML_VERSION &&
@@ -947,7 +947,7 @@
         }
       }, 4000);
     </script>
-    <script type="module" src="./app.js?v=2026-05-31-uncertain-state"></script>
+    <script type="module" src="./app.js?v=2026-05-31-flash-temporal"></script>
     <script src="https://app.fivucsas.com/launcher.js?v=2026-05-28" defer></script>
   </body>
 </html>

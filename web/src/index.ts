@@ -84,6 +84,11 @@ export type {
   FlashReflectionResult,
   FlashReflectionOptions,
 } from "./infrastructure/analyzers/FlashReflectionAnalyzer";
+export { FlashTemporalAnalyzer } from "./infrastructure/analyzers/FlashTemporalAnalyzer";
+export type {
+  FlashTemporalResult,
+  FlashTemporalOptions,
+} from "./infrastructure/analyzers/FlashTemporalAnalyzer";
 export { BackgroundGridAnalyzer } from "./infrastructure/analyzers/BackgroundGridAnalyzer";
 export { TemporalAnalyzer } from "./infrastructure/analyzers/TemporalAnalyzer";
 export { LivenessProver } from "./application/LivenessProver";
