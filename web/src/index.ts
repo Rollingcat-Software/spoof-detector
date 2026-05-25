@@ -100,6 +100,18 @@ export type {
   ReadinessResult,
   ReadinessOptions,
 } from "./application/ReadinessGate";
+export {
+  IdentityMatcher,
+  l2normalize,
+  cosine,
+  meanVector,
+} from "./identity/IdentityMatcher";
+export type {
+  FaceEmbedder,
+  IdentityState,
+  IdentityMatchResult,
+  IdentityMatcherOptions,
+} from "./identity/IdentityMatcher";
 // MoireAnalyzer / TextureAnalyzer / ScreenReplayAnalyzer are intentionally
 // NOT re-exported eagerly here (Phase 5E-1) so Vite/Rollup emits each as
 // its own lazy chunk under dist/. Callers that need the constructors can
