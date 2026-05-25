@@ -16,12 +16,13 @@ import {
   runCasiaFasdMicroBench,
   FlashReflectionAnalyzer,
   FlashTemporalAnalyzer,
-} from "./lib/spoof-detector.js?v=2026-05-25-flash-temporal";
+  ReadinessGate,
+} from "./lib/spoof-detector.js?v=2026-05-25-readiness-gate";
 
 // Version handshake — checked by the inline script in index.html.
 // If the user is running a stale cached app.js (no AMISPOOF_VERSION),
 // the HTML triggers a one-shot reload after 4 s.
-window.AMISPOOF_VERSION = "2026-05-25-flash-temporal";
+window.AMISPOOF_VERSION = "2026-05-25-readiness-gate";
 
 // SessionEngine.getVerdict() returns a confidence in [0, 0.88] when the
 // LivenessProver is wired (structural ceiling — see SessionEngine.ts
@@ -447,11 +448,26 @@ const wbProbe = {
   screenSuspected: false,
 };
 
+// ===== Pre-flight readiness gate (blocks session start) =====
+// After the camera turns on we enter PREVIEW: the loop runs detection and
+// evaluates capture readiness each frame, but the session verdict is NOT shown
+// until the user clicks "Begin session", which is enabled only after the checks
+// stay green for READINESS_STABLE_FRAMES consecutive frames. Abstain-first: a
+// dark/over-lit/occluded/no-face capture yields "fix this", never a verdict.
+const readinessGate = new ReadinessGate();
+const READINESS_STABLE_FRAMES = 8;
+let previewMode = false;
+let readinessStreak = 0;
+
 const els = {
   videoWrap: $("videoWrap"),
   video: $("video"),
   overlay: $("overlay"),
   start: $("start"),
+  beginSession: $("beginSession"),
+  readinessPanel: $("readinessPanel"),
+  readinessHeadline: $("readinessHeadline"),
+  readinessList: $("readinessList"),
   stop: $("stop"),
   reset: $("reset"),
   download: $("download"),
@@ -851,13 +867,20 @@ async function start() {
 
     await ensureDetector();
 
+    // Enter PREVIEW (readiness check) — the session does NOT start until the
+    // readiness checks pass and the user clicks "Begin session".
     els.start.style.display = "none";
+    if (els.beginSession) {
+      els.beginSession.style.display = "";
+      els.beginSession.disabled = true;
+    }
+    if (els.readinessPanel) els.readinessPanel.style.display = "block";
     els.stop.disabled = false;
-    els.reset.disabled = false;
-    els.download.disabled = false;
     els.videoWrap.dataset.state = "running";
-    setStatus("running", "live");
+    setStatus("readiness check…", "live");
 
+    previewMode = true;
+    readinessStreak = 0;
     running = true;
     loop();
 
@@ -906,6 +929,14 @@ async function stop() {
   els.start.style.display = "";
   els.start.disabled = false;
   els.start.textContent = "Start";
+  // Clear any preview / readiness state so a fresh Start re-runs the check.
+  previewMode = false;
+  readinessStreak = 0;
+  if (els.beginSession) {
+    els.beginSession.style.display = "none";
+    els.beginSession.disabled = true;
+  }
+  if (els.readinessPanel) els.readinessPanel.style.display = "none";
   els.videoWrap.dataset.state = "idle";
   setStatus("stopped", "live");
 }
@@ -948,6 +979,18 @@ async function loop() {
     const v = detector.getVerdict();
     lastVerdict = v;
 
+    // === Pre-flight readiness (preview) ===
+    // Before the session begins we only evaluate capture readiness and gate
+    // the "Begin session" button — no verdict, no active flash probe. The
+    // engine still ingests frames (cheap) but that accumulation is discarded by
+    // detector.reset() when the session actually begins.
+    if (previewMode) {
+      drawOverlay(analysis, v);
+      evaluateReadiness(analysis);
+      if (running) requestAnimationFrame(loop);
+      return;
+    }
+
     // Auto flash-response temporal probe — run a few seconds past warmup, then
     // on a (longer, since it's intrusive) cadence, to catch a screen/video-
     // replay swapped in mid-session. Fire-and-forget; it restores the camera.
@@ -967,6 +1010,76 @@ async function loop() {
     setStatus(`frame error: ${err.message || err}`, "error");
   }
   if (running) requestAnimationFrame(loop);
+}
+
+// ===== Pre-flight readiness evaluation (preview phase) =====
+// Maps the per-frame analysis onto the SDK ReadinessGate, renders the live
+// checklist, and enables "Begin session" only after the checks stay green for
+// READINESS_STABLE_FRAMES consecutive frames (debounce against per-frame jitter).
+function evaluateReadiness(analysis) {
+  const faces = analysis.faces || [];
+  const bbox = faces[0] ? faces[0].bbox : null;
+  const frameArea = (canvas.width || 1) * (canvas.height || 1);
+  const faceAreaFraction = bbox && bbox.area ? bbox.area / frameArea : 0;
+  const gate = analysis.gate_result || null;
+  const result = readinessGate.evaluate({
+    faceCount: faces.length,
+    faceAreaFraction,
+    faceBrightness: gate ? gate.globalFaceBrightness : 0,
+    occluded: gate ? !!gate.occluded : false,
+    occludedRegions: gate ? gate.occludedRegions || [] : [],
+    cameraResponsive: !!(els.video && els.video.readyState >= 2 && !els.video.paused),
+  });
+  renderReadiness(result);
+
+  if (result.ready) readinessStreak += 1;
+  else readinessStreak = 0;
+  const stable = readinessStreak >= READINESS_STABLE_FRAMES;
+  if (els.beginSession) els.beginSession.disabled = !stable;
+  if (els.readinessHeadline) {
+    els.readinessHeadline.textContent = stable
+      ? "Ready — click “Begin session”"
+      : result.ready
+        ? "Holding steady…"
+        : "Getting ready — fix the items below";
+    els.readinessHeadline.className = "gate-headline " + (stable ? "ok" : "warn");
+  }
+  if (els.verdictText) els.verdictText.textContent = "Readiness check — see checklist";
+}
+
+function renderReadiness(result) {
+  if (!els.readinessList) return;
+  els.readinessList.innerHTML = result.checks
+    .map((c) => {
+      const color = c.pass ? "var(--green)" : "var(--amber)";
+      const mark = c.pass ? "✓" : "•";
+      return (
+        `<div class="row"><span>${mark} ${c.label}</span>` +
+        `<span style="color:${color};text-align:right">${c.message}</span></div>`
+      );
+    })
+    .join("");
+}
+
+/** Leave PREVIEW and start the real session (discarding preview accumulation). */
+function beginSession() {
+  if (!previewMode || !detector) return;
+  previewMode = false;
+  readinessStreak = 0;
+  detector.reset(); // discard frames accumulated during readiness preview
+  if (els.beginSession) {
+    els.beginSession.disabled = true;
+    els.beginSession.style.display = "none";
+  }
+  if (els.readinessPanel) els.readinessPanel.style.display = "none";
+  els.reset.disabled = false;
+  els.download.disabled = false;
+  els.videoWrap.dataset.state = "running";
+  setStatus("running", "live");
+}
+
+if (els.beginSession) {
+  els.beginSession.addEventListener("click", beginSession);
 }
 
 // Visibility change handler — pauses/resumes the run loop and, on
