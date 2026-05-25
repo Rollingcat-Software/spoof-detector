@@ -171,13 +171,42 @@ The pipeline *is* the redesign — it fixes the "boring dashboard" critique:
 - **Model download size** (~4–5 MB identity model) on first load — lazy-load it
   only when enrollment starts.
 
-## 11. Open decisions for you
+## 11. Decisions (locked 2026-05-25)
 
-1. **Identity model:** ONNX MobileFaceNet/SFace (recommended) vs face-api.js?
-2. **Template persistence:** in-session ephemeral only (recommended) vs. optional
-   `localStorage` "remember on this device" — **no server either way**.
-3. **Match strictness** `τ` + consecutive-fail count (false-reject vs. miss
-   trade-off) — calibrate live like we did the flash probe.
-4. **Keep the Tester dashboard** as a dev mode? (recommend: yes.)
-5. **Monitoring scope:** which incidents in step 4 — identity drift, 2nd person,
-   no face, look-away, phone-in-frame (hand/object detector)?
+1. **Abstain-heavy verdicts.** Public defaults favour `INCONCLUSIVE — "fix
+   conditions"` over risking a false flag on a real visitor. Each axis is
+   three-state: LIVE / SPOOF (or IMPERSONATION) / INCONCLUSIVE. The readiness
+   gate turns most bad captures into "fix your lighting/position" *before* a
+   verdict is issued.
+2. **Identity model:** ONNX MobileFaceNet/SFace via the existing onnxruntime-web
+   stack (no second ML runtime). Lazy-loaded only when enrollment starts.
+3. **Template persistence:** **ephemeral by default**; explicit opt-in "remember
+   on this device" (`localStorage`). Never an upload, never a server. (Distinct
+   from model caching — see §12.)
+4. **Identity demo scenario:** "enroll your face → then test a swap (a photo, or
+   another person sits down) → watch it flag IMPERSONATION." Add an identity
+   chip to the "Try a spoof attack" scenarios.
+5. **Mobile:** let it run; abstain where the device/browser can't support a
+   signal (e.g. no exposure lock → flash abstains). No hard block, no special
+   degrade path.
+6. **Tester dashboard kept** as a dev/research mode; the per-analyzer
+   transparency stays but is **progressively disclosed** behind an
+   "Advanced / Why?" panel (collapsed by default for first-time visitors).
+7. **Match strictness `τ`** + consecutive-fail count: ship a conservative
+   default, abstain on uncertainty; tune from captured pilots (can't live-tune
+   per visitor on a public demo).
+
+## 12. Model caching & offline (perf)
+
+The downloaded ML assets are **not** personal data and **should** be cached so
+returning visitors don't re-pay several MB:
+
+- **Service worker** caches the same-origin models (`models/*.onnx`,
+  `*.task`, the identity model) + the lib bundle → instant repeat loads and
+  **offline** operation once warm.
+- jsdelivr peer deps (onnxruntime-web, mediapipe) already ship
+  `Cache-Control: immutable`; the SW can additionally pre-cache them.
+- A real **loading/progress UI** during first download (fixes the "loading…"
+  confusion that looks like a stall).
+- Cache-busting stays keyed to `AMISPOOF_VERSION` so a new release invalidates
+  cleanly (same handshake we use today).
