@@ -1570,10 +1570,13 @@ async function runFlashProbe(auto = false) {
     // so thresholds can be tuned against real vs screen captures.
     window.__flashProbeRaw = { baselineSamples, flashSamples, afterSamples, temporal, lockedExposure };
 
+    const overLit = temporal.baselineMean > 185;
     const verdict = !lockedExposure
       ? "INCONCLUSIVE — couldn't lock camera exposure (active probe needs a controllable camera)"
       : temporal.inconclusive
-        ? "INCONCLUSIVE — flash didn't reach the face (dim the room / move closer)"
+        ? overLit
+          ? "INCONCLUSIVE — face is over-lit; the flash has no headroom (dim the room for the light check)"
+          : "INCONCLUSIVE — flash didn't reach the face (dim the room / move closer)"
         : temporal.isScreen
           ? "SCREEN / VIDEO-REPLAY (auto-brightness ramp/persistence)"
           : "LIVE (instant reflection, no persistence)";

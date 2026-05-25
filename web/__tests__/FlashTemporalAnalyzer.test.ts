@@ -91,6 +91,22 @@ describe("FlashTemporalAnalyzer", () => {
     expect(r.screenScore).toBeLessThan(50);
   });
 
+  it("over-lit face (bright room, baseline near saturation) → inconclusive", () => {
+    // Live 2026-05-25: a real face in a brightly-lit room sat at baseline ≈210
+    // (near the 255 ceiling). With no headroom the flash's tiny rise produced a
+    // noise-dominated persistence that previously false-flagged as a screen
+    // (persN 0.33). The baseline-saturation ceiling must abstain instead.
+    const a = new FlashTemporalAnalyzer({ sampleIntervalMs: 100 });
+    const r = a.score(
+      [209, 211, 210],
+      [216, 220, 225, 227, 226, 227, 226, 225, 227, 226, 225, 226, 227, 226, 225],
+      [225, 222, 214, 211, 213, 210, 212, 211],
+    );
+    expect(r.baselineMean).toBeGreaterThan(185);
+    expect(r.inconclusive).toBe(true);
+    expect(r.isScreen).toBe(false);
+  });
+
   it("maxed screen / rapid re-probe (tiny rise) → inconclusive, not a silent miss", () => {
     // A screen whose backlight already latched to max shows almost no further
     // rise on a re-probe; the normalised persistence then divides by noise and
