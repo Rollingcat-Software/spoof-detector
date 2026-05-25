@@ -38,13 +38,18 @@ enrolled person** trips only PAD. You need both layers for exam integrity.
 
 ## 3. Goals / non-goals (this iteration)
 
-**Goals:** PC-first (Brave/Chrome desktop); fully client-side (no upload — keep
-amispoof's "no server" promise); guided step flow; readiness gate that **blocks
-Start**; continuous identity + liveness monitoring; downloadable evidence report.
+**Goals:** a **public research demo anyone can open and test** — no account, no
+install, **100% client-side, nothing ever uploaded**; PC-first (Brave/Chrome
+desktop); guided step flow; readiness gate that **blocks Start**; continuous
+identity + liveness monitoring; downloadable evidence report. The pipeline is
+the interactive way to *showcase the spoof/liveness/identity research*, not a
+production exam system.
 
-**Non-goals (now):** mobile (bonus later); server round-trips; replacing the
-platform's server-side Facenet512/pgvector recognition; high-assurance 1:1
-identity (that stays server-side — see §6 limits).
+**Non-goals (now):** **any server or platform coupling** — amispoof stays a
+standalone, account-less, on-device research playground; it does **not** call or
+depend on the FIVUCSAS platform / biometric-processor. High-assurance 1:1
+identity *authentication* is out of scope (this demonstrates identity
+*continuity* as research, not auth). Mobile is a bonus, not a target.
 
 ## 4. The pipeline (step-by-step flow)
 
@@ -93,8 +98,10 @@ quality guarantee prevent flicker false-rejects from a head-turn.
 - Enrollment is explicit & consented; a clear "your face is processed on this
   device and never uploaded" notice (true — no server call).
 - Template clearable; ephemeral by default.
-- Biometric data → KVKK/GDPR applies; mirror the platform's existing My-Profile
-  consent/erase model. Never persist face *images*, only the embedding vector.
+- Biometric data → handle responsibly even on-device: a clear consent notice,
+  one-click clear, ephemeral by default. Never persist face *images* — only the
+  embedding vector, and only if the visitor opts into "remember on this device."
+  No account, no server, so nothing to erase remotely.
 
 ## 6. Readiness gate spec (step 1 detail)
 
@@ -150,10 +157,10 @@ The pipeline *is* the redesign — it fixes the "boring dashboard" critique:
 
 ## 10. Honest limits / risks
 
-- **Client-side recognition < server Facenet512.** Good for *continuity*
-  (same-person drift within a session); not a high-assurance 1:1 identity
-  proof — that stays server-side. We'll frame it as "session identity
-  continuity," not "identity verification."
+- **Research-grade identity, not authentication.** A small client-side model is
+  good for *continuity* (same-person drift within a session); it is explicitly
+  **not** a high-assurance 1:1 identity proof, and amispoof makes no auth claim.
+  Framed as "session identity continuity," a research demonstration only.
 - **Identity match degrades with poor capture** — which is exactly why it sits
   *behind* the readiness gate.
 - **Lighting tension is real:** passive detectors want light; the active flash
@@ -167,8 +174,8 @@ The pipeline *is* the redesign — it fixes the "boring dashboard" critique:
 ## 11. Open decisions for you
 
 1. **Identity model:** ONNX MobileFaceNet/SFace (recommended) vs face-api.js?
-2. **Template persistence:** in-session only / `localStorage` opt-in / tie to
-   the platform's server enrollment?
+2. **Template persistence:** in-session ephemeral only (recommended) vs. optional
+   `localStorage` "remember on this device" — **no server either way**.
 3. **Match strictness** `τ` + consecutive-fail count (false-reject vs. miss
    trade-off) — calibrate live like we did the flash probe.
 4. **Keep the Tester dashboard** as a dev mode? (recommend: yes.)
