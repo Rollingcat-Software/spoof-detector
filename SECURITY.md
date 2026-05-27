@@ -34,4 +34,4 @@ Out of scope:
 
 ## Safe-Harbor
 
-Good-faith research that respects user privacy, doesn't degrade service, and follows this disclosure process is welcomed. We will not pursue legal action against researchers who follow this policy.
+Good-faith research that respects user privacy, doesn't degrade service, and follows this disclosure process is welcome. We will not pursue legal action against researchers who follow this policy.
