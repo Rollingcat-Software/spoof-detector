@@ -1,6 +1,6 @@
 # Spoof Detector
 
-[![Tests](https://img.shields.io/badge/tests-114%20passing-brightgreen)](#testing)
+[![Tests](https://img.shields.io/badge/tests-142%20passing-brightgreen)](#testing)
 [![Version](https://img.shields.io/badge/version-0.2.0-blue)](pyproject.toml)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![ISO 30107-3](https://img.shields.io/badge/ISO%2030107--3-Grade%20C-yellow)](#iso-30107-3-evaluation-2026-05-02)
@@ -9,7 +9,7 @@ Multi-signal face anti-spoofing engine that produces **session-level verdicts** 
 
 Originally extracted from the [FIVUCSAS](https://github.com/Rollingcat-Software/FIVUCSAS) biometric-authentication platform's R&D track and now maintained as a standalone repository so it can be reused, evaluated and cited independently.
 
-> **Status (2026-05-09):** runnable working example. `pytest` is green (114/114). MiniFASNet ONNX, MediaPipe FaceLandmarker, and the calibrated 7-class fuser are wired end-to-end. v0.2.0 adds the **gates** (`src/gates/`), **fusion** (`src/fusion/`), and **pipeline assembler** (`src/pipeline/`) sub-packages so a downstream service can consume just the parts it needs without bringing up the full session engine.
+> **Status (2026-05-28):** runnable working example. `pytest` is green (142/142). MiniFASNet ONNX, MediaPipe FaceLandmarker, and the calibrated 7-class fuser are wired end-to-end. v0.2.0 adds the **gates** (`src/gates/`), **fusion** (`src/fusion/`), and **pipeline assembler** (`src/pipeline/`) sub-packages so a downstream service can consume just the parts it needs without bringing up the full session engine.
 
 ## Research consolidation (2026-05-09)
 
@@ -174,7 +174,7 @@ spoof-detector/
       fusion/                       Calibrated 7-class probability fuser
       logging/                      JSONL session logger
     presentation/                   OpenCV HUD, threaded camera, app loop
-  tests/                            68 unit tests (analyzers, domain, session)
+  tests/                            142 unit tests (analyzers, domain, session)
   tools/
     diagnose.py                     Live diagnostic dashboard / single-image mode
     benchmark.py                    Per-analyzer timing + accuracy
@@ -191,7 +191,7 @@ spoof-detector/
 ## Testing
 
 ```bash
-# Unit tests — 68 tests, ~3 s, no camera, no model download
+# Unit tests — 142 tests, ~3 s, no camera, no model download
 pytest tests/ -v
 
 # Per-analyzer benchmark
