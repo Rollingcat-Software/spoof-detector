@@ -39,16 +39,52 @@ from tests.benchmark.runner import Sample
 _ID_RE = re.compile(r"_id(\d+)_", re.IGNORECASE)
 _IMAGE_EXTS = {".png", ".jpg", ".jpeg"}
 
+# Paper-wide subsampling seed (matches the bootstrap / resample convention).
+_DEFAULT_SEED = 42
+
+
+def _make_sample(path: Path, is_bf: bool) -> Sample:
+    m = _ID_RE.search(path.name)
+    subject_id = int(m.group(1)) if m else None
+    device_chain = path.stem.split("_id")[0] if "_id" in path.stem else None
+    return Sample(
+        sample_id=path.stem,
+        is_bonafide=is_bf,
+        attack_type=None if is_bf else "unknown",
+        payload=str(path),
+        metadata={
+            "device_chain": device_chain,
+            "subject_id": subject_id,
+            "source": "kainyyy_hf",
+        },
+    )
+
 
 def iter_kainyyy_largecrowd(
     root: Path | str,
     split: Literal["all", "live", "spoof"] = "all",
+    *,
+    interleave: bool = True,
+    seed: int = _DEFAULT_SEED,
 ) -> Iterator[Sample]:
     """Yield largeCrowd-spoof samples.
 
     Args:
         root: path to the dataset root containing `largeCrowd-spoof/`.
         split: "live", "spoof", or "all".
+        interleave: when ``split="all"``, deterministically shuffle the
+            combined live+spoof stream (seeded by ``seed``) so a downstream
+            ``--limit N`` truncation yields BOTH classes. Without this the
+            adapter emitted all 720 ``live/`` stills before any of the 2 891
+            ``spoof/`` stills, so any capped run (e.g. the n200 protocol)
+            saw only bona-fide samples — producing the degenerate
+            ``n_attack=0, AUC=0.0`` results stored before this fix. The
+            label mapping itself was already correct (``live/``→bona-fide,
+            ``spoof/``→attack); the defect was purely emission order under a
+            sample cap. Set ``interleave=False`` to recover the legacy
+            folder-ordered stream (e.g. for a full uncapped run).
+        seed: RNG seed for the deterministic interleave (default 42, the
+            paper-wide subsampling seed).
 
     Each yielded Sample has:
         sample_id     = filename stem
@@ -67,6 +103,7 @@ def iter_kainyyy_largecrowd(
     if split in ("all", "spoof"):
         subdirs.append(("spoof", False))
 
+    paths: list[tuple[Path, bool]] = []
     for subdir, is_bf in subdirs:
         folder = root / subdir
         if not folder.exists():
@@ -74,17 +111,14 @@ def iter_kainyyy_largecrowd(
         for path in sorted(folder.iterdir()):
             if path.suffix.lower() not in _IMAGE_EXTS:
                 continue
-            m = _ID_RE.search(path.name)
-            subject_id = int(m.group(1)) if m else None
-            device_chain = path.stem.split("_id")[0] if "_id" in path.stem else None
-            yield Sample(
-                sample_id=path.stem,
-                is_bonafide=is_bf,
-                attack_type=None if is_bf else "unknown",
-                payload=str(path),
-                metadata={
-                    "device_chain": device_chain,
-                    "subject_id": subject_id,
-                    "source": "kainyyy_hf",
-                },
-            )
+            paths.append((path, is_bf))
+
+    # Deterministically shuffle so a downstream --limit captures both classes.
+    # Only meaningful for split="all"; single-class splits are left in
+    # filename order for traceability.
+    if interleave and split == "all":
+        import random
+        random.Random(seed).shuffle(paths)
+
+    for path, is_bf in paths:
+        yield _make_sample(path, is_bf)

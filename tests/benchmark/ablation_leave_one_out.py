@@ -79,21 +79,21 @@ def _full_pipeline_with_per_analyzer_capture(samples, max_frames: int = 30) -> l
     return out
 
 
-def refuse_with_zeroed_weight(per_sample: list[dict], zeroed: str | None = None) -> list[float]:
-    """Re-compute P(REAL) per sample after setting a single analyzer's weight to 0.
+def _refuse_with_weights(per_sample: list[dict], weights: dict[str, float]) -> list[float]:
+    """Re-compute P(REAL) per sample under an arbitrary analyzer-weight map.
 
-    Replicates the multi_class_fuser logic at the per-frame-merged level
-    (a small approximation; the proper way is to re-run the full fuser
-    per frame, but this is faster and the differences are tiny because
-    the fuser is linear in analyzer scores).
+    Replicates the multi_class_fuser evidence routing at the per-frame-merged
+    level (a small approximation; the proper way is to re-run the full fuser
+    per frame, but this is faster and the differences are tiny because the
+    fuser is linear in analyzer scores). This is the shared kernel behind both
+    the leave-one-out ablation (§8.2) and the §8.3 weight-configuration study.
+
+    Analyzers not present in `weights` are treated as weight 0 (dropped),
+    matching the original leave-one-out behaviour where unknown names defaulted
+    to 0.0 in the re-fusion path.
     """
-    from src.infrastructure.fusion.multi_class_fuser import DEFAULT_ANALYZER_WEIGHTS
     from src.domain.models import SpoofCategory
     from src.domain.taxonomy import SPOOF_SIGNAL_MAP
-
-    weights = dict(DEFAULT_ANALYZER_WEIGHTS)
-    if zeroed:
-        weights[zeroed] = 0.0
 
     p_real_list: list[float] = []
     for s in per_sample:
@@ -121,42 +121,63 @@ def refuse_with_zeroed_weight(per_sample: list[dict], zeroed: str | None = None)
     return p_real_list
 
 
-def main(argv: list[str] | None = None) -> int:
-    p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--dataset", required=True)
-    p.add_argument("--root", required=False)
-    p.add_argument("--protocol", default="ablation_loo")
-    p.add_argument("--limit", type=int, default=None)
-    p.add_argument("--out", default="paper/figures")
-    p.add_argument("-v", "--verbose", action="count", default=0)
-    args = p.parse_args(argv)
-    logging.basicConfig(level=logging.WARNING - 10 * args.verbose)
+def refuse_with_zeroed_weight(per_sample: list[dict], zeroed: str | None = None) -> list[float]:
+    """Re-compute P(REAL) per sample after setting a single analyzer's weight to 0.
 
-    # Reuse the runner's adapter loader
-    from tests.benchmark.run import _load_adapter
-    samples = _load_adapter(args.dataset, args.root, args.protocol)
-    if args.limit:
-        from itertools import islice
-        samples = list(islice(samples, args.limit))
+    Thin wrapper over :func:`_refuse_with_weights` that starts from the
+    calibrated ``DEFAULT_ANALYZER_WEIGHTS`` and optionally zeroes one named
+    analyzer. Preserved verbatim in behaviour for the §8.2 leave-one-out path.
+    """
+    from src.infrastructure.fusion.multi_class_fuser import DEFAULT_ANALYZER_WEIGHTS
 
-    logger.info("Running full hybrid pipeline once with per-analyzer capture...")
-    per_sample = _full_pipeline_with_per_analyzer_capture(samples)
-    logger.info("Captured %d samples with %d analyzer outputs each",
-                len(per_sample),
-                len(per_sample[0]["analyzer_scores"]) if per_sample else 0)
+    weights = dict(DEFAULT_ANALYZER_WEIGHTS)
+    if zeroed:
+        weights[zeroed] = 0.0
+    return _refuse_with_weights(per_sample, weights)
 
-    # Build labels
-    is_bonafide = [s["is_bonafide"] for s in per_sample]
-    attack_types = [s["attack_type"] or "unknown" for s in per_sample]
 
-    # Compute baseline (no analyzer zeroed)
+def build_weight_map(config: str, analyzer_names: list[str]) -> dict[str, float]:
+    """Construct an analyzer-weight map for a named §8.3 configuration.
+
+    Configs:
+        ``calibrated``         — the paper-default ``DEFAULT_ANALYZER_WEIGHTS``.
+        ``uniform``            — every analyzer at 1.0.
+        ``partial``            — uniform 1.0 except texture=moire=0.1
+                                 (isolates the §5.3 anti-correlation reweight).
+        ``minifasnet_dominant``— minifasnet=5.0, every other analyzer=0.1.
+
+    `analyzer_names` is the set of analyzers actually captured in the run, so
+    the uniform / partial / dominant maps cover exactly the reachable bank
+    (multi-frame analyzers that do not fire on the single-image protocol are
+    still listed because they appear in the capture with a neutral score).
+    """
+    from src.infrastructure.fusion.multi_class_fuser import DEFAULT_ANALYZER_WEIGHTS
+
+    if config == "calibrated":
+        return dict(DEFAULT_ANALYZER_WEIGHTS)
+    if config == "uniform":
+        return {name: 1.0 for name in analyzer_names}
+    if config == "partial":
+        return {name: (0.1 if name in ("texture", "moire") else 1.0)
+                for name in analyzer_names}
+    if config == "minifasnet_dominant":
+        return {name: (5.0 if name == "minifasnet" else 0.1)
+                for name in analyzer_names}
+    raise ValueError(f"unknown weight config: {config!r}")
+
+
+WEIGHT_CONFIGS = ("calibrated", "uniform", "partial", "minifasnet_dominant")
+
+
+def _run_leave_one_out(per_sample, is_bonafide, attack_types, args) -> int:
+    """§8.2 path — set each analyzer's weight to 0 and re-evaluate."""
     from src.metrics import classification_report
+
     baseline_scores = refuse_with_zeroed_weight(per_sample, zeroed=None)
     baseline = classification_report(baseline_scores, is_bonafide, attack_types)
     print(f"=== Baseline (full hybrid) ===")
     print(f"  ACER = {baseline['acer']*100:5.2f}%  AUC = {baseline['auc']:.4f}  N={len(per_sample)}")
 
-    # Identify all analyzer names
     all_analyzers = sorted(per_sample[0]["analyzer_scores"].keys())
     print(f"\n=== Leave-one-out (each row = analyzer removed) ===")
     print(f"{'analyzer':<22s} {'ACER':>8s} {'Δ-ACER':>8s} {'AUC':>8s} {'Δ-AUC':>9s}")
@@ -190,6 +211,115 @@ def main(argv: list[str] | None = None) -> int:
     }, indent=2, default=str))
     print(f"\nwrote {out_file}")
     return 0
+
+
+def _run_weight_configs(per_sample, is_bonafide, attack_types, args) -> int:
+    """§8.3 path — re-fuse the SAME per-sample capture under each weight config.
+
+    All configs (calibrated default + the three alternative maps) are derived
+    from one capture so the AUC/ACER/EER deltas between them are internally
+    consistent (no cross-environment mixing). One JSON per config is written
+    to <out>/weightcfg_<dataset>_<protocol>_<config>.json, each embedding the
+    full weight map, the per-sample analyzer scores, and the per-sample fused
+    P(REAL), so every published §8.3 number is recomputable offline.
+    """
+    from src.metrics import classification_report
+
+    configs = list(args.weights) if args.weights else list(WEIGHT_CONFIGS)
+    analyzer_names = sorted(per_sample[0]["analyzer_scores"].keys())
+
+    print(f"=== §8.3 weight-configuration study  (N={len(per_sample)}) ===")
+    print(f"{'config':<22s} {'ACER':>8s} {'EER':>8s} {'AUC':>8s}")
+    print("-" * 50)
+
+    out_dir = Path(args.out)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    results: dict[str, dict] = {}
+    for cfg in configs:
+        weights = build_weight_map(cfg, analyzer_names)
+        fused = _refuse_with_weights(per_sample, weights)
+        report = classification_report(fused, is_bonafide, attack_types)
+        results[cfg] = report
+        print(f"{cfg:<22s} {report['acer']*100:7.2f}% {report['eer']*100:7.2f}% {report['auc']:7.4f}")
+
+        out_file = out_dir / f"weightcfg_{args.dataset}_{args.protocol}_{cfg}.json"
+        out_file.write_text(json.dumps({
+            "dataset": args.dataset,
+            "protocol": args.protocol,
+            "weight_config": cfg,
+            "weights": weights,
+            "n_samples": len(per_sample),
+            "metrics": report,
+            "per_sample": [
+                {
+                    "sample_id": s["sample_id"],
+                    "is_bonafide": s["is_bonafide"],
+                    "attack_type": s["attack_type"],
+                    "analyzer_scores": s["analyzer_scores"],
+                    "p_real": p,
+                }
+                for s, p in zip(per_sample, fused)
+            ],
+            "note": (
+                "Re-fused offline from a single full-hybrid per-analyzer "
+                "capture on the in-house replay sub-protocol. All four §8.3 "
+                "weight configs share this capture so their deltas are "
+                "internally consistent. Environment: uniface/onnxruntime as "
+                "pinned in requirements.txt at generation time."
+            ),
+        }, indent=2, default=str))
+        print(f"  wrote {out_file}")
+
+    if "calibrated" in results and "uniform" in results:
+        d = results["calibrated"]["auc"] - results["uniform"]["auc"]
+        print(f"\nuniform -> calibrated AUC delta = {d:+.4f} "
+              f"(uniform {results['uniform']['auc']:.4f} -> "
+              f"calibrated {results['calibrated']['auc']:.4f})")
+    return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument("--dataset", required=True)
+    p.add_argument("--root", required=False)
+    p.add_argument("--protocol", default="ablation_loo")
+    p.add_argument("--limit", type=int, default=None)
+    p.add_argument("--out", default="paper/figures")
+    p.add_argument("--mode", choices=["loo", "weights"], default="loo",
+                   help="loo = per-analyzer leave-one-out (§8.2, default); "
+                        "weights = re-fuse under named weight configs (§8.3).")
+    p.add_argument("--weights", nargs="+", choices=WEIGHT_CONFIGS, default=None,
+                   help="Weight configs to evaluate in --mode weights "
+                        "(default: all four). Ignored in --mode loo.")
+    p.add_argument("-v", "--verbose", action="count", default=0)
+    args = p.parse_args(argv)
+    logging.basicConfig(level=logging.WARNING - 10 * args.verbose)
+
+    # Reuse the runner's adapter loader
+    from tests.benchmark.run import _load_adapter
+    samples = _load_adapter(args.dataset, args.root, args.protocol)
+    if args.limit:
+        from itertools import islice
+        samples = list(islice(samples, args.limit))
+
+    logger.info("Running full hybrid pipeline once with per-analyzer capture...")
+    per_sample = _full_pipeline_with_per_analyzer_capture(samples)
+    logger.info("Captured %d samples with %d analyzer outputs each",
+                len(per_sample),
+                len(per_sample[0]["analyzer_scores"]) if per_sample else 0)
+
+    if not per_sample:
+        print("ERROR: no reachable samples (empty capture) — aborting")
+        return 1
+
+    # Build labels
+    is_bonafide = [s["is_bonafide"] for s in per_sample]
+    attack_types = [s["attack_type"] or "unknown" for s in per_sample]
+
+    if args.mode == "weights":
+        return _run_weight_configs(per_sample, is_bonafide, attack_types, args)
+    return _run_leave_one_out(per_sample, is_bonafide, attack_types, args)
 
 
 if __name__ == "__main__":

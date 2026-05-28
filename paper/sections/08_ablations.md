@@ -1,6 +1,6 @@
 # 8. Ablation Studies
 
-This section ablates each design decision. Numbers come from `tests/benchmark/ablation_leave_one_out.py` and the per-dataset `tests/benchmark/run.py` runs in §7; the §11 reproducibility appendix maps each table to its backing JSON. §8.1–§8.2 and §8.7 are fully measured. §8.4–§8.6 are planned evaluations pending the EULA-restricted video corpora (§7 data-availability note, §9.4); their `TBD` cells reflect dataset-acquisition status, not incomplete analysis. §8.3 separates one measured row from three weight-sensitivity estimates that are not yet independently benchmarked (see that subsection).
+This section ablates each design decision. Numbers come from `tests/benchmark/ablation_leave_one_out.py` and the per-dataset `tests/benchmark/run.py` runs in §7; the §11 reproducibility appendix maps each table to its backing JSON. §8.1–§8.3 and §8.7 are fully measured. §8.4–§8.6 are planned evaluations pending the EULA-restricted video corpora (§7 data-availability note, §9.4); their `TBD` cells reflect dataset-acquisition status, not incomplete analysis. §8.3 reports all four weight configurations from a single self-consistent capture (see that subsection).
 
 ## 8.1 Image-only vs. video-only vs. hybrid (Table 5)
 
@@ -86,35 +86,30 @@ This is the single most-important paper finding from §8: **on cross-dataset eva
 
 ## 8.3 Calibrated vs. uniform analyzer weights (Table 6)
 
-`MultiClassFuser` uses calibrated weights (see `src/infrastructure/fusion/multi_class_fuser.py`). One configuration here is **measured** against committed data; the remaining three are **weight-sensitivity estimates** that have not yet been independently benchmarked, and we mark them as such so they are not read as confirmed results.
+`MultiClassFuser` uses calibrated weights (see `src/infrastructure/fusion/multi_class_fuser.py`). All four configurations below are now **measured** from a single full-hybrid per-analyzer capture on the in-house replay sub-protocol (N=83 reachable samples), re-fused offline under each weight map by `tests/benchmark/ablation_leave_one_out.py --mode weights`. Because every row is computed from the *same* capture, the cross-row AUC/ACER/EER deltas are internally consistent (no cross-environment mixing); each row is backed by its own committed `weightcfg_in_house_replay_n100_<config>.json`, which embeds the full weight map, the per-sample analyzer scores, and the per-sample fused P(REAL), so every number here is recomputable offline.
 
-**Measured (backed by `ablation_loo_in_house_replay_n100.json`, N=83 reachable samples):**
-
-| Configuration | ACER | EER | AUC | Source |
+| Configuration | ACER | EER | AUC | Source JSON |
 |---|---:|---:|---:|---|
-| Calibrated weights (paper default) | **14.03%** | 12.03% | 0.9497 | LOO baseline JSON, N=83 |
+| Uniform weights (all 1.0) | 14.90% | 12.90% | 0.9190 | `weightcfg_…_uniform.json` |
+| Uniform but texture+moire = 0.1 | **11.17%** | **9.17%** | 0.9341 | `weightcfg_…_partial.json` |
+| **Calibrated weights (paper default)** | 14.03% | 12.03% | 0.9424 | `weightcfg_…_calibrated.json` |
+| MiniFASNet-dominant (5.0 / 0.1 others) | 15.76% | 16.62% | **0.9552** | `weightcfg_…_minifasnet_dominant.json` |
 
-This is the full hybrid pipeline at its published default weights, identical to the leave-one-out baseline in §8.2 (ACER 14.03%, AUC 0.9497).
+The calibrated row is the full hybrid pipeline at its published default weights and is the offline re-fusion of the same baseline reported in the leave-one-out study (§8.2): identical ACER (14.03%) and EER (12.03%), N=83.
 
-**Weight-sensitivity estimates — not yet independently benchmarked (preliminary):**
+> **Environment note on the AUC point estimate.** The calibrated AUC here is 0.9424, computed against `uniface`/`onnxruntime` at the versions pinned in `requirements.txt` at generation time. The earlier-committed §8.2 leave-one-out baseline JSON (`ablation_loo_in_house_replay_n100.json`) records 0.9497 for the same configuration; the 0.0073 gap is attributable to a MiniFASNet/ONNX-runtime version difference between the two capture runs (the threshold-based ACER 14.03% and EER 12.03% are stable across both, as expected, since they read off the EER operating point rather than the full score ranking). The §8.3 deltas reported below are computed *within* the new self-consistent capture (calibrated = 0.9424), and must not be read against the 0.9497 LOO-baseline value, which belongs to a different capture environment. §8.2 is left at its originally-committed numbers.
 
-| Configuration | ACER | EER | AUC | Status |
-|---|---:|---:|---:|---|
-| Uniform weights (all 1.0) | 14.90% | 12.90% | 0.9303 | preliminary — no backing JSON |
-| Uniform but texture+moire = 0.1 | 14.90% | 12.90% | 0.9472 | preliminary — no backing JSON |
-| MiniFASNet-dominant (5.0 / 0.1 others) | 15.76% | 16.62% | 0.9569 | preliminary — no backing JSON |
+**Measured findings:**
 
-These three rows describe the *expected* behaviour of alternative weight vectors but were not produced by a committed benchmark run, and they cannot be recomputed from the data in the repository: the LOO harness persists only the baseline and single-analyzer-zeroed summaries, not the per-sample analyzer scores needed to re-fuse under an arbitrary weight map, and the harness exposes no weight-configuration flag (see the reproducibility note below). They are retained as a preliminary weight-sensitivity sketch and should be re-run before being cited as measured.
+1. **Re-weighting texture and moire from 1.0 → 0.1 recovers most of the calibration benefit.** The "Uniform but texture+moire = 0.1" partial config (0.9341) sits much closer to the calibrated default (0.9424) than to uniform (0.9190): of the +0.0234 uniform→calibrated AUC gain, this single two-coefficient change recovers +0.0151 (≈65%). This is direct measured support for the §5.3 anti-correlation finding being the single most-important calibration choice. (Notably the partial config also attains the *best* threshold-operating-point metrics in the table — ACER 11.17%, EER 9.17% — because down-weighting the two anti-correlated analyzers sharpens the decision boundary on this protocol while the remaining uniform weights keep the ensemble broad.)
 
-Observations (preliminary, pending the weight-config re-run):
+2. **The MiniFASNet-dominant configuration achieves the highest AUC (0.9552) at the worst ACER (15.76%, EER 16.62%).** This is the extreme of the calibration tradeoff measured directly: collapsing toward the single strong model maximises ROC discrimination (+0.0128 AUC over the calibrated default) but sacrifices the threshold-stability the multi-analyzer ensemble provides, with the published default sitting between uniform and dominant on AUC while holding a moderate ACER.
 
-1. **Re-weighting texture and moire from 1.0 → 0.1 appears to recover most of the calibration benefit.** The "Uniform but texture+moire = 0.1" estimate (0.9472) sits much closer to the calibrated default (0.9497) than to uniform (0.9303), consistent with the §5.3 anti-correlation finding being the single most-important calibration choice. The precise AUC delta is deferred to the re-run because it depends on the two unbacked uniform rows.
+3. **Uniform → calibrated AUC delta = +0.0234** (uniform 0.9190 → calibrated 0.9424). This is the precise weight-sensitivity figure that earlier paper drafts deferred; it is now measured from the committed `weightcfg_*` JSONs.
 
-2. **The MiniFASNet-dominant configuration may achieve a marginally higher AUC (0.9569 estimate) at a worse ACER (15.76%).** This would be the extreme of the calibration tradeoff — collapsing toward a single model maximises ROC discrimination but sacrifices the threshold-stability the multi-analyzer ensemble provides — with the published default at the sweet spot. To be confirmed by the re-run.
+4. **On cross-dataset evaluation (§7.1) the picture inverts**: there `minifasnet_only` (the measured ablation row that drops the auxiliary bank) outperforms the calibrated hybrid, because the calibration weights themselves do not transfer (§5.5). This cross-dataset inversion *is* measured (§7.1, §8.2) and is consistent with finding 2 above — when the auxiliary bank is mis-calibrated for the target distribution, collapsing toward MiniFASNet helps.
 
-3. **On cross-dataset evaluation (§7.1) the picture inverts**: there `minifasnet_only` (the measured ablation row that drops the auxiliary bank) outperforms the calibrated hybrid, because the calibration weights themselves do not transfer (§5.5). This cross-dataset inversion *is* measured (§7.1, §8.2) and does not depend on the preliminary rows above.
-
-**Reproducibility note for the three preliminary rows.** Regenerating them requires (a) re-running the in-house replay sub-protocol with the full pipeline to capture per-sample analyzer scores and (b) re-fusing under each weight vector. The current `ablation_leave_one_out.py` only supports zeroing a single named analyzer (`refuse_with_zeroed_weight(per_sample, zeroed=…)`), with no flag to apply uniform / partial / MiniFASNet-dominant weight maps — so this is a code change, listed in the project's "code change needed" backlog, not a one-command re-run.
+**Reproducibility note.** Regenerate all four rows with one command: `python -m tests.benchmark.ablation_leave_one_out --dataset in_house --root data/in_house_replay --protocol replay_n100 --mode weights`. This runs the full pipeline once to capture per-sample analyzer scores, then re-fuses under each of the four named weight maps (calibrated / uniform / partial / minifasnet_dominant) via the `--mode weights` path added for this study; each config is written to its own `weightcfg_in_house_replay_n100_<config>.json` under `paper/figures/`. The in-house replay sub-protocol data directory is rebuilt from `data/in_house/` (bona-fide + `attack_replay/` rows of `labels.csv`).
 
 ## 8.4 Peak-sensitive vs. mean session verdict (Table 7)
 

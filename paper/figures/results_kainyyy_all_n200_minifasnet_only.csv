@@ -1,2 +1,2 @@
 dataset,protocol,method,APCER_max,BPCER,ACER,EER,AUC,N
-kainyyy,all_n200,minifasnet_only,0.00%,0.00%,0.00%,0.00%,0.0000,200
+kainyyy,all_n200,minifasnet_only,18.75%,20.00%,19.38%,18.12%,0.8648,200

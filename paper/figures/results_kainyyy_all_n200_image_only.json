@@ -3,134 +3,364 @@
   "protocol": "all_n200",
   "pipeline_name": "image_only",
   "n_samples": 200,
-  "elapsed_sec": 35.7599950931035,
+  "elapsed_sec": 29.357145494781435,
   "metrics": {
-    "threshold": 0.17996376702391098,
-    "apcer_max": 0.0,
-    "apcer_per_type": {},
-    "bpcer": 0.0,
-    "acer": 0.0,
-    "hter": 0.0,
-    "eer": 0.0,
-    "eer_threshold": 0.17996376702391098,
-    "auc": 0.0,
-    "n_bonafide": 200,
-    "n_attack": 0
+    "threshold": 0.8864312359350517,
+    "apcer_max": 0.3625,
+    "apcer_per_type": {
+      "unknown": 0.3625
+    },
+    "bpcer": 0.375,
+    "acer": 0.36875,
+    "hter": 0.36875,
+    "eer": 0.35624999999999996,
+    "eer_threshold": 0.8864312359350517,
+    "auc": 0.6724999999999999,
+    "n_bonafide": 40,
+    "n_attack": 160
   },
   "per_sample": [
     {
-      "sample_id": "AGL752VM_id147_s0_105",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.8971695699909926
+      "sample_id": "spoof_1019",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.8492844477280886
     },
     {
-      "sample_id": "AGL752VM_id147_s0_120",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.7108884129308161
+      "sample_id": "FT720P_MBP1314_IPHONE6F_id0_s1_75",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.8053329148119863
     },
     {
-      "sample_id": "AGL752VM_id147_s0_135",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.710862371736896
+      "sample_id": "FT720P_MBP1314_IPHONE6F_id12_s1_60",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.8940613318024431
     },
     {
-      "sample_id": "AGL752VM_id147_s0_15",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.7110481858317125
+      "sample_id": "YOUTUBE_IIYAMAGB_GZS4020_id29_s0_90",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3354793075628243
     },
     {
-      "sample_id": "AGL752VM_id147_s0_150",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.8919017227428496
+      "sample_id": "FT720P_SSM2433_S4508_id0_s1_120",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.9409074720581052
     },
     {
-      "sample_id": "AGL752VM_id147_s0_30",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.7105247914420313
+      "sample_id": "FT720P_I2269VWM_DOOX30_id0_s3_170",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.279940053048323
     },
     {
-      "sample_id": "AGL752VM_id147_s0_45",
+      "sample_id": "real_133",
       "is_bonafide": true,
       "attack_type": null,
-      "score": 0.7105347554477479
+      "score": 0.8894834142955983
     },
     {
-      "sample_id": "AGL752VM_id147_s0_60",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.895101018671122
+      "sample_id": "YOUTUBE_IIYAMAXU_ZE520KL_id43_s0_193",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3349641481422927
     },
     {
-      "sample_id": "AGL752VM_id147_s0_75",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.8896637784932517
+      "sample_id": "FT720P_MBP1314_IPHONE6F_id5_s0_75",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.75623339410665
     },
     {
-      "sample_id": "AGL752VM_id147_s0_90",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.8925721416140393
+      "sample_id": "FT720P_MBP1314_IPHONE6F_id0_s3_45",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.8868910651217018
     },
     {
-      "sample_id": "FT720P_id0_s0_105",
+      "sample_id": "real_136",
       "is_bonafide": true,
       "attack_type": null,
-      "score": 0.9027393375228467
+      "score": 0.08686474719878694
     },
     {
-      "sample_id": "FT720P_id0_s0_120",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9028028111791404
+      "sample_id": "YOUTUBE_BQXL2420_NEXUS5_id43_s0_45",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4423193347611308
     },
     {
-      "sample_id": "FT720P_id0_s0_135",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9009856563005573
+      "sample_id": "FT720P_MBP1314_IPHONE7F_id0_s1_150",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.9224361740138591
     },
     {
-      "sample_id": "FT720P_id0_s0_15",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9032469130927671
+      "sample_id": "FT720P_MBP1314_IPHONE7B_id12_s1_90",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.9837179191377297
     },
     {
-      "sample_id": "FT720P_id0_s0_150",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9028596175116766
+      "sample_id": "YOUTUBE_SLS24E390HL0_HUAWEIG620SL01_S0_id43_s1_90",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.9009303996512388
     },
     {
-      "sample_id": "FT720P_id0_s0_30",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9039383635409582
+      "sample_id": "YOUTUBE_SSM940N_AZ3MZC520TL_id48_s0_45",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3427943935440435
     },
     {
-      "sample_id": "FT720P_id0_s0_45",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9395838672065666
+      "sample_id": "YOUTUBE_SSM940N_AZ3MZC520TL_id48_s0_150",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.8477098668799635
     },
     {
-      "sample_id": "FT720P_id0_s0_60",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9028782867348308
+      "sample_id": "FT720P_MBP1314_IPHONE8F_id12_s0_135",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.9835706817793191
     },
     {
-      "sample_id": "FT720P_id0_s0_75",
+      "sample_id": "YOUTUBE_DLE6540_HTCDEYE_id42_s1_45",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.939306387045573
+    },
+    {
+      "sample_id": "FT720P_I2269VWM_DOOX30_id5_s0_105",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.9221745056511975
+    },
+    {
+      "sample_id": "YOUTUBE_LGFIPS235VBN_SMA500F_id43_s0_150",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.9310234406267024
+    },
+    {
+      "sample_id": "YOUTUBE_VX2363SMHL_LGL90_id48_s1_60",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.8656456492014114
+    },
+    {
+      "sample_id": "real_52",
       "is_bonafide": true,
       "attack_type": null,
-      "score": 0.9000841895477002
+      "score": 0.9861745376347401
+    },
+    {
+      "sample_id": "spoof_1307",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.2996425509360461
+    },
+    {
+      "sample_id": "FT720P_MBP1314_X014D_id5_s1_45",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.421725683020078
+    },
+    {
+      "sample_id": "YOUTUBE_MBP1314_IPHONE8F_id48_s0_90",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.9836686174355419
+    },
+    {
+      "sample_id": "YOUTUBE_MSIGS60_SGJ5_id39_s1_65",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.9260003413432938
+    },
+    {
+      "sample_id": "YOUTUBE_BQVW2245_NEXUS5_id42_s0_201",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.44795379812403036
+    },
+    {
+      "sample_id": "YOUTUBE_C27F591FDI_LGG3D690_id48_s1_151",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.8980497676140303
+    },
+    {
+      "sample_id": "YOUTUBE_HPE17J001ER_ZSZD551KL_id48_s0_60",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.25526468733051527
+    },
+    {
+      "sample_id": "YOUTUBE_SLS24E390HL0_HUAWEIG620SL01_S0_id48_s1_120",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.9344820431515967
+    },
+    {
+      "sample_id": "YOUTUBE_id48_s0_135",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9862948489912482
+    },
+    {
+      "sample_id": "YOUTUBE_id39_s1_91",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7109193891981961
+    },
+    {
+      "sample_id": "YOUTUBE_IIYAMAXU_MOTOMC_S1_id48_s1_60",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.8922547244925205
+    },
+    {
+      "sample_id": "FT720P_SSM2433_S4508_id0_s0_120",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.7742131225767247
+    },
+    {
+      "sample_id": "FT720P_G780_REDMI4X_id12_s2_90",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3366668192340858
+    },
+    {
+      "sample_id": "YOUTUBE_P226VLSB00_HONOR4CCHMU01_id48_s1_135",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.8615887936289514
+    },
+    {
+      "sample_id": "YOUTUBE_SLS24E390HL0_HUAWEIG620SL01_S1_id43_s0_15",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.8797695225609727
+    },
+    {
+      "sample_id": "YOUTUBE_MBP1314_IPHONE8B_id39_s1_75",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.7111820008047013
+    },
+    {
+      "sample_id": "FT720P_MBP1314_IPHONE7B_id12_s0_120",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.9838087148301128
+    },
+    {
+      "sample_id": "FT720P_NEC90GX2_ZC554KL_id0_s3_135",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.29015211851310363
+    },
+    {
+      "sample_id": "YOUTUBE_IIYAMAXU_ZE520KL_id39_s0_81",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.6681022326691791
+    },
+    {
+      "sample_id": "YOUTUBE_I2369VM_HONOR7X_id48_s1_45",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.8417077034996301
+    },
+    {
+      "sample_id": "YOUTUBE_IIYAMAXU_ZE520KL_id43_s1_114",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.9321582557378365
+    },
+    {
+      "sample_id": "FT720P_SSM20B370_BQ5204_id0_s3_92",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.8525447056022415
+    },
+    {
+      "sample_id": "YOUTUBE_IIYAMAXU_ZE520KL_id39_s0_36",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.6904877758127609
+    },
+    {
+      "sample_id": "FT720P_MBP1314_IPHONE7B_id0_s2_120",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.796609979876862
+    },
+    {
+      "sample_id": "YOUTUBE_IIYAMAXU_MOTOMC_S1_id43_s0_133",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.880774956974656
+    },
+    {
+      "sample_id": "YOUTUBE_P226VLSB00_HONOR4CCHMU01_id39_s0_41",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.8900634204096132
+    },
+    {
+      "sample_id": "FT720P_SSM2433_S4508_id5_s0_150",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.8784863800955652
+    },
+    {
+      "sample_id": "YOUTUBE_LGFIPS235VBN_SMA500F_id43_s0_101",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.9250680759138341
+    },
+    {
+      "sample_id": "YOUTUBE_SSM757MB_FS407S6_id43_s1_135",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.7106492937360781
+    },
+    {
+      "sample_id": "YOUTUBE_AAR7_IPHONE4S_id43_s0_15",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.9546748652268466
+    },
+    {
+      "sample_id": "YOUTUBE_PBQ5WTS_ZTEBA2_id43_s1_150",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.2722654001331937
+    },
+    {
+      "sample_id": "YOUTUBE_TP300LA_SGS7E_id43_s0_65",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3459091071147566
+    },
+    {
+      "sample_id": "spoof_1253",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.9773720427385392
+    },
+    {
+      "sample_id": "YOUTUBE_L5001EL_IPHONE6F_id43_s0_121",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.9482771833841654
     },
     {
       "sample_id": "FT720P_id0_s0_90",
@@ -139,46 +369,184 @@
       "score": 0.8989116545271464
     },
     {
+      "sample_id": "FT720P_SSM20B370_BQ5204_id0_s1_60",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.8937502191047347
+    },
+    {
+      "sample_id": "FT720P_MBP1314_X014D_id12_s2_90",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4249881794215431
+    },
+    {
+      "sample_id": "YOUTUBE_id43_s0_45",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9320264288651666
+    },
+    {
+      "sample_id": "YOUTUBE_SSM763MB_LA546_id39_s1_49",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.32724913345216144
+    },
+    {
+      "sample_id": "FT720P_G780_REDMI4X_id0_s0_75",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.9213629213343306
+    },
+    {
+      "sample_id": "YOUTUBE_SLS24E390HL0_HUAWEIG620SL01_S0_id43_s0_30",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.9769550205896864
+    },
+    {
+      "sample_id": "spoof_1003",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.9410860348602771
+    },
+    {
+      "sample_id": "spoof_1216",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.8720494164324579
+    },
+    {
+      "sample_id": "spoof_1057",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.6615295591083362
+    },
+    {
+      "sample_id": "YOUTUBE_IIYAMAXU_MOTOMC_S0_id43_s1_46",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.7058442396425165
+    },
+    {
       "sample_id": "FT720P_id0_s1_105",
       "is_bonafide": true,
       "attack_type": null,
       "score": 0.9218130595338333
     },
     {
-      "sample_id": "FT720P_id0_s1_120",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9127836796369782
+      "sample_id": "FT720P_SSM20B370_BQ5204_id0_s1_45",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.903729381345471
     },
     {
-      "sample_id": "FT720P_id0_s1_135",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9187874478649302
+      "sample_id": "YOUTUBE_ACER5820TG_REDMI4A_id42_s0_15",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.2675992155757439
     },
     {
-      "sample_id": "FT720P_id0_s1_15",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.914130295784942
+      "sample_id": "YOUTUBE_SRV508_IPHONE5SF_id42_s0_67",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.2576623610322152
     },
     {
-      "sample_id": "FT720P_id0_s1_150",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9141924350243016
+      "sample_id": "FT720P_SSM2433_S4508_id5_s1_150",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.5786638713104988
     },
     {
-      "sample_id": "FT720P_id0_s1_30",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9114088609817307
+      "sample_id": "YOUTUBE_DIGUNKNOWN_IPHONE5SF_id42_s1_176",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3620339186135086
     },
     {
-      "sample_id": "FT720P_id0_s1_45",
+      "sample_id": "real_48",
       "is_bonafide": true,
       "attack_type": null,
-      "score": 0.9155836075590313
+      "score": 0.8484614404505967
+    },
+    {
+      "sample_id": "spoof_1038",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.8991753081040752
+    },
+    {
+      "sample_id": "spoof_1174",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.8565618895274222
+    },
+    {
+      "sample_id": "real_249",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9301556508061372
+    },
+    {
+      "sample_id": "FT720P_G780_REDMI4X_id0_s1_15",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.31900717072855805
+    },
+    {
+      "sample_id": "FT720P_MBP1314_IPHONE7F_id9_s0_30",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.39409725892590486
+    },
+    {
+      "sample_id": "FT720P_MBP1314_IPHONE6SF_id0_s3_114",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.8419430154433979
+    },
+    {
+      "sample_id": "YOUTUBE_id120_s0_162",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7126321389736048
+    },
+    {
+      "sample_id": "YOUTUBE_I2369VM_HONOR7X_id48_s1_90",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.7461628716763963
+    },
+    {
+      "sample_id": "YOUTUBE_HP15AC113UR_GZS5001_id42_s0_141",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.2524670651783022
+    },
+    {
+      "sample_id": "FT720P_MBP1314_IPHONE8F_id0_s2_60",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.8884065966885984
+    },
+    {
+      "sample_id": "FT720P_MBP1314_IPHONE6F_id0_s0_120",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.9014102218674983
+    },
+    {
+      "sample_id": "YOUTUBE_id43_s0_139",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9036007335200795
+    },
+    {
+      "sample_id": "real_229",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7085235932416517
     },
     {
       "sample_id": "FT720P_id0_s1_60",
@@ -187,724 +555,28 @@
       "score": 0.919378426221956
     },
     {
-      "sample_id": "FT720P_id0_s1_75",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9198679107387187
+      "sample_id": "FT720P_MBP1314_X014D_id12_s0_75",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.8857288237226739
     },
     {
-      "sample_id": "FT720P_id0_s1_90",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9243678069886679
+      "sample_id": "YOUTUBE_PBLS11HR_HONOR9L_id42_s0_120",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3479517403112567
     },
     {
-      "sample_id": "FT720P_id0_s2_105",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.8938021223446013
+      "sample_id": "YOUTUBE_IIYAMAXU_MOTOMC_S1_id42_s0_17",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.9091725873340866
     },
     {
-      "sample_id": "FT720P_id0_s2_120",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.8893577654149173
-    },
-    {
-      "sample_id": "FT720P_id0_s2_135",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.8925208367394218
-    },
-    {
-      "sample_id": "FT720P_id0_s2_15",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.7093394370221595
-    },
-    {
-      "sample_id": "FT720P_id0_s2_150",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.8932263595904353
-    },
-    {
-      "sample_id": "FT720P_id0_s2_30",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.8920549273839192
-    },
-    {
-      "sample_id": "FT720P_id0_s2_45",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.8900546031775596
-    },
-    {
-      "sample_id": "FT720P_id0_s2_60",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.8923051855541064
-    },
-    {
-      "sample_id": "FT720P_id0_s2_75",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.8942807982962101
-    },
-    {
-      "sample_id": "FT720P_id0_s2_90",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9236616496600847
-    },
-    {
-      "sample_id": "FT720P_id0_s3_107",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.8787062511677179
-    },
-    {
-      "sample_id": "FT720P_id0_s3_127",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.8462871741605023
-    },
-    {
-      "sample_id": "FT720P_id0_s3_142",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.8639298609628174
-    },
-    {
-      "sample_id": "FT720P_id0_s3_157",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.8821144709621508
-    },
-    {
-      "sample_id": "FT720P_id0_s3_16",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9202188922167486
-    },
-    {
-      "sample_id": "FT720P_id0_s3_31",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.8584003550699899
-    },
-    {
-      "sample_id": "FT720P_id0_s3_46",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.8895708301073181
-    },
-    {
-      "sample_id": "FT720P_id0_s3_61",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9149560647149672
-    },
-    {
-      "sample_id": "FT720P_id0_s3_77",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.8549733784353396
-    },
-    {
-      "sample_id": "FT720P_id0_s3_92",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9299372964338176
-    },
-    {
-      "sample_id": "FT720P_id12_s0_105",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9858000489466293
-    },
-    {
-      "sample_id": "FT720P_id12_s0_120",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9857055085302509
-    },
-    {
-      "sample_id": "FT720P_id12_s0_135",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9855858114540382
-    },
-    {
-      "sample_id": "FT720P_id12_s0_15",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9856021544283096
-    },
-    {
-      "sample_id": "FT720P_id12_s0_150",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9856887692772403
-    },
-    {
-      "sample_id": "FT720P_id12_s0_30",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.985552601656614
-    },
-    {
-      "sample_id": "FT720P_id12_s0_45",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9858007783444362
-    },
-    {
-      "sample_id": "FT720P_id12_s0_60",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9854335533660233
-    },
-    {
-      "sample_id": "FT720P_id12_s0_75",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9856548136199149
-    },
-    {
-      "sample_id": "FT720P_id12_s0_90",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9855763327846142
-    },
-    {
-      "sample_id": "FT720P_id12_s1_105",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9856638248790337
-    },
-    {
-      "sample_id": "FT720P_id12_s1_120",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9861406679597398
-    },
-    {
-      "sample_id": "FT720P_id12_s1_135",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9860485694814751
-    },
-    {
-      "sample_id": "FT720P_id12_s1_15",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9862822724580694
-    },
-    {
-      "sample_id": "FT720P_id12_s1_150",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9861451840868892
-    },
-    {
-      "sample_id": "FT720P_id12_s1_30",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9862732982402745
-    },
-    {
-      "sample_id": "FT720P_id12_s1_45",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9862969926483526
-    },
-    {
-      "sample_id": "FT720P_id12_s1_60",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9857648948251115
-    },
-    {
-      "sample_id": "FT720P_id12_s1_75",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9855827862235851
-    },
-    {
-      "sample_id": "FT720P_id12_s1_90",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9859504882637311
-    },
-    {
-      "sample_id": "FT720P_id12_s2_105",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9859023706698646
-    },
-    {
-      "sample_id": "FT720P_id12_s2_120",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9858574903499808
-    },
-    {
-      "sample_id": "FT720P_id12_s2_135",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9861402953442171
-    },
-    {
-      "sample_id": "FT720P_id12_s2_15",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9860137484632882
-    },
-    {
-      "sample_id": "FT720P_id12_s2_150",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9857649654371473
-    },
-    {
-      "sample_id": "FT720P_id12_s2_30",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9860023375290905
-    },
-    {
-      "sample_id": "FT720P_id12_s2_45",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9860306095165534
-    },
-    {
-      "sample_id": "FT720P_id12_s2_60",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.985720980377714
-    },
-    {
-      "sample_id": "FT720P_id12_s2_75",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.985937718308834
-    },
-    {
-      "sample_id": "FT720P_id12_s2_90",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9858247522237453
-    },
-    {
-      "sample_id": "FT720P_id5_s0_105",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9309152194298641
-    },
-    {
-      "sample_id": "FT720P_id5_s0_120",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.7117914298122368
-    },
-    {
-      "sample_id": "FT720P_id5_s0_135",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.8956209886238289
-    },
-    {
-      "sample_id": "FT720P_id5_s0_15",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9013256164204879
-    },
-    {
-      "sample_id": "FT720P_id5_s0_150",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9304352965458496
-    },
-    {
-      "sample_id": "FT720P_id5_s0_30",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9290186348152304
-    },
-    {
-      "sample_id": "FT720P_id5_s0_45",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9318616522392362
-    },
-    {
-      "sample_id": "FT720P_id5_s0_60",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9261438400651543
-    },
-    {
-      "sample_id": "FT720P_id5_s0_75",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9288159428031313
-    },
-    {
-      "sample_id": "FT720P_id5_s0_90",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9290425029304068
-    },
-    {
-      "sample_id": "FT720P_id9_s0_105",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.6945255477169022
-    },
-    {
-      "sample_id": "FT720P_id9_s0_120",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.3582276699742481
-    },
-    {
-      "sample_id": "FT720P_id9_s0_135",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.17996376702391098
-    },
-    {
-      "sample_id": "FT720P_id9_s0_15",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.8633354384632614
-    },
-    {
-      "sample_id": "FT720P_id9_s0_150",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.6251700316248281
-    },
-    {
-      "sample_id": "FT720P_id9_s0_30",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.8203196720025315
-    },
-    {
-      "sample_id": "FT720P_id9_s0_45",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.8378713535451267
-    },
-    {
-      "sample_id": "FT720P_id9_s0_60",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.8088473608020038
-    },
-    {
-      "sample_id": "FT720P_id9_s0_75",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.8396119821359288
-    },
-    {
-      "sample_id": "FT720P_id9_s0_90",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.8490089098775562
-    },
-    {
-      "sample_id": "IPHONE8B_id5_s2_105",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.922765053482154
-    },
-    {
-      "sample_id": "IPHONE8B_id5_s2_120",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9264039543892472
-    },
-    {
-      "sample_id": "IPHONE8B_id5_s2_135",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9265375156843104
-    },
-    {
-      "sample_id": "IPHONE8B_id5_s2_15",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9299736767682126
-    },
-    {
-      "sample_id": "IPHONE8B_id5_s2_150",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9254612355440008
-    },
-    {
-      "sample_id": "IPHONE8B_id5_s2_30",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9226482154516705
-    },
-    {
-      "sample_id": "IPHONE8B_id5_s2_45",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9265079263058947
-    },
-    {
-      "sample_id": "IPHONE8B_id5_s2_60",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9302709466369987
-    },
-    {
-      "sample_id": "IPHONE8B_id5_s2_75",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9274499768605827
-    },
-    {
-      "sample_id": "IPHONE8B_id5_s2_90",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.922875373224693
-    },
-    {
-      "sample_id": "IPHONE8B_id81_s0_105",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9005075918563983
-    },
-    {
-      "sample_id": "IPHONE8B_id81_s0_120",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.8887280558265395
-    },
-    {
-      "sample_id": "IPHONE8B_id81_s0_135",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9228178954940726
-    },
-    {
-      "sample_id": "IPHONE8B_id81_s0_15",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.8988987632845976
-    },
-    {
-      "sample_id": "IPHONE8B_id81_s0_150",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9132118071040508
-    },
-    {
-      "sample_id": "IPHONE8B_id81_s0_30",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.8734103733873565
-    },
-    {
-      "sample_id": "IPHONE8B_id81_s0_45",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.8532695048947657
-    },
-    {
-      "sample_id": "IPHONE8B_id81_s0_60",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.8780281063624009
-    },
-    {
-      "sample_id": "IPHONE8B_id81_s0_75",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9021722261929777
-    },
-    {
-      "sample_id": "IPHONE8B_id81_s0_90",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.888831029219281
-    },
-    {
-      "sample_id": "IPHONE8B_id9_s2_105",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.7114481218939682
-    },
-    {
-      "sample_id": "IPHONE8B_id9_s2_120",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.711566494823637
-    },
-    {
-      "sample_id": "IPHONE8B_id9_s2_135",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.7115078414212616
-    },
-    {
-      "sample_id": "IPHONE8B_id9_s2_15",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.7112562517129261
-    },
-    {
-      "sample_id": "IPHONE8B_id9_s2_150",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.7118447871019744
-    },
-    {
-      "sample_id": "IPHONE8B_id9_s2_30",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.7120781999129201
-    },
-    {
-      "sample_id": "IPHONE8B_id9_s2_45",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.711653219219015
-    },
-    {
-      "sample_id": "IPHONE8B_id9_s2_60",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.8920158490461767
-    },
-    {
-      "sample_id": "IPHONE8B_id9_s2_75",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.7114949520448728
-    },
-    {
-      "sample_id": "IPHONE8B_id9_s2_90",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.7118668166724473
-    },
-    {
-      "sample_id": "MSIGT72_id164_s0_105",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9843426374838113
-    },
-    {
-      "sample_id": "MSIGT72_id164_s0_120",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9845222934747458
-    },
-    {
-      "sample_id": "MSIGT72_id164_s0_135",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9849699890879265
-    },
-    {
-      "sample_id": "MSIGT72_id164_s0_15",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9825832455078379
-    },
-    {
-      "sample_id": "MSIGT72_id164_s0_30",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9613805733000745
-    },
-    {
-      "sample_id": "MSIGT72_id164_s0_45",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9853847370450162
-    },
-    {
-      "sample_id": "MSIGT72_id164_s0_60",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9828469973775916
-    },
-    {
-      "sample_id": "MSIGT72_id164_s0_75",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9831125583034015
-    },
-    {
-      "sample_id": "MSIGT72_id164_s0_90",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9823007682423122
-    },
-    {
-      "sample_id": "PBUNKNOWN_id169_s0_105",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9604308495796355
-    },
-    {
-      "sample_id": "PBUNKNOWN_id169_s0_120",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9632010023363563
-    },
-    {
-      "sample_id": "PBUNKNOWN_id169_s0_135",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.961954095554005
-    },
-    {
-      "sample_id": "PBUNKNOWN_id169_s0_15",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.939351512767723
-    },
-    {
-      "sample_id": "PBUNKNOWN_id169_s0_150",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9625145642538175
-    },
-    {
-      "sample_id": "PBUNKNOWN_id169_s0_30",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9618307352470543
-    },
-    {
-      "sample_id": "PBUNKNOWN_id169_s0_45",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9621174724979358
-    },
-    {
-      "sample_id": "PBUNKNOWN_id169_s0_60",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.937402260048929
-    },
-    {
-      "sample_id": "PBUNKNOWN_id169_s0_75",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9601813053238113
+      "sample_id": "YOUTUBE_SLS24E390HL0_HUAWEIG620SL01_S1_id43_s1_105",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.9041267817986693
     },
     {
       "sample_id": "PBUNKNOWN_id169_s0_90",
@@ -913,154 +585,208 @@
       "score": 0.9383031734234633
     },
     {
-      "sample_id": "SIC320_id161_s0_105",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9594483934753197
+      "sample_id": "spoof_1258",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.696870674979112
     },
     {
-      "sample_id": "SIC320_id161_s0_120",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9330112367887723
+      "sample_id": "YOUTUBE_IIYAMAGB_GZS4020_id29_s0_30",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3355163784082477
     },
     {
-      "sample_id": "SIC320_id161_s0_135",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.937374903102487
+      "sample_id": "YOUTUBE_VX2363SMHL_LGL90_id48_s1_75",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.36051573891560823
     },
     {
-      "sample_id": "SIC320_id161_s0_15",
+      "sample_id": "YOUTUBE_id43_s0_75",
       "is_bonafide": true,
       "attack_type": null,
-      "score": 0.9099397475521067
+      "score": 0.9273412462538179
     },
     {
-      "sample_id": "SIC320_id161_s0_150",
+      "sample_id": "FT720P_SSM2433_S4508_id12_s1_45",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.9221468495978985
+    },
+    {
+      "sample_id": "YOUTUBE_SSMB2430_SM4AD_id48_s0_120",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.39579311855737814
+    },
+    {
+      "sample_id": "YOUTUBE_IIYAMAXU_SMJ710FN_id29_s0_135",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.33602214943140707
+    },
+    {
+      "sample_id": "AGL752VM_id147_s0_105",
       "is_bonafide": true,
       "attack_type": null,
-      "score": 0.9618559592829671
+      "score": 0.8971695699909926
     },
     {
-      "sample_id": "SIC320_id161_s0_30",
+      "sample_id": "FT720P_MBP1314_IPHONE6F_id12_s2_135",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4345875242476144
+    },
+    {
+      "sample_id": "FT720P_SSM20B370_BQ5204_id9_s0_75",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.8898840769721724
+    },
+    {
+      "sample_id": "real_105",
       "is_bonafide": true,
       "attack_type": null,
-      "score": 0.8968907672041931
+      "score": 0.9852318576263739
     },
     {
-      "sample_id": "SIC320_id161_s0_45",
+      "sample_id": "YOUTUBE_PBLS11HR_HONOR9L_id39_s1_120",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.6769575894848293
+    },
+    {
+      "sample_id": "YOUTUBE_HP250G6_XPERIAZ5_id43_s1_30",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.7869649116427293
+    },
+    {
+      "sample_id": "real_287",
       "is_bonafide": true,
       "attack_type": null,
-      "score": 0.8918180328232006
+      "score": 0.7124174811842837
     },
     {
-      "sample_id": "SIC320_id161_s0_60",
+      "sample_id": "FT720P_MBP1314_IPHONE6SF_id0_s2_90",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.8811661917720076
+    },
+    {
+      "sample_id": "YOUTUBE_S198150N_GM5_id48_s0_105",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.31406357396691414
+    },
+    {
+      "sample_id": "YOUTUBE_HP250G6_XPERIAZ5_id43_s1_137",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.33349360894230384
+    },
+    {
+      "sample_id": "YOUTUBE_TP300LA_SGS7E_id43_s1_148",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.28895576177293314
+    },
+    {
+      "sample_id": "YOUTUBE_IIYAMAXU_MOTOMC_S0_id42_s0_97",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.8802873755699941
+    },
+    {
+      "sample_id": "FT720P_G780_REDMI4X_id0_s1_105",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3549910150939964
+    },
+    {
+      "sample_id": "YOUTUBE_SSMP2250_LVP1M_id42_s0_77",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.6061110557626326
+    },
+    {
+      "sample_id": "FT720P_MBP1314_X014D_id0_s0_75",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.9010566243886143
+    },
+    {
+      "sample_id": "YOUTUBE_TP300LA_SGS7E_id43_s0_80",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.36086589897812865
+    },
+    {
+      "sample_id": "YOUTUBE_IIYAMAXU_MOTOMC_S0_id48_s0_105",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.7928678634385462
+    },
+    {
+      "sample_id": "YOUTUBE_IIYAMAXU_MOTOMC_S1_id42_s0_126",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.6960064058535569
+    },
+    {
+      "sample_id": "YOUTUBE_PBLS11HR_HONOR9L_id39_s1_75",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.597488961435159
+    },
+    {
+      "sample_id": "spoof_1266",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3417160326120463
+    },
+    {
+      "sample_id": "real_210",
       "is_bonafide": true,
       "attack_type": null,
-      "score": 0.8937036225224578
+      "score": 0.06861454599974358
     },
     {
-      "sample_id": "SIC320_id161_s0_75",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9044310270335387
+      "sample_id": "FT720P_MBP1314_IPHONE6SF_id9_s0_30",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.2542357608674365
     },
     {
-      "sample_id": "SIC320_id161_s0_90",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9041728000215514
+      "sample_id": "YOUTUBE_MBP1314_IPHONE8F_id48_s0_15",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.9349060825640747
     },
     {
-      "sample_id": "UNKNOWN_id152_s0_105",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.7139089735875579
+      "sample_id": "spoof_1261",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.9049085641465465
     },
     {
-      "sample_id": "UNKNOWN_id152_s0_120",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.7139686255246616
-    },
-    {
-      "sample_id": "UNKNOWN_id152_s0_135",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.7144250557979849
-    },
-    {
-      "sample_id": "UNKNOWN_id152_s0_15",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.7149406891968278
-    },
-    {
-      "sample_id": "UNKNOWN_id152_s0_150",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.7144255894022268
-    },
-    {
-      "sample_id": "UNKNOWN_id152_s0_30",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.7147833062994203
-    },
-    {
-      "sample_id": "UNKNOWN_id152_s0_45",
+      "sample_id": "real_308",
       "is_bonafide": true,
       "attack_type": null,
       "score": 0.7144704230448112
     },
     {
-      "sample_id": "UNKNOWN_id152_s0_60",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.7141711505713322
+      "sample_id": "FT720P_G780_REDMI4X_id5_s0_60",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.2698588824500157
     },
     {
-      "sample_id": "UNKNOWN_id152_s0_75",
+      "sample_id": "YOUTUBE_id120_s0_132",
       "is_bonafide": true,
       "attack_type": null,
-      "score": 0.7135598834457105
-    },
-    {
-      "sample_id": "UNKNOWN_id152_s0_90",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.7133977509254698
-    },
-    {
-      "sample_id": "YOUTUBE_id115_s0_105",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.8944771456942567
-    },
-    {
-      "sample_id": "YOUTUBE_id115_s0_120",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.8944357600724885
-    },
-    {
-      "sample_id": "YOUTUBE_id115_s0_135",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.8983364688478628
-    },
-    {
-      "sample_id": "YOUTUBE_id115_s0_15",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.8951371691186598
-    },
-    {
-      "sample_id": "YOUTUBE_id115_s0_30",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.8920321680898537
+      "score": 0.7106301857982903
     },
     {
       "sample_id": "YOUTUBE_id115_s0_45",
@@ -1069,154 +795,430 @@
       "score": 0.9016446208530167
     },
     {
-      "sample_id": "YOUTUBE_id115_s0_60",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.8975063877983519
+      "sample_id": "YOUTUBE_AK73S_REDMI3S_id42_s0_45",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.28379208403260775
     },
     {
-      "sample_id": "YOUTUBE_id115_s0_75",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9007628935985557
+      "sample_id": "spoof_1051",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.9186792767765259
     },
     {
-      "sample_id": "YOUTUBE_id115_s0_90",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.8956171828406212
+      "sample_id": "FT720P_MBP1314_IPHONE7F_id0_s1_75",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.9095448934987747
     },
     {
-      "sample_id": "YOUTUBE_id115_s1_105",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9034685598414121
+      "sample_id": "FT720P_NEC90GX2_ZC554KL_id0_s2_75",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.9254104125286615
     },
     {
-      "sample_id": "YOUTUBE_id115_s1_120",
+      "sample_id": "real_200",
       "is_bonafide": true,
       "attack_type": null,
-      "score": 0.9372665373952002
+      "score": 0.9030761178453077
     },
     {
-      "sample_id": "YOUTUBE_id115_s1_135",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9016471452246718
+      "sample_id": "YOUTUBE_VX2363SMHL_LGL90_id43_s0_62",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.710632556460183
     },
     {
-      "sample_id": "YOUTUBE_id115_s1_15",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9348118542600445
+      "sample_id": "spoof_1124",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.24423666010796533
     },
     {
-      "sample_id": "YOUTUBE_id115_s1_150",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.8986818582337689
+      "sample_id": "YOUTUBE_IIYAMAXU_GZS4020_id29_s0_30",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3564211018586784
     },
     {
-      "sample_id": "YOUTUBE_id115_s1_30",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9008553739690153
+      "sample_id": "YOUTUBE_TFT22W90PS_SA5100_id43_s1_150",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.8593186264586535
     },
     {
-      "sample_id": "YOUTUBE_id115_s1_45",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9021044717042065
+      "sample_id": "YOUTUBE_PBLS11HR_HONOR9L_id42_s0_75",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.37512974331813753
     },
     {
-      "sample_id": "YOUTUBE_id115_s1_60",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9037384910117122
+      "sample_id": "spoof_1221",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.8732683411118225
     },
     {
-      "sample_id": "YOUTUBE_id115_s1_75",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9020872023339459
+      "sample_id": "spoof_1303",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.2535046253741673
     },
     {
-      "sample_id": "YOUTUBE_id115_s1_90",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.8999511177661784
+      "sample_id": "YOUTUBE_LG58020157_DOOX5MP_id39_s0_30",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.8369600670812867
     },
     {
-      "sample_id": "YOUTUBE_id115_s2_105",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9040159205334405
+      "sample_id": "FT720P_SSM20B370_BQ5204_id5_s0_150",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.9205648853939238
     },
     {
-      "sample_id": "YOUTUBE_id115_s2_120",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9000333798202009
+      "sample_id": "spoof_1166",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.4022181511583071
     },
     {
-      "sample_id": "YOUTUBE_id115_s2_135",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9841675808524561
+      "sample_id": "YOUTUBE_S300U1A_HUAWEIY3II_id39_s1_75",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.5977174008995492
     },
     {
-      "sample_id": "YOUTUBE_id115_s2_15",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.8998503375756698
+      "sample_id": "FT720P_MBP1314_IPHONE7B_id0_s3_105",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.9021560717558194
     },
     {
-      "sample_id": "YOUTUBE_id115_s2_150",
+      "sample_id": "YOUTUBE_id48_s1_60",
       "is_bonafide": true,
       "attack_type": null,
-      "score": 0.8975245367155124
+      "score": 0.9379717297868305
     },
     {
-      "sample_id": "YOUTUBE_id115_s2_30",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9008030246510967
+      "sample_id": "FT720P_MBP1314_IPHONE7F_id12_s0_60",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.965399964136897
     },
     {
-      "sample_id": "YOUTUBE_id115_s2_45",
+      "sample_id": "real_21",
       "is_bonafide": true,
       "attack_type": null,
-      "score": 0.8985727735939704
+      "score": 0.9263951142476483
     },
     {
-      "sample_id": "YOUTUBE_id115_s2_60",
+      "sample_id": "PBUNKNOWN_id169_s0_45",
       "is_bonafide": true,
       "attack_type": null,
-      "score": 0.8975875191417281
+      "score": 0.9621174724979358
     },
     {
-      "sample_id": "YOUTUBE_id115_s2_75",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9031028124849433
+      "sample_id": "FT720P_G780_REDMI4X_id0_s0_60",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.876681340644862
     },
     {
-      "sample_id": "YOUTUBE_id115_s2_90",
-      "is_bonafide": true,
-      "attack_type": null,
-      "score": 0.9383882734917982
+      "sample_id": "FT720P_MBP1314_IPHONE7F_id0_s0_75",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.9328470870007874
     },
     {
-      "sample_id": "YOUTUBE_id116_s0_105",
+      "sample_id": "YOUTUBE_id120_s0_57",
       "is_bonafide": true,
       "attack_type": null,
-      "score": 0.9042418176321113
+      "score": 0.7108034583055329
     },
     {
-      "sample_id": "YOUTUBE_id116_s0_120",
+      "sample_id": "YOUTUBE_IIYAMAXU_SMG955U_S1_id48_s0_30",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3164770642127968
+    },
+    {
+      "sample_id": "FT720P_SSM20B370_BQ5204_id0_s3_62",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.8668832516256714
+    },
+    {
+      "sample_id": "FT720P_MBP1314_X014D_id12_s1_15",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.8998905644858302
+    },
+    {
+      "sample_id": "real_67",
       "is_bonafide": true,
       "attack_type": null,
-      "score": 0.8997191213655364
+      "score": 0.986929699982629
+    },
+    {
+      "sample_id": "YOUTUBE_I2369VM_HONOR7X_id39_s0_66",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.7057730058341857
+    },
+    {
+      "sample_id": "YOUTUBE_TP300LA_SGS7E_id43_s1_118",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.26475196197486456
+    },
+    {
+      "sample_id": "spoof_1241",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.253440398469436
+    },
+    {
+      "sample_id": "real_44",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8859714067484016
+    },
+    {
+      "sample_id": "YOUTUBE_VX2363SMHL_LGL90_id48_s1_120",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.9034749868397414
+    },
+    {
+      "sample_id": "spoof_1063",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.6944564404208784
+    },
+    {
+      "sample_id": "YOUTUBE_id48_s0_30",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.956798091747905
+    },
+    {
+      "sample_id": "YOUTUBE_IIYAMAXU_ZE520KL_id43_s0_214",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.974300006840336
+    },
+    {
+      "sample_id": "FT720P_id12_s1_60",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9857648948251115
+    },
+    {
+      "sample_id": "YOUTUBE_DV3360_LA6020A40_id42_s0_143",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.26185522197635175
+    },
+    {
+      "sample_id": "FT720P_MBP1314_IPHONE8F_id0_s3_16",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.8726441244138884
+    },
+    {
+      "sample_id": "spoof_1222",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.426882640049537
+    },
+    {
+      "sample_id": "FT720P_MBP1314_IPHONE6F_id0_s3_120",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.8253209063195024
+    },
+    {
+      "sample_id": "FT720P_MBP1314_IPHONE6F_id0_s1_30",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.8541897855907643
+    },
+    {
+      "sample_id": "FT720P_SSM2433_S4508_id5_s1_105",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.8193781918982401
+    },
+    {
+      "sample_id": "YOUTUBE_id118_s0_105",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7100154107860718
+    },
+    {
+      "sample_id": "spoof_1315",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.3220336826431722
+    },
+    {
+      "sample_id": "YOUTUBE_AK73S_REDMI3S_id42_s0_136",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.08723227269463707
+    },
+    {
+      "sample_id": "IPHONE8B_id81_s0_135",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9228178954940726
+    },
+    {
+      "sample_id": "FT720P_MBP1314_IPHONE6SF_id5_s0_15",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.9264267044849864
+    },
+    {
+      "sample_id": "FT720P_NEC90GX2_ZC554KL_id0_s0_60",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.8991809213557265
+    },
+    {
+      "sample_id": "YOUTUBE_SLS24E390HL0_HUAWEIG620SL01_S1_id43_s1_30",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.9021555078581293
+    },
+    {
+      "sample_id": "YOUTUBE_AV203H_LEREELE3_id43_s0_61",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.38614743556401254
+    },
+    {
+      "sample_id": "FT720P_G780_REDMI4X_id12_s1_15",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.9285519848119548
+    },
+    {
+      "sample_id": "YOUTUBE_id124_s0_75",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.6729968453895329
+    },
+    {
+      "sample_id": "YOUTUBE_MBP1314_IPHONE8B_id48_s1_60",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.9286056864152646
+    },
+    {
+      "sample_id": "spoof_1179",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.38563943767994385
+    },
+    {
+      "sample_id": "real_8",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.7105347554477479
+    },
+    {
+      "sample_id": "FT720P_MBP1314_IPHONE7F_id0_s0_120",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.9323629847801697
+    },
+    {
+      "sample_id": "FT720P_MBP1314_IPHONE6SF_id0_s2_75",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.879955877805885
+    },
+    {
+      "sample_id": "YOUTUBE_DIGUNKNOWN_IPHONE5SF_id42_s0_15",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.8568276839289592
+    },
+    {
+      "sample_id": "spoof_1141",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.8881993230542781
+    },
+    {
+      "sample_id": "FT720P_MBP1314_IPHONE6SF_id0_s3_54",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.8104274513147456
+    },
+    {
+      "sample_id": "FT720P_SSM2433_S4508_id0_s2_75",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.9085777659218818
+    },
+    {
+      "sample_id": "YOUTUBE_SRV508_IPHONE5SF_id39_s1_84",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.8882398509885772
+    },
+    {
+      "sample_id": "real_269",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.5821749437698068
+    },
+    {
+      "sample_id": "FT720P_IIYAMAGB_IPHONE5SB_id0_s0_45",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.8959216672119432
+    },
+    {
+      "sample_id": "YOUTUBE_VX2363SMHL_LGL90_id48_s1_30",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.9326083748904019
+    },
+    {
+      "sample_id": "real_163",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.8932714360729358
+    },
+    {
+      "sample_id": "YOUTUBE_AA6000_HUAWEIY9_id39_s1_30",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.0971174921929636
+    },
+    {
+      "sample_id": "YOUTUBE_HP250_MEIZUM3S_id39_s1_86",
+      "is_bonafide": false,
+      "attack_type": "unknown",
+      "score": 0.7073950550004939
+    },
+    {
+      "sample_id": "AGL752VM_id147_s0_60",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.895101018671122
+    },
+    {
+      "sample_id": "PBUNKNOWN_id169_s0_30",
+      "is_bonafide": true,
+      "attack_type": null,
+      "score": 0.9618307352470543
     }
   ]
 }

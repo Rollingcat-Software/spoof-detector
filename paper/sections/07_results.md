@@ -44,14 +44,16 @@ The `minifasnet_only` AUC CI on CASIA-FASD is [0.9366, 0.9560] (width 0.019); on
 
 CelebA-Spoof's 10-class taxonomy (vs CASIA-FASD's 3-class) is harder, and the AUC drop from 0.945 → 0.782 reflects (a) the broader spoof-class distribution and (b) the fact the HF eval shard mirror flattened the 10-class labels to binary live/spoof, so we cannot publish a per-spoof-type breakdown without re-acquiring the original CelebA-Spoof labels (§7.4 placeholder).
 
-### Kainyyy largeCrowd-spoof (HuggingFace) — excluded
+### Kainyyy largeCrowd-spoof (HuggingFace), N=200
 
-This dataset is **excluded from all reported results** owing to a known adapter label-mapping issue: the current adapter maps every record to the bona-fide class, so the stored runs report `n_attack = 0` and a degenerate AUC of 0.0. No Kainyyy number is cited anywhere in this paper. The adapter fix is tracked as future work (see the repository issue tracker); once corrected, the row below will be populated by re-running the harness.
+Earlier drafts excluded this dataset because the stored runs reported `n_attack = 0` and a degenerate AUC of 0.0. The root cause was **not** a label-mapping inversion — the adapter correctly maps `live/`→bona-fide and `spoof/`→attack — but an *emission-order* defect: the adapter yielded all 720 `live/` stills before any of the 2 891 `spoof/` stills, so any capped run (the N=200 protocol applies `--limit 200`) drew only bona-fide samples. The fix (`tests/benchmark/datasets/kainyyy_largecrowd.py`) deterministically interleaves the combined stream at `seed=42` so a `--limit N` truncation captures both classes proportionally; the resulting N=200 subsample is 40 bona-fide / 160 attack.
 
-| Pipeline           | ACER | EER | AUC |
-|--------------------|-----:|----:|----:|
-| `minifasnet_only`  | excluded (adapter label-mapping issue) | — | — |
-| `image_only`       | excluded (adapter label-mapping issue) | — | — |
+| Pipeline           | ACER | EER | AUC | N |
+|--------------------|-----:|----:|----:|--:|
+| `minifasnet_only`  | 19.38% | 18.12% | **0.8648** | 200 |
+| `image_only`       | 36.88% | 35.62% | 0.6725 | 200 |
+
+(Backed by `results_kainyyy_all_n200_{minifasnet_only,image_only}.json`; zero-shot, no recalibration.) The pattern is consistent with the cross-dataset finding elsewhere in §7: the strong single-model `minifasnet_only` baseline (0.8648) substantially outperforms the auxiliary-bank `image_only` configuration (0.6725) on an out-of-distribution dataset whose capture characteristics the in-house calibration did not see.
 
 ### Axon CC-BY-4.0 cut-print + 3D-paper-mask (combined with in-house bonafide) — planned
 
@@ -101,10 +103,10 @@ All cells are full-N `minifasnet_only` AUC at the sample size shown in parenthes
 
 | Calibration ↓ / Eval → | CASIA-FASD            | CelebA-Spoof          | Kainyyy                | Axon          | In-house              |
 |------------------------|----------------------:|----------------------:|-----------------------:|--------------:|----------------------:|
-| UniFace (zero-shot)    | **0.9454** (N=2,408)  | 0.7820 (N=2,611)      | excluded¹              | planned       | 0.9264 (N=100)        |
-| In-house (calibrated)  | planned²              | planned²              | excluded¹              | planned       | 0.9264 (N=100)        |
+| UniFace (zero-shot)    | **0.9454** (N=2,408)  | 0.7820 (N=2,611)      | 0.8648 (N=200)¹        | planned       | 0.9264 (N=100)        |
+| In-house (calibrated)  | planned²              | planned²              | planned²               | planned       | 0.9264 (N=100)        |
 
-¹ Kainyyy is excluded (known adapter label-mapping issue; see §7.1).
+¹ Kainyyy `minifasnet_only`, N=200 subsample (the adapter emission-order defect is fixed; see §7.1). This cell is an N=200 zero-shot subsample, not full-N like the CASIA/CelebA cells — read with that caveat.
 ² On-target recalibration on a public set requires a labelled training split of that set; deferred to the per-operator-recalibration evaluation (§9.3).
 
 The headline diagonal entry is in-house intra-dataset (AUC 0.9264, N=100). The headline off-diagonal is UniFace → CASIA-FASD (**AUC 0.9454 at the full N=2,408**) — note this corrects an earlier draft that reported the N=200 subsample value (0.84) in this cell; the full-N number is the publishable cross-dataset robustness figure that drives the discussion in §9.2. The N-progression (0.840 at N=200 → 0.855 at N=500 → 0.9454 at N=2,408) is itself analysed in §8.7.
