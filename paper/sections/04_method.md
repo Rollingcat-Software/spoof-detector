@@ -28,7 +28,7 @@ These all require a buffer of N≥30 recent frames per face track:
 | Micro-tremor | 8–12 Hz oscillation in head pose | Head-yaw FFT, expected band power |
 | Landmark variance | Per-landmark standard deviation | If σ < threshold across N frames → photo |
 | Temporal | Cross-frame motion plausibility | Optical flow consistency + landmark trajectory |
-| Background grid | Per-cell scene stability (proctoring) | 8×6 cell motion variance, expects static background |
+| Background grid | Per-cell scene stability (proctoring) | 6×4 (24 cells) motion variance, expects static background |
 | Screen flicker | 50/60 Hz refresh artifacts (whole frame) | Spatial FFT band power at integer multiples of 50/60 Hz |
 
 ## 4.3 Multi-class fusion
@@ -133,7 +133,7 @@ Empirical confirmation is given in §8.4 ("Peak-sensitive vs. mean session verdi
 
 The published peak-sensitive aggregator is implemented as `aggregate_frame_scores(scores, mode="peak_sensitive")` in `tests/benchmark/pipelines/_common.py`; the bottom-`k` window with `k = max(1, len(scores) // 10)` is the worst-decile mean of §4.4.2, and the 0.5 / 0.5 blend matches the verdict formula above. This is the aggregator used by `tests/benchmark/pipelines/hybrid.py` and `tests/benchmark/pipelines/video_only.py` to produce the §7 cross-dataset results. A streaming variant for live single-session use is implemented in `src/application/session_engine.py::SessionEngine.get_verdict()`; it substitutes a worst-5-frame *sliding* window for the worst-decile (cheaper to maintain incrementally as frames arrive) and otherwise applies the same 0.5 / 0.5 blend at line 382. Incidents — events that flag operator attention — are emitted on sustained `P(REAL) < 0.4` for ≥ 3 seconds, no blinks for ≥ 15 seconds (when blink analyzer is healthy), face missing for ≥ 5 seconds, or MiniFASNet score swing ≥ 0.35 in 1-second window (identity-change suspicion).
 
-The blend coefficient α = 0.5 is selected heuristically as a 50 / 50 mean-plus-worst-decile balance; a full α ∈ {0.0, 0.25, 0.5, 0.75, 1.0} sweep over multi-segment sessions is implemented in `tests/benchmark/alpha_sweep.py` and is to be reported in §8.4 once the multi-segment data acquisition is complete.
+The blend coefficient α = 0.5 is selected heuristically as a 50 / 50 mean-plus-worst-decile balance; a full α ∈ {0.0, 0.25, 0.5, 0.75, 1.0} sweep over multi-segment sessions is to be reported in §8.4 once the multi-segment data acquisition is complete (`tests/benchmark/alpha_sweep.py` — harness not yet committed).
 
 ## 4.5 Active challenges (optional layer, not part of the headline pipeline)
 
