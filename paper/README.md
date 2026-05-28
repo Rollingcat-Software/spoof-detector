@@ -12,15 +12,16 @@ paper/
 ├── sections/
 │   ├── 00_abstract.md
 │   ├── 01_introduction.md
-│   ├── 02_related_work.md      (TBD)
-│   ├── 03_taxonomy.md          (TBD)
+│   ├── 02_related_work.md
+│   ├── 03_taxonomy.md
 │   ├── 04_method.md
-│   ├── 05_calibration.md       (TBD)
+│   ├── 05_calibration.md
 │   ├── 06_experimental_setup.md
-│   ├── 07_results.md           (placeholders, fill from JSON)
-│   ├── 08_ablations.md         (placeholders)
+│   ├── 07_results.md           (populated from paper/figures/results_*.json)
+│   ├── 08_ablations.md         (populated; §8.3 alt-weight rows preliminary, §8.4–§8.6 pending EULA datasets)
 │   ├── 09_discussion.md
-│   └── 10_conclusion.md
+│   ├── 10_conclusion.md
+│   └── 11_reproducibility.md   (table-to-JSON map + per-tier bootstrap calls)
 ├── figures/
 │   ├── build_tables.py         (renders tables from JSON)
 │   ├── results_*.json          (per-benchmark run output)
@@ -54,7 +55,7 @@ python paper/figures/build_tables.py
 # 4. (Optional) assemble LaTeX manuscript by inlining sections + tables
 ```
 
-The skeleton in `sections/` is publishable as-is; only the §7 and §8 tables wait for the `tests.benchmark.run` outputs to populate. Everything else (abstract, intro, method, setup, discussion, conclusion) is fully written.
+All sections in `sections/` are written and every published metric in §7–§8 is backed by a committed `figures/results_*.json` — see §11 for the table-to-JSON map. The only `TBD` cells are planned evaluations awaiting EULA-restricted datasets (OULU-NPU, SiW, CASIA-SURF; §7.4 also blocked by the HF mirror flattening CelebA-Spoof attack types). The three §8.3 alternative-weight rows are preliminary weight-sensitivity estimates not yet independently benchmarked.
 
 ## Citation
 
