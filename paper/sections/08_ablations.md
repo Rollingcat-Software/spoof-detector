@@ -1,8 +1,6 @@
 # 8. Ablation Studies
 
-This section ablates each design decision. Numbers come from `tests/benchmark/ablation_leave_one_out.py` and the per-dataset `tests/benchmark/run.py` runs in §7.
-
-> **Status (2026-05-19, capstone submission cut-off).** §8.1–§8.3 (image-only vs hybrid, per-analyzer leave-one-out, calibrated vs uniform weights) and §8.7 (CI tightness) are **fully populated** from CASIA-FASD + CelebA-Spoof + in-house runs. **§8.4 (peak-sensitive vs mean), §8.5 (active-challenge real-data rows) and §8.6 (session-length curve) remain pending** OULU-NPU / SiW dataset licensing (see §7 Status block and §9.4). `[TBD]` cells reflect data acquisition status, not incomplete analysis — the harness `tests/benchmark/run.py` is one-command reproducible the moment access is granted.
+This section ablates each design decision. Numbers come from `tests/benchmark/ablation_leave_one_out.py` and the per-dataset `tests/benchmark/run.py` runs in §7; the §11 reproducibility appendix maps each table to its backing JSON. §8.1–§8.2 and §8.7 are fully measured. §8.4–§8.6 are planned evaluations pending the EULA-restricted video corpora (§7 data-availability note, §9.4); their `TBD` cells reflect dataset-acquisition status, not incomplete analysis. §8.3 separates one measured row from three weight-sensitivity estimates that are not yet independently benchmarked (see that subsection).
 
 ## 8.1 Image-only vs. video-only vs. hybrid (Table 5)
 
@@ -88,34 +86,47 @@ This is the single most-important paper finding from §8: **on cross-dataset eva
 
 ## 8.3 Calibrated vs. uniform analyzer weights (Table 6)
 
-`MultiClassFuser` uses calibrated weights (see `src/infrastructure/fusion/multi_class_fuser.py:26-40`). Compare four configurations on the in-house replay sub-protocol (N=83 reachable samples):
+`MultiClassFuser` uses calibrated weights (see `src/infrastructure/fusion/multi_class_fuser.py`). One configuration here is **measured** against committed data; the remaining three are **weight-sensitivity estimates** that have not yet been independently benchmarked, and we mark them as such so they are not read as confirmed results.
 
-| Configuration | ACER | EER | AUC | Comment |
+**Measured (backed by `ablation_loo_in_house_replay_n100.json`, N=83 reachable samples):**
+
+| Configuration | ACER | EER | AUC | Source |
 |---|---:|---:|---:|---|
-| Calibrated weights (paper default) | **14.03%** | 12.03% | 0.9497 | published default |
-| Uniform weights (all 1.0) | 14.90% | 12.90% | 0.9303 | naive ensemble |
-| Uniform but texture+moire = 0.1 | 14.90% | 12.90% | 0.9472 | isolates §5.3 finding |
-| MiniFASNet-dominant (5.0 / 0.1 others) | 15.76% | 16.62% | **0.9569** | extreme single-model bias |
+| Calibrated weights (paper default) | **14.03%** | 12.03% | 0.9497 | LOO baseline JSON, N=83 |
 
-Findings:
+This is the full hybrid pipeline at its published default weights, identical to the leave-one-out baseline in §8.2 (ACER 14.03%, AUC 0.9497).
 
-1. **Re-weighting texture and moire from 1.0 → 0.1 alone recovers most of the AUC gap** between uniform (0.9303) and calibrated (0.9497) — the row "Uniform but texture+moire = 0.1" lands at 0.9472, recovering 0.017 of the 0.019 AUC gap. The §5.3 anti-correlation finding is empirically the single most-important calibration choice.
+**Weight-sensitivity estimates — not yet independently benchmarked (preliminary):**
 
-2. **The MiniFASNet-dominant configuration (5.0/0.1) achieves the best AUC (0.9569)** but worst ACER (15.76%). This is the extreme of the calibration tradeoff: collapsing to a single model maximises discrimination but sacrifices the threshold-stability that the multi-analyzer ensemble provides. The published default sits at the sweet spot.
+| Configuration | ACER | EER | AUC | Status |
+|---|---:|---:|---:|---|
+| Uniform weights (all 1.0) | 14.90% | 12.90% | 0.9303 | preliminary — no backing JSON |
+| Uniform but texture+moire = 0.1 | 14.90% | 12.90% | 0.9472 | preliminary — no backing JSON |
+| MiniFASNet-dominant (5.0 / 0.1 others) | 15.76% | 16.62% | 0.9569 | preliminary — no backing JSON |
 
-3. **The calibrated-weights ACER advantage is small (0.87 pp) on the in-house set** but consistent. On cross-dataset evaluation (§7.1) the picture inverts — there `minifasnet_only` (the ablation row that simulates "uniform with everything else dropped") outperforms calibrated, because the calibration weights themselves don't transfer (§5.5).
+These three rows describe the *expected* behaviour of alternative weight vectors but were not produced by a committed benchmark run, and they cannot be recomputed from the data in the repository: the LOO harness persists only the baseline and single-analyzer-zeroed summaries, not the per-sample analyzer scores needed to re-fuse under an arbitrary weight map, and the harness exposes no weight-configuration flag (see the reproducibility note below). They are retained as a preliminary weight-sensitivity sketch and should be re-run before being cited as measured.
+
+Observations (preliminary, pending the weight-config re-run):
+
+1. **Re-weighting texture and moire from 1.0 → 0.1 appears to recover most of the calibration benefit.** The "Uniform but texture+moire = 0.1" estimate (0.9472) sits much closer to the calibrated default (0.9497) than to uniform (0.9303), consistent with the §5.3 anti-correlation finding being the single most-important calibration choice. The precise AUC delta is deferred to the re-run because it depends on the two unbacked uniform rows.
+
+2. **The MiniFASNet-dominant configuration may achieve a marginally higher AUC (0.9569 estimate) at a worse ACER (15.76%).** This would be the extreme of the calibration tradeoff — collapsing toward a single model maximises ROC discrimination but sacrifices the threshold-stability the multi-analyzer ensemble provides — with the published default at the sweet spot. To be confirmed by the re-run.
+
+3. **On cross-dataset evaluation (§7.1) the picture inverts**: there `minifasnet_only` (the measured ablation row that drops the auxiliary bank) outperforms the calibrated hybrid, because the calibration weights themselves do not transfer (§5.5). This cross-dataset inversion *is* measured (§7.1, §8.2) and does not depend on the preliminary rows above.
+
+**Reproducibility note for the three preliminary rows.** Regenerating them requires (a) re-running the in-house replay sub-protocol with the full pipeline to capture per-sample analyzer scores and (b) re-fusing under each weight vector. The current `ablation_leave_one_out.py` only supports zeroing a single named analyzer (`refuse_with_zeroed_weight(per_sample, zeroed=…)`), with no flag to apply uniform / partial / MiniFASNet-dominant weight maps — so this is a code change, listed in the project's "code change needed" backlog, not a one-command re-run.
 
 ## 8.4 Peak-sensitive vs. mean session verdict (Table 7)
 
-The proctoring claim: peak-sensitive aggregation prevents spoof-burst dilution. This ablation requires multi-segment session data we don't yet have on the in-house set; OULU-NPU's per-PAI session videos are the natural test bed once acquired.
+**Planned evaluation — pending access to EULA-restricted datasets (OULU-NPU, SiW, CASIA-SURF).** The proctoring claim is that peak-sensitive aggregation prevents spoof-burst dilution. Measuring it requires multi-segment session data we do not yet have on the in-house set; OULU-NPU's per-PAI session videos are the natural test bed once access is granted. The aggregation logic itself is implemented and unit-tested (§4.4); only the dataset is pending.
 
 | Aggregation | Real-only session ACC | Spoof-only session ACC | **Mixed session ACC** |
 |---|---:|---:|---:|
-| Mean | TBD | TBD | TBD |
-| Peak-sensitive (50/50) | TBD | TBD | TBD |
-| Worst-only | TBD | TBD | TBD |
+| Mean | TBD (planned) | TBD (planned) | TBD (planned) |
+| Peak-sensitive (50/50) | TBD (planned) | TBD (planned) | TBD (planned) |
+| Worst-only | TBD (planned) | TBD (planned) | TBD (planned) |
 
-The mixed-session column is the headline number a paper reviewer reads: a session that is real for 50 seconds, spoof for 10, then real for 60 should be flagged as spoof. Peak-sensitive aggregation does this; pure-mean does not.
+The mixed-session column is the headline number a paper reviewer reads: a session that is real for 50 seconds, spoof for 10, then real for 60 should be flagged as spoof. Peak-sensitive aggregation is designed to do this where pure-mean does not; the empirical confirmation awaits the video corpora above.
 
 ## 8.5 Active challenges (optional layer; Table 9)
 
@@ -129,41 +140,43 @@ When deployment can request user cooperation, add the active layer (light challe
 |---|---:|---:|---:|---:|
 | `flash_only` (synthetic pairs) | 40.00% | 40.00% | 0.5685 | 40.00% |
 
-This is an architectural smoke test: the FlashSpoofAnalyzer correctly produces non-trivial scores end-to-end against the synthetic pairs, validating the `pre_flash_bgr → flash_bgr → FlashSpoofAnalysis → fused live-ness score` plumbing. The 0.5685 AUC reflects the synthesis limitation: when *every* sample is rendered with the same diffuse-flash response, the analyzer cannot distinguish real-world flash dynamics. Real evaluation of the active layer requires actual capture-time pre/flash pairs.
+(Backed by `results_active_challenge_in_house_replay_active.json`, N=100.) This is an architectural smoke test: the FlashSpoofAnalyzer correctly produces non-trivial scores end-to-end against the synthetic pairs, validating the `pre_flash_bgr → flash_bgr → FlashSpoofAnalysis → fused live-ness score` plumbing. The 0.5685 AUC reflects the synthesis limitation: when *every* sample is rendered with the same diffuse-flash response, the analyzer cannot distinguish real-world flash dynamics. Real evaluation of the active layer requires actual capture-time pre/flash pairs.
 
-### Real-data placeholders (TBD)
+### Real-data rows — planned (pending consented capture release)
+
+The active-challenge rows below are a **planned evaluation**: they require real capture-time pre/flash frame pairs and gesture-response videos that are not yet consented for academic release. Only the passive-only baseline (which equals the §8.2 LOO baseline, ACER 14.03%) is measured.
 
 | Configuration | APCER | BPCER | ACER | UX cost (s) |
 |---|---:|---:|---:|---:|
 | hybrid (passive only, paper default) | 14.03% | 14.03% | 14.03% | 0 |
-| hybrid + light challenge | TBD | TBD | TBD | ~1.5 |
-| hybrid + gesture challenge | TBD | TBD | TBD | ~3.0 |
-| hybrid + both | TBD | TBD | TBD | ~4.0 |
+| hybrid + light challenge | TBD (planned) | TBD (planned) | TBD (planned) | ~1.5 |
+| hybrid + gesture challenge | TBD (planned) | TBD (planned) | TBD (planned) | ~3.0 |
+| hybrid + both | TBD (planned) | TBD (planned) | TBD (planned) | ~4.0 |
 
-Active challenges add a +30 to +50 percentage-point swing on hard screen-replay attacks (per Aysenur's 2026 internal evaluation, see `research/aysenur/working_spoof_detection/`). They are not part of the headline pipeline reported in §7.
+Active challenges are expected to add a substantial swing on hard screen-replay attacks (per an internal evaluation, see `research/aysenur/working_spoof_detection/`), but the quantified figures await the consented real-data release; they are not part of the headline pipeline reported in §7.
 
 The path to real numbers: Aysenur's evaluation data captured actual pre/flash frame pairs from real users + replay attacks under the `light_challenge_service` protocol. Once that capture set is consented for academic release, `tests/benchmark/active_challenge.py` will load the real pairs (replacing the synthesis step) and produce the paper-grade row above.
 
 ## 8.6 Session length curve (Figure 4)
 
-ACER as a function of how many seconds of video are observed:
+**Planned evaluation — pending access to EULA-restricted datasets (OULU-NPU, SiW).** ACER as a function of how many seconds of video are observed:
 
 | Session length | 1 s | 5 s | 10 s | 30 s | 60 s | 5 min |
 |---|---:|---:|---:|---:|---:|---:|
-| ACER (OULU-NPU P1) | TBD | TBD | TBD | TBD | TBD | TBD |
+| ACER (OULU-NPU P1) | TBD (planned) | TBD (planned) | TBD (planned) | TBD (planned) | TBD (planned) | TBD (planned) |
 
-Hypothesis: ACER is high at 1 s (insufficient time for temporal analyzers to warm up), drops sharply between 5 s and 30 s as blink and rPPG come online, then plateaus. This requires video benchmarks.
+Hypothesis: ACER is high at 1 s (insufficient time for temporal analyzers to warm up), drops sharply between 5 s and 30 s as blink and rPPG come online, then plateaus. Confirming this requires the video benchmarks above.
 
 ## 8.7 N-effect on bootstrap CI tightness
 
 A practical observation from our test grid: increasing N tightens the AUC CI predictably.
 
-| N | CASIA-FASD AUC | 95% CI width | Source |
+| N | CASIA-FASD AUC | 95% CI width | Source (all seed=42) |
 |---:|---:|---:|---|
-| 200 | 0.840 | [0.755, 0.910] = 0.155 | bootstrap n=1500 |
-| 500 | 0.855 | [0.810, 0.893] = 0.083 | bootstrap n=1500 |
-| 2,408 (full) | **0.9452** | [0.9366, 0.9560] = **0.0194** | bootstrap n=100 |
+| 200 | 0.840 | [0.755, 0.910] = 0.155 | bootstrap n_resamples=1500 (small-N tier) |
+| 500 | 0.855 | [0.810, 0.893] = 0.083 | bootstrap n_resamples=1500 (small-N tier) |
+| 2,408 (full) | **0.9452** | [0.9366, 0.9560] = **0.0194** | bootstrap n_resamples=100 (full large-set tier) |
 
-The 200→500 sample increase halved the CI width; the full-N (2,408) result tightens it again by another factor of 4× (0.083 → 0.019). The pattern is consistent with the analytical relationship CI ∝ 1/√N for proportions. Note that the CASIA-FASD point estimate also rose from 0.840 (N=200) → 0.855 (N=500) → 0.945 (N=2,408) — small-N happened to draw subjects with weaker MiniFASNet scores; the full-test result is the unbiased estimator.
+The 200→500 sample increase halved the CI width; the full-N (2,408) result tightens it again by another factor of ~4× (0.083 → 0.019). The pattern is consistent with the analytical relationship CI ∝ 1/√N for proportions. Note that the CASIA-FASD point estimate also rose from 0.840 (N=200) → 0.855 (N=500) → 0.9452 (N=2,408, CI central estimate; full-resolution 0.9454) — small-N happened to draw subjects with weaker MiniFASNet scores; the full-test result is the unbiased estimator. (The N=200 / N=500 subsamples are computed at n_resamples=1500 per the small-N tier convention; the full N=2,408 set drops to n_resamples=100 because its CI is already tight — both verified against the per-sample arrays in their `results_casia_fasd_test_*_minifasnet_only.json` files.)
 
 This three-row sequence is itself an instructive paper observation: small-N FAS evaluations are noisy, and reviewer comparisons that rely on intra-paper N-discrepancies (e.g. one method reports N=200, another N=2000) can be misleading without explicit CI reporting.

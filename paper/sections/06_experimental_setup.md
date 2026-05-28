@@ -46,7 +46,7 @@ The in-house synthesiser (`tests/benchmark/synthesize_attacks.py`) takes a real 
 
 Why include the weak classes at all: their failure mode (analyzers score them *higher* than bona-fide) is itself an interpretable result and feeds the discussion in §9 of why per-frame liveness analyzers cannot be trusted on adversarial inputs that lack rephotograph artefacts.
 
-For the headline §7.1 result we use only the `replay` sub-protocol (11 bona-fide × 11 strong replay-attack variants). The §7.7 transparency block includes the full-set numbers showing what the weak attack classes look like.
+For the in-house validation we use the `replay` sub-protocol (the §7.2 N=100 set: 25 bona-fide × 75 strong replay-attack variants). The §7.3 transparency block (in-house full set, N=325) includes the full-set numbers showing what the weak attack classes look like.
 
 ## 6.5 Metrics
 

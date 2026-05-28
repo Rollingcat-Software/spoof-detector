@@ -48,6 +48,9 @@ huggingface-cli download nguyenkhoa/celeba-spoof-for-face-antispoofing \
     --include "data/eval-00000-of-00004.parquet"
 
 # Kainyyy/face-anti-spoof (largeCrowd subset) — 3611 samples, ~1.0 GB
+# NOTE: currently EXCLUDED from all paper results — the adapter has a known
+# label-mapping bug (every record maps to bona-fide, so n_attack=0 and AUC=0.0).
+# Do not cite Kainyyy numbers until the adapter is fixed (CODE CHANGE NEEDED).
 huggingface-cli download Kainyyy/face-anti-spoof \
     --repo-type dataset --local-dir /tmp/fas_datasets/kainyyy_face_anti_spoof
 
@@ -164,28 +167,38 @@ Run time: ~30s each.
 
 ### 2e. Bootstrap CIs (§7 footnotes)
 
+The paper uses a fixed two-tier resample convention at `seed=42`:
+
+- **n_resamples = 1500** for the small-N tiers (N ≤ 100): the in-house replay sub-protocol (§7.2, N=100), the in-house full set (§7.3, N=325), and the CASIA-FASD N=200 / N=500 subsamples (§8.7).
+- **n_resamples = 100** for the full large public sets: CASIA-FASD (§7.1, N=2,408) and CelebA-Spoof (§7.1, N=2,611), where the CI is already tight (AUC width ≈ 0.02–0.03) at the lower count.
+
 ```bash
 python -c "
 from src.metrics import acer_ci, auc_ci, eer_ci
 import json
-for path in [
-    'paper/figures/results_casia_fasd_test_full_minifasnet_only.json',
-    'paper/figures/results_celeba_spoof_hf_eval_full_minifasnet_only.json',
+# (path, n_resamples) per the two-tier convention above
+for path, nr in [
+    ('paper/figures/results_casia_fasd_test_full_minifasnet_only.json', 100),
+    ('paper/figures/results_celeba_spoof_hf_eval_full_minifasnet_only.json', 100),
+    ('paper/figures/results_in_house_replay_n100_minifasnet_only.json', 1500),
+    ('paper/figures/results_in_house_full_n325_minifasnet_only.json', 1500),
 ]:
     d = json.load(open(path))
     s = d['per_sample']
     scores = [x['score'] for x in s]
     is_bf = [x['is_bonafide'] for x in s]
     types = [x['attack_type'] for x in s]
-    a = acer_ci(scores, is_bf, types, n_resamples=300, seed=42)
-    u = auc_ci(scores, is_bf, types, n_resamples=300, seed=42)
-    print(f'{path.split(\"/\")[-1]}')
+    a = acer_ci(scores, is_bf, types, n_resamples=nr, seed=42)
+    u = auc_ci(scores, is_bf, types, n_resamples=nr, seed=42)
+    print(f'{path.split(\"/\")[-1]}  (n_resamples={nr})')
     print(f'  ACER = {a.estimate*100:.2f}% [{a.low*100:.2f}, {a.high*100:.2f}]')
     print(f'  AUC  = {u.estimate:.4f} [{u.low:.4f}, {u.high:.4f}]')
 "
 ```
 
-Approximate time: ~7-15 minutes per dataset depending on N (most of the bootstrap cost is in EER computation).
+Note: the AUC *point estimate* in the §7 tables is the full-resolution `metrics.auc` (computed at `roc_curve(..., n_points=200)`); the CI central estimate `u.estimate` above is at the bootstrap's internal `n_points=100` and may differ in the third–fourth decimal (e.g. CASIA 0.9452 vs 0.9454; in-house full N=325 0.4781 vs 0.4717). Both are reported in §7.
+
+Approximate time: ~1-2 minutes per dataset at n_resamples=100 (large sets), ~3-5 minutes at n_resamples=1500 (small sets); most of the bootstrap cost is in EER computation.
 
 ## 3. Build paper tables + figures
 
@@ -223,7 +236,7 @@ pandoc /tmp/paper_assembled.md -o /tmp/paper_draft.tex \
 - **MediaPipe FaceLandmarker not initialising**: ensure `face_landmarker.task` is at `models/face_landmarker.task` (it ships with the repo).
 - **MiniFASNet not loading**: `pip install uniface` and let the first run download the ONNX to `~/.uniface/models/` (~1.7 MB download).
 - **Empty results JSON**: usually means the adapter walked the wrong root path. Check `tests/benchmark/datasets/<dataset>.py:iter_<dataset>` docstring for the expected layout.
-- **bootstrap is slow**: each `eer_ci` call sorts O(N) candidates × `n_resamples` times. For N>2000, drop `n_resamples` to 300 (paper §7 reports at 300; we verified the CI width is stable).
+- **bootstrap is slow**: each `eer_ci` call sorts O(N) candidates × `n_resamples` times. For the full large public sets (N>2000) the paper reports at `n_resamples=100` (CI width already ≈ 0.02–0.03 and stable); the small-N tiers (N≤100 plus the N=200/N=500 CASIA subsamples) use `n_resamples=1500`. See §2e for the exact per-tier mapping.
 - **Cross-dataset numbers are *worse* than published intra-dataset numbers**: this is *expected* — the paper §9.2 disclaims that our zero-shot evaluation is a robustness signal, not a SOTA claim. Published OULU-NPU numbers below ACER 5% are intra-dataset retraining.
 
 ## 6. Adding a new dataset
