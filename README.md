@@ -1,7 +1,7 @@
 # Spoof Detector
 
-[![Tests](https://img.shields.io/badge/tests-114%20passing-brightgreen)](#testing)
-[![Version](https://img.shields.io/badge/version-0.2.0-blue)](pyproject.toml)
+[![Tests](https://img.shields.io/badge/tests-138%20passing-brightgreen)](#testing)
+[![Version](https://img.shields.io/badge/version-0.2.1-blue)](pyproject.toml)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![ISO 30107-3](https://img.shields.io/badge/ISO%2030107--3-Grade%20C-yellow)](#iso-30107-3-evaluation-2026-05-02)
 
@@ -9,11 +9,11 @@ Multi-signal face anti-spoofing engine that produces **session-level verdicts** 
 
 Originally extracted from the [FIVUCSAS](https://github.com/Rollingcat-Software/FIVUCSAS) biometric-authentication platform's R&D track and now maintained as a standalone repository so it can be reused, evaluated and cited independently.
 
-> **Status (2026-05-09):** runnable working example. `pytest` is green (114/114). MiniFASNet ONNX, MediaPipe FaceLandmarker, and the calibrated 7-class fuser are wired end-to-end. v0.2.0 adds the **gates** (`src/gates/`), **fusion** (`src/fusion/`), and **pipeline assembler** (`src/pipeline/`) sub-packages so a downstream service can consume just the parts it needs without bringing up the full session engine.
+> **Status (2026-05-09):** runnable working example. `pytest` is green (138/138). MiniFASNet ONNX, MediaPipe FaceLandmarker, and the calibrated 7-class fuser are wired end-to-end. v0.2.1 adds the **gates** (`src/gates/`), **fusion** (`src/fusion/`), and **pipeline assembler** (`src/pipeline/`) sub-packages so a downstream service can consume just the parts it needs without bringing up the full session engine.
 
 ## Research consolidation (2026-05-09)
 
-In addition to `src/` (productized v0.2.0 library), the repo now also hosts
+In addition to `src/` (productized v0.2.1 library), the repo now also hosts
 the full body of FIVUCSAS liveness / anti-spoof research from all three
 contributors. Everything is **additive** — no source location was removed
 upstream; this repo is the consolidated read-only mirror.
@@ -30,7 +30,7 @@ See [`research/README.md`](research/README.md) and
 [`ROADMAP.md`](ROADMAP.md) ("Where things live" + "Productization checklist")
 for how the research tree is intended to feed back into `src/`.
 
-## What's new in v0.2.0 (2026-05-09)
+## What's new in v0.2.1 (2026-05-09)
 
 Three new sub-packages, all importable independently of the main session engine:
 
@@ -46,13 +46,13 @@ These modules are Aysenur's work — see [AUTHORS.md](AUTHORS.md). They were por
 ### Quick install
 
 ```bash
-pip install "git+https://github.com/Rollingcat-Software/spoof-detector.git@v0.2.0"
+pip install "git+https://github.com/Rollingcat-Software/spoof-detector.git@v0.2.1"
 ```
 
-The lean install (`pip install spoof-detector`) brings in only `numpy + opencv-python`. To run the full session engine (MediaPipe, MiniFASNet, the existing 14-analyzer pipeline) install the `[full]` extra:
+The lean install (`pip install spoof-detector`) brings in only `numpy + opencv-python`. To run the full session engine (MediaPipe, MiniFASNet, the existing 13-analyzer pipeline) install the `[full]` extra:
 
 ```bash
-pip install "spoof-detector[full] @ git+https://github.com/Rollingcat-Software/spoof-detector.git@v0.2.0"
+pip install "spoof-detector[full] @ git+https://github.com/Rollingcat-Software/spoof-detector.git@v0.2.1"
 ```
 
 ## What it does
@@ -69,7 +69,7 @@ Real-time face presentation-attack detection that classifies every session into 
 | 5 | AR filter              | MobileNetV3-Small head (planned)                      | planned    |
 | 6 | Deepfake injection     | Active illumination (planned)                         | planned    |
 
-Per-frame the engine runs **14 analyzers** in three layers (pixel forensics / behavioural signals / environment), routes their scores into a calibrated multi-class fuser, and feeds the per-frame classification into a **session engine** that maintains a "guilty until proven innocent" liveness proof score (blinks + motion + rotation + expression up to 75/100). The session verdict is **peak-sensitive**: a single sustained spoof burst permanently affects the verdict so a real-face tail can't dilute the attack.
+Per-frame the engine runs **13 analyzers** in three layers (pixel forensics / behavioural signals / environment), routes their scores into a calibrated multi-class fuser, and feeds the per-frame classification into a **session engine** that maintains a "guilty until proven innocent" liveness proof score (blinks + motion + rotation + expression up to 75/100). The session verdict is **peak-sensitive**: a single sustained spoof burst permanently affects the verdict so a real-face tail can't dilute the attack.
 
 ## ISO 30107-3 evaluation (2026-05-02)
 
@@ -134,7 +134,7 @@ Pipeline (per frame)
   - MediaPipe face detection (~2 ms)
   - MediaPipe FaceLandmarker (478 points, shared across analyzers)
   - IoU multi-face tracking
-  - 14 analyzers in 3 layers:
+  - 13 analyzers in 3 layers:
 
      Layer 1 — pixel forensics
         MiniFASNet ONNX        (5.0x)  +94.7 gap, proven
@@ -170,11 +170,11 @@ spoof-detector/
     application/                    SessionEngine, Pipeline, FaceTracker, LivenessProver
     infrastructure/
       detection/                    MediaPipe face + landmarker
-      analyzers/                    14 analyzers (one file each)
+      analyzers/                    13 analyzers (one file each)
       fusion/                       Calibrated 7-class probability fuser
       logging/                      JSONL session logger
     presentation/                   OpenCV HUD, threaded camera, app loop
-  tests/                            68 unit tests (analyzers, domain, session)
+  tests/                            138 unit tests (analyzers, domain, session)
   tools/
     diagnose.py                     Live diagnostic dashboard / single-image mode
     benchmark.py                    Per-analyzer timing + accuracy
@@ -185,13 +185,14 @@ spoof-detector/
     collect_ar_dataset.py           AR-filter dataset builder
     train_ar_detector.py            MobileNetV3-Small training entry (Phase 5)
   paper/
-    outline.md                      Academic paper outline (BIOSIG / IJCB target)
+    README.md                       Academic paper overview (BIOSIG / IJCB target)
+    sections/                       Paper sections (00_abstract.md … 10_conclusion.md)
 ```
 
 ## Testing
 
 ```bash
-# Unit tests — 68 tests, ~3 s, no camera, no model download
+# Unit tests — 138 tests, ~3 s, no camera, no model download
 pytest tests/ -v
 
 # Per-analyzer benchmark
@@ -206,7 +207,7 @@ python tools/diagnose.py --image path/to/face.jpg
 
 ## Requirements
 
-- Python 3.11+
+- Python 3.10+
 - OpenCV (with GUI support — the headless `opencv-python-headless` will block `main.py` but not `pytest` / `tools/diagnose.py --image`)
 - MediaPipe 0.10.9+
 - `uniface` 3.0+ (MiniFASNet ONNX) and `onnxruntime` (CPU build by default; replace with `onnxruntime-gpu` for CUDA)
@@ -244,7 +245,7 @@ Target venues: BIOSIG 2026 / IJCB 2026. Working title:
 
 > **AR-Spoofing: Session-Based Multi-Method Face Presentation Attack Detection**
 
-Outline lives in [`paper/outline.md`](paper/outline.md). The paper is **not** ready for submission yet — the current focus is shipping a stable, working detector. See [`ROADMAP.md`](ROADMAP.md) for the full plan.
+Outline lives in [`paper/README.md`](paper/README.md). The paper is **not** ready for submission yet — the current focus is shipping a stable, working detector. See [`ROADMAP.md`](ROADMAP.md) for the full plan.
 
 ## Authors
 
