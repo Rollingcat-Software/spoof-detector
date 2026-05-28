@@ -55,7 +55,7 @@ python paper/figures/build_tables.py
 # 4. (Optional) assemble LaTeX manuscript by inlining sections + tables
 ```
 
-All sections in `sections/` are written and every published metric in §7–§8 is backed by a committed `figures/results_*.json` — see §11 for the table-to-JSON map. The only `TBD` cells are planned evaluations awaiting EULA-restricted datasets (OULU-NPU, SiW, CASIA-SURF; §7.4 also blocked by the HF mirror flattening CelebA-Spoof attack types). The three §8.3 alternative-weight rows are preliminary weight-sensitivity estimates not yet independently benchmarked.
+All sections in `sections/` are written and every published metric in §7–§8 is backed by a committed `figures/results_*.json` (or `figures/weightcfg_*.json` for §8.3) — see §11 for the table-to-JSON map. The only `TBD` cells are planned evaluations awaiting EULA-restricted datasets (OULU-NPU, SiW, CASIA-SURF; §7.4 also blocked by the HF mirror flattening CelebA-Spoof attack types). The four §8.3 weight-configuration rows are now measured from a single self-consistent capture (`weightcfg_in_house_replay_n100_*.json`).
 
 ## Citation
 
