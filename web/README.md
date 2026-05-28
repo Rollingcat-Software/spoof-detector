@@ -34,6 +34,8 @@ ar_filter, background_grid) plus the LivenessProver.
 
 ## Installation
 
+> **Note:** `@rollingcat/spoof-detector` is not yet published to npm. Use the source directly from this repository.
+
 ```bash
 npm install @rollingcat/spoof-detector \
             onnxruntime-web@^1.18.0 \
