@@ -139,7 +139,7 @@ The pipeline *is* the redesign — it fixes the "boring dashboard" critique:
   gauge, color wash + motion on LIVE/SPOOF/IMPERSONATION transitions.
 - **Progressive disclosure:** an "Advanced / Why?" panel reveals the analyzer
   bank (keep the transparency that makes it credible — just demote it).
-- **Identity/brand:** an `amispoof` wordmark, a type pairing (display + mono),
+- **Identity/brand:** an "Am I Spoof?" wordmark (the user-facing display name; the `amispoof` domain/code identifier stays lowercase), a type pairing (display + mono),
   a signature accent that isn't GitHub-blue, a subtle "CV scan" treatment on
   the video, a real loading/skeleton state (kills the "loading…" confusion).
 

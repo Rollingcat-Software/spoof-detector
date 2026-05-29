@@ -4,7 +4,7 @@
 > estimate was executed over a single session, then extended across
 > four phases (PRs #19 → #23) over 2026-05-15 → 2026-05-16. The
 > TypeScript port lives in `web/`, deployed at
-> https://fivucsas.com/amispoof/ with:
+> https://amispoof.fivucsas.com/ with:
 >
 > - **12 analyzers** — MiniFASNet, Blink, LandmarkVariance, DeviceBoundary,
 >   MicroTremor, ScreenFlicker, rPPG, Moire, Texture, ScreenReplay,
