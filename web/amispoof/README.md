@@ -1,7 +1,7 @@
 # amispoof — browser anti-spoof tester
 
 Self-contained static bundle of the FIVUCSAS spoof-detector pipeline,
-intended for deployment at `fivucsas.com/amispoof/`. Runs entirely
+intended for deployment at `amispoof.fivucsas.com/`. Runs entirely
 client-side; no server GPU, no frames uploaded.
 
 ## What's here
@@ -33,20 +33,20 @@ npm run amispoof:serve      # opens on http://127.0.0.1:8791/
 The page needs `https://` for `navigator.mediaDevices.getUserMedia` —
 `localhost` is allowlisted by browsers so the local serve works.
 
-## Deploy to fivucsas.com/amispoof/
+## Deploy to amispoof.fivucsas.com
 
-The fivucsas.com root is served by Hostinger. Deploy via SCP:
+The amispoof.fivucsas.com subdomain is served by Hostinger. Deploy via SCP:
 
 ```bash
 cd /opt/projects/fivucsas/spoof-detector/web
 npm run build && npm run amispoof:bundle
 scp -P 65002 -r amispoof/* \
-  u349700627@46.202.158.52:~/domains/fivucsas.com/public_html/amispoof/
+  u349700627@46.202.158.52:~/domains/amispoof.fivucsas.com/public_html/
 ```
 
 ## Cache headers (Hostinger .htaccess)
 
-Drop this `.htaccess` into `~/domains/fivucsas.com/public_html/amispoof/`
+Drop this `.htaccess` into `~/domains/amispoof.fivucsas.com/public_html/`
 so the models and lib bundle cache aggressively:
 
 ```apache

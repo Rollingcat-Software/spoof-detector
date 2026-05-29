@@ -127,7 +127,7 @@ Calibrated weights (Phase 4A, per paper §5.3 + §8.3 LOO findings):
 - device_boundary 0.5, micro_tremor 0.5 (zero-shot LOO harm).
 - background_grid held at 1.5 (sole transferable positive contributor).
 
-Deployment: https://fivucsas.com/amispoof/ — webcam-driven tester with
+Deployment: https://amispoof.fivucsas.com/ — webcam-driven tester with
 12-analyzer fusion, advisory face-usability gate panel, face bbox +
 478-pt landmark overlay, copy button, downloadable JSON snapshot, and
 a one-click `Run accuracy bench` button hitting
