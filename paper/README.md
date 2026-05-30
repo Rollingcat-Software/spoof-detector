@@ -26,7 +26,7 @@ paper/
 │   ├── build_tables.py         (renders tables from JSON)
 │   ├── results_*.json          (per-benchmark run output)
 │   ├── results_*.csv           (paper-table single rows)
-│   ├── table1_headline.md      (auto-emit)
+│   ├── WITHDRAWN_in_house_synthetic_results.md  (why table1_headline + in_house synthetic CSVs were removed)
 │   ├── table2_celeba_per_type.md
 │   └── table5_ablation_tracks.md
 └── (manuscript.tex             — assembled LaTeX, optional)

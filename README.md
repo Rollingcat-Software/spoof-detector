@@ -155,7 +155,7 @@ Pipeline (per frame)
         Texture                (0.1x)  anti-correlated, suppressed
         Moire                  (0.1x)  anti-correlated, suppressed
 
-  - MultiClassFuser (calibrated weights) -> 7-category probabilities
+  - MultiClassFuser (heuristic weights) -> 7-category probabilities
   - LivenessProver: blinks(25) + motion(20) + rotation(15) + expression(15) = 75 max
 ```
 
@@ -231,7 +231,7 @@ Python pipeline:
 Browser TypeScript port (`web/`, published as `@rollingcat/spoof-detector`):
 - [x] **Phases 1-3** (PR #19) — 6 base analyzers + Aysenur's 3 gates + hybrid_evaluator + assembler + 4 more analyzers (rPPG, Moire, Texture, ScreenReplay).
 - [x] **Bug-fix wave** (PRs #20-#22) — verdict-lock warmup, no-blink incident wiring, blink-rate fps math, gate UX, SEO surface, landmark/video alignment, stale-cache self-heal.
-- [x] **Phase 4** (PR #23) — paper-calibrated weights, BackgroundGrid + Temporal analyzers, LivenessProver, Web Worker offload + frame-skip scheduler, WebGPU EP with WASM fallback, lazy bundle chunks, in-page CASIA-FASD validation harness.
+- [x] **Phase 4** (PR #23) — heuristic fuser weights, BackgroundGrid + Temporal analyzers, LivenessProver, Web Worker offload + frame-skip scheduler, WebGPU EP with WASM fallback, lazy bundle chunks, in-page CASIA-FASD validation harness.
 - [ ] Browser-tuned per-region gate thresholds (mobile-cam calibration sweep).
 - [ ] Real CASIA-FASD micro-mirror samples in `web/amispoof/samples/`.
 - [ ] amispoof.com domain (currently `/amispoof/` slug on fivucsas.com).

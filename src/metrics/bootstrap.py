@@ -9,9 +9,12 @@ versions of this exact test set."
 Usage:
     from src.metrics.bootstrap import bootstrap_ci
 
+    # NOTE: ACER needs a decision threshold. The honest way is to pass a
+    # Dev-derived threshold (see prefer auc_ci / eer_ci, which are threshold-free).
+    # The example below opts into EER-on-test purely for illustration.
     ci = bootstrap_ci(
         scores, is_bonafide, attack_types,
-        metric=lambda *args: classification_report(*args)["acer"],
+        metric=lambda *a: classification_report(*a, allow_test_set_threshold=True)["acer"],
         n_resamples=2000, alpha=0.05, seed=42,
     )
     print(f"ACER = {ci.estimate:.3f} (95% CI [{ci.low:.3f}, {ci.high:.3f}])")

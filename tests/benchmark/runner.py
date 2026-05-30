@@ -132,10 +132,15 @@ def run_benchmark(
             metrics={"error": "empty stream"},
         )
 
+    # Benchmark harness has no Dev split wired, so APCER/BPCER/ACER here use the
+    # EER-on-test operating point (opt-in). These cells are biased low and are NOT
+    # used as paper headlines — the headline numbers in §7 are the threshold-free
+    # AUC/EER (see src/metrics/standard.py classification_report threshold policy).
     report = classification_report(
         scores,
         is_bonafide,
         attack_types,
+        allow_test_set_threshold=True,
     )
     return BenchmarkResult(
         dataset=dataset,

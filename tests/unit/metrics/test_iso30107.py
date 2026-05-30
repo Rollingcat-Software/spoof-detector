@@ -118,12 +118,29 @@ def test_confusion_matrix_sums_match_dataset(fixture_balanced):
 
 def test_classification_report_one_call(fixture_balanced):
     scores, is_bonafide, attack_types = fixture_balanced
-    report = classification_report(scores, is_bonafide, attack_types)
+    # EER-on-test (no Dev threshold) must be explicitly opted into.
+    report = classification_report(
+        scores, is_bonafide, attack_types, allow_test_set_threshold=True
+    )
     # Spot-check the keys a paper would reference
     for key in ["apcer_max", "bpcer", "acer", "eer", "auc", "n_bonafide", "n_attack"]:
         assert key in report
     assert report["n_bonafide"] == 10
     assert report["n_attack"] == 10
+
+
+def test_classification_report_requires_threshold_or_optin(fixture_balanced):
+    """No Dev threshold + no opt-in must raise (test-set-leakage guard)."""
+    scores, is_bonafide, attack_types = fixture_balanced
+    with pytest.raises(ValueError, match="threshold"):
+        classification_report(scores, is_bonafide, attack_types)
+
+
+def test_classification_report_applies_dev_threshold(fixture_balanced):
+    """A Dev-derived threshold is applied verbatim to the reported set."""
+    scores, is_bonafide, attack_types = fixture_balanced
+    report = classification_report(scores, is_bonafide, attack_types, threshold=0.5)
+    assert report["threshold"] == 0.5
 
 
 def test_apcer_per_type_max_published_attack_first():

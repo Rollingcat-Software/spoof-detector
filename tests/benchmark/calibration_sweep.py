@@ -70,7 +70,12 @@ def _sweep_one(per_sample: list[dict], analyzer: str, weights: list[float]) -> l
             z = sum(exps.values()) or 1e-9
             scores.append(float(exps[SpoofCategory.REAL] / z))
 
-        report = classification_report(scores, is_bonafide, attack_types)
+        # Sweep compares ACER across weight values on one fixed capture; no Dev
+        # split is wired, so this uses the (biased) EER-on-test operating point —
+        # opt-in. The swept curve is a heuristic visualisation, not a paper headline.
+        report = classification_report(
+            scores, is_bonafide, attack_types, allow_test_set_threshold=True
+        )
         rows.append({
             "weight": float(w),
             "acer": float(report["acer"]),
