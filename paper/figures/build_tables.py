@@ -49,10 +49,27 @@ def fmt_dec(x: float | None, places: int = 4) -> str:
     return f"{x:.{places}f}" if isinstance(x, (int, float)) else "—"
 
 
+# In-house synthetic same-source protocols are EXCLUDED from the headline table.
+# Their attacks are gamma/blur/moire re-renders of the bona-fide image and their
+# ACER was computed with the threshold chosen on the test set — a leaked,
+# unreproducible "0% ACER / 100%" result. They were withdrawn 2026-05-29 (see
+# paper/figures/WITHDRAWN_in_house_synthetic_results.md). The headline is the
+# zero-shot public-dataset evaluation only. Do NOT re-add them here.
+_HEADLINE_EXCLUDED_PROTOCOLS = {
+    ("in_house", "clean"),
+    ("in_house", "default"),
+    ("in_house", "replay_only"),
+    ("in_house", "replay_only_v2"),
+}
+
+
 def build_table_1(results: list[dict]) -> str:
-    """§7.1 — headline numbers."""
+    """§7.1 — headline numbers (zero-shot public datasets; in-house synthetic excluded)."""
     lines = [
         "# Table 1 — Headline ACER / EER / AUC across datasets",
+        "",
+        "_In-house synthetic same-source protocols are intentionally excluded — see_",
+        "_`WITHDRAWN_in_house_synthetic_results.md`. Headline = zero-shot public datasets._",
         "",
         "| Dataset | Protocol | Method | APCER | BPCER | ACER | EER | AUC | N |",
         "|---|---|---|---:|---:|---:|---:|---:|---:|",
@@ -64,16 +81,18 @@ def build_table_1(results: list[dict]) -> str:
         m = r["metrics"]
         if not isinstance(m, dict) or "apcer_max" not in m:
             continue
+        if (r.get("dataset"), r.get("protocol")) in _HEADLINE_EXCLUDED_PROTOCOLS:
+            continue
         lines.append("| {dataset} | {protocol} | {method} | {apcer} | {bpcer} | {acer} | {eer} | {auc} | {n} |".format(
-            dataset=r["dataset"],
-            protocol=r["protocol"],
-            method=r["pipeline_name"],
+            dataset=r.get("dataset", "—"),
+            protocol=r.get("protocol", "—"),
+            method=r.get("pipeline_name", "—"),
             apcer=fmt_pct(m.get("apcer_max")),
             bpcer=fmt_pct(m.get("bpcer")),
             acer=fmt_pct(m.get("acer")),
             eer=fmt_pct(m.get("eer")),
             auc=fmt_dec(m.get("auc")),
-            n=r["n_samples"],
+            n=r.get("n_samples", "—"),
         ))
     return "\n".join(lines) + "\n"
 
@@ -111,9 +130,11 @@ def build_table_5_ablation(results: list[dict]) -> str:
         "|---|---|---|---:|---:|---:|---:|---:|",
     ]
     # Find any dataset/protocol where we have all 3 methods
-    methods = {(r["dataset"], r["protocol"]): set() for r in results}
+    methods: dict[tuple, set] = {}
     for r in results:
-        methods[(r["dataset"], r["protocol"])].add(r["pipeline_name"])
+        if "pipeline_name" not in r:
+            continue  # e.g. active-challenge smoke runs have no pipeline_name
+        methods.setdefault((r.get("dataset"), r.get("protocol")), set()).add(r["pipeline_name"])
     triples = {k for k, v in methods.items() if {"image_only", "video_only", "hybrid"} <= v}
     if not triples:
         lines.append("| _no dataset has all three pipelines run yet_ |")

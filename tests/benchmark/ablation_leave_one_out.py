@@ -173,8 +173,13 @@ def _run_leave_one_out(per_sample, is_bonafide, attack_types, args) -> int:
     """§8.2 path — set each analyzer's weight to 0 and re-evaluate."""
     from src.metrics import classification_report
 
+    # Ablation deltas are computed relative to a shared EER-on-test baseline on the
+    # SAME capture, so the Δ-ACER between configs is internally consistent; the
+    # absolute ACER is biased low (no Dev split) and is opt-in. Not a paper headline.
     baseline_scores = refuse_with_zeroed_weight(per_sample, zeroed=None)
-    baseline = classification_report(baseline_scores, is_bonafide, attack_types)
+    baseline = classification_report(
+        baseline_scores, is_bonafide, attack_types, allow_test_set_threshold=True
+    )
     print(f"=== Baseline (full hybrid) ===")
     print(f"  ACER = {baseline['acer']*100:5.2f}%  AUC = {baseline['auc']:.4f}  N={len(per_sample)}")
 
@@ -185,7 +190,9 @@ def _run_leave_one_out(per_sample, is_bonafide, attack_types, args) -> int:
     rows = []
     for name in all_analyzers:
         scores = refuse_with_zeroed_weight(per_sample, zeroed=name)
-        report = classification_report(scores, is_bonafide, attack_types)
+        report = classification_report(
+            scores, is_bonafide, attack_types, allow_test_set_threshold=True
+        )
         d_acer = (report["acer"] - baseline["acer"]) * 100
         d_auc = report["auc"] - baseline["auc"]
         print(f"{name:<22s} {report['acer']*100:7.2f}% {d_acer:+7.2f}% {report['auc']:7.4f} {d_auc:+8.4f}")
@@ -239,7 +246,9 @@ def _run_weight_configs(per_sample, is_bonafide, attack_types, args) -> int:
     for cfg in configs:
         weights = build_weight_map(cfg, analyzer_names)
         fused = _refuse_with_weights(per_sample, weights)
-        report = classification_report(fused, is_bonafide, attack_types)
+        report = classification_report(
+            fused, is_bonafide, attack_types, allow_test_set_threshold=True
+        )
         results[cfg] = report
         print(f"{cfg:<22s} {report['acer']*100:7.2f}% {report['eer']*100:7.2f}% {report['auc']:7.4f}")
 

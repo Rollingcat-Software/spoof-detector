@@ -1,2 +1,0 @@
-dataset,protocol,method,APCER_max,BPCER,ACER,EER,AUC,N
-in_house,default,minifasnet_only,50.00%,50.00%,50.00%,50.00%,0.5000,20

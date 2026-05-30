@@ -3,14 +3,21 @@
 Combines per-analyzer scores into a probability distribution
 over the 7-category spoof taxonomy.
 
-Evidence-based weighting: analyzers with proven discrimination
-power get higher weights. Analyzers that are anti-correlated
-(score spoofs higher than real) get near-zero weight.
+HEURISTIC weighting (NOT a swept/optimised calibration): the weights below are
+hand-set from the *sign* of each analyzer's discrimination gap (real-mean minus
+spoof-mean). Analyzers with a strong positive gap get higher weights; analyzers
+measured to be anti-correlated (score spoofs higher than real) get near-zero
+weight. The original 1-D sweep that motivated the texture/moire 0.1 value was run
+on an in-house *synthetic same-source* set with the threshold chosen on the test
+set; that result is unreproducible and has been withdrawn (see paper §5.4 and
+paper/figures/WITHDRAWN_in_house_synthetic_results.md). Do not describe these as
+"optimised" or "swept". TODO: re-derive per-operator with a proper Dev/Test split.
 
-Calibration data (from analyze_captures.py ground truth test):
-  MiniFASNet:       real=99.9  spoof=5.1   gap=+94.7  GOOD
-  screen_replay:    real=46.7  spoof=37.1  gap=+9.6   WEAK
-  device_boundary:  (new, untested — expected HIGH)
+Discrimination-gap signs that motivated the weights (indicative magnitudes only;
+from the in-house synthetic set, so trust the SIGN, not the absolute value):
+  MiniFASNet:       real=99.9  spoof=5.1   gap=+94.7  STRONG POSITIVE
+  screen_replay:    real=46.7  spoof=37.1  gap=+9.6   WEAK POSITIVE
+  device_boundary:  positive on in-house; HARMS zero-shot transfer (paper §8.2)
   moire:            real=39.1  spoof=44.1  gap=-5.0   ANTI-CORRELATED
   texture:          real=72.1  spoof=78.4  gap=-6.3   ANTI-CORRELATED
   temporal:         real=90.0  (single-frame only)     NEUTRAL
@@ -21,8 +28,12 @@ from __future__ import annotations
 from src.domain.models import SpoofCategory, SpoofClassification, AnalyzerResult
 from src.domain.taxonomy import SPOOF_SIGNAL_MAP
 
-# Calibrated weights based on measured discrimination power.
+# Heuristic, hand-set weights grounded in per-analyzer discrimination-gap SIGNS
+# (see module docstring). NOT a swept/optimised calibration — do not relabel as such.
 # Higher weight = analyzer score has more influence on final classification.
+# NOTE: these exact values are mirrored by the TypeScript browser port; changing a
+# value here changes runtime detector behavior. This integrity cleanup leaves the
+# values unchanged and only corrects the provenance description.
 DEFAULT_ANALYZER_WEIGHTS: dict[str, float] = {
     "minifasnet": 5.0,          # PROVEN: +94.7 gap
     "screen_flicker": 3.0,     # NEW: 50/60Hz temporal detection — catches ANY screen
@@ -48,7 +59,8 @@ class MultiClassFuser:
     - A LOW score (close to 0) means "spoof-like" → distributes evidence
       across spoof categories based on SPOOF_SIGNAL_MAP weights
 
-    Analyzer weights are calibrated from ground-truth testing.
+    Analyzer weights are heuristic (hand-set from discrimination-gap signs),
+    not a swept/optimised calibration — see module docstring.
     """
 
     def __init__(self, analyzer_weights: dict[str, float] | None = None):

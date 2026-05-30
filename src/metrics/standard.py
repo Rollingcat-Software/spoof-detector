@@ -154,18 +154,51 @@ def classification_report(
     is_bonafide: Sequence[bool],
     attack_types: Sequence[str] | None = None,
     threshold: float | None = None,
+    *,
+    allow_test_set_threshold: bool = False,
 ) -> dict[str, float | dict]:
     """One-call summary: APCER (max + per-type), BPCER, ACER, HTER, EER, AUC.
 
-    If threshold is None, uses the EER threshold (typical paper-reporting choice).
+    Threshold policy (ISO/IEC 30107-3 reporting honesty):
+      The decision threshold MUST be fixed on a Dev/validation split and then
+      APPLIED unchanged to the Test set. Choosing the threshold on the same set
+      you report APCER/BPCER/ACER on (the "EER-on-test" shortcut) is a form of
+      test-set leakage that optimistically biases ACER/APCER/BPCER downward —
+      in the limit it can manufacture a "0% ACER" headline that does not survive
+      a Dev→Test split. AUC and EER are threshold-free and are always reported.
+
+      • Pass `threshold=` with a value derived on a held-out Dev/validation split
+        (e.g. `eer(dev_scores, dev_is_bonafide)[1]`). This is the correct path.
+
+      • If you have no Dev split and explicitly want the (biased) EER-on-test
+        operating point — acceptable ONLY for threshold-free sanity reporting or
+        when AUC/EER are the headline — you must OPT IN with
+        `allow_test_set_threshold=True`. Doing so without opting in raises, so
+        the leakage can never happen silently.
+
+    EER and AUC in the returned dict are always computed threshold-free on the
+    given set and are unaffected by this policy.
     """
     from src.metrics.iso30107 import apcer, bpcer, acer, eer  # local re-import for clarity
 
+    # EER + AUC are threshold-free summaries of the given set; always safe.
+    eer_value, eer_th = eer(scores, is_bonafide, attack_types)
+
     if threshold is None:
-        eer_value, eer_th = eer(scores, is_bonafide, attack_types)
+        # !!! TEST-SET THRESHOLD PATH — LEAKAGE RISK !!!
+        # No Dev-derived threshold was supplied. Picking the EER threshold on the
+        # SAME set we then score APCER/BPCER/ACER on leaks the test labels into the
+        # operating point. This path is opt-in only and must never be a paper headline.
+        if not allow_test_set_threshold:
+            raise ValueError(
+                "classification_report: no `threshold` supplied. APCER/BPCER/ACER "
+                "require a threshold fixed on a Dev/validation split and applied to "
+                "Test (ISO/IEC 30107-3). Pass `threshold=<dev_eer_threshold>`, or — "
+                "if you knowingly want the biased EER-on-test operating point — pass "
+                "`allow_test_set_threshold=True`. (AUC/EER are threshold-free and "
+                "always reported.)"
+            )
         threshold = eer_th
-    else:
-        eer_value, eer_th = eer(scores, is_bonafide, attack_types)
 
     apcer_max, per_type = apcer(scores, is_bonafide, attack_types, threshold)
     bpcer_value = bpcer(scores, is_bonafide, threshold)

@@ -136,7 +136,8 @@ def main(argv: list[str] | None = None) -> int:
     scores = [r["active_score"] for r in rows]
     is_bf = [r["is_bonafide"] for r in rows]
     types = [r.get("attack_type") or "unknown" for r in rows]
-    report = classification_report(scores, is_bf, types)
+    # Smoke test with no Dev split — EER-on-test operating point (opt-in, biased low).
+    report = classification_report(scores, is_bf, types, allow_test_set_threshold=True)
 
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)

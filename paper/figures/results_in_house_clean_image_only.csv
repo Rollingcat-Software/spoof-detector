@@ -1,2 +1,0 @@
-dataset,protocol,method,APCER_max,BPCER,ACER,EER,AUC,N
-in_house,clean,image_only,62.50%,62.50%,62.50%,62.50%,0.3438,40
