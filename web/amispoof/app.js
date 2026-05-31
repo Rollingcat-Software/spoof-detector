@@ -18,12 +18,12 @@ import {
   FlashTemporalAnalyzer,
   ReadinessGate,
   DEFAULT_ANALYZER_WEIGHTS,
-} from "./lib/spoof-detector.js?v=2026-05-31-veto-cosignal-v3";
+} from "./lib/spoof-detector.js?v=2026-05-31-ui-improvements";
 
 // Version handshake — checked by the inline script in index.html.
 // If the user is running a stale cached app.js (no AMISPOOF_VERSION),
 // the HTML triggers a one-shot reload after 4 s.
-window.AMISPOOF_VERSION = "2026-05-31-veto-cosignal-v3";
+window.AMISPOOF_VERSION = "2026-05-31-ui-improvements";
 
 // SessionEngine.getVerdict() returns a confidence in [0, 0.88] when the
 // LivenessProver is wired (structural ceiling — see SessionEngine.ts
@@ -536,7 +536,52 @@ const els = {
   ambientLabel: $("ambientLabel"),
   replayDevice: $("replayDevice"),
   captureNotes: $("captureNotes"),
+  captureBar: $("captureBar"),
+  captureCounter: $("captureCounter"),
+  countLive: $("countLive"),
+  countSpoof: $("countSpoof"),
+  countOther: $("countOther"),
 };
+
+// === Hard-coded per-analyzer cross-session AUC values =========================
+// Derived 2026-05-31 from the in-house frame-log dataset (6 LIVE + 8 SPOOF
+// sessions, ~23k frames, captured across daylight / room / before-sunset /
+// home-sunset / video-call). These are TOP-LINE .score AUC values — the
+// signal each analyzer feeds into the MultiClassFuser at its top level.
+// (Some analyzers have much stronger SUB-feature AUCs e.g. texture.texture_score
+// 0.92 or screen_replay.skin_score 0.89, but those aren't fuser inputs.)
+//
+// Update freely as the dataset grows — re-run `python notebooks/build_report.py`
+// to regenerate. These constants document what the operator should expect to
+// see in the analyzer panel: green = signal, grey = noise.
+const ANALYZER_TOPLINE_AUC = {
+  texture: 0.836,
+  background_motion: 0.779,
+  pose_3d_consistency: 0.751,
+  eyebrow_motion: 0.742,
+  landmark_variance: 0.742,
+  gaze: 0.733,
+  blink: 0.715,
+  screen_replay: 0.683,
+  behavioral_pattern: 0.682,
+  minifasnet: 0.645,
+  blink_symmetry: 0.634,
+  device_boundary: 0.578,
+  planarity: 0.558,
+  rppg: 0.556,
+  background_grid: 0.554,
+  expression_dynamics: 0.517,
+  micro_tremor: 0.511,
+  screen_flicker: 0.511,
+  moire: 0.509,
+  temporal: 0.505,
+};
+function aucClass(auc) {
+  if (auc == null) return "weak";
+  if (auc >= 0.75) return "strong";
+  if (auc >= 0.65) return "mid";
+  return "weak";
+}
 
 const analyzerRefs = {};
 function buildAnalyzerGroup(title, group) {
@@ -549,8 +594,12 @@ function buildAnalyzerGroup(title, group) {
     const row = document.createElement("div");
     row.className = "analyzer-row";
     row.title = cfg.desc;
+    const auc = ANALYZER_TOPLINE_AUC[cfg.name];
+    const aucPill = auc != null
+      ? `<span class="auc ${aucClass(auc)}" title="In-house cross-session top-line AUC (2026-05-31 dataset, n=14 sessions)">AUC ${auc.toFixed(2)}</span>`
+      : "";
     row.innerHTML = `
-      <span class="name">${cfg.label} <span class="weight">w ${cfg.weight}</span></span>
+      <span class="name">${cfg.label} <span class="weight">w ${cfg.weight}</span> ${aucPill}</span>
       <span class="bar"><span class="fill" style="width: 50%"></span></span>
       <span class="val">—</span>
     `;
@@ -564,6 +613,66 @@ function buildAnalyzerGroup(title, group) {
 }
 buildAnalyzerGroup("Image-track (single frame)", "image");
 buildAnalyzerGroup("Video-track (over time)", "video");
+
+// === Capture-bar state + persistent session counter ===========================
+// The capture bar gets a coloured left border based on what class the user
+// has picked in the dropdown. The session counter tracks how many ↓ Reports
+// they've saved per class in this browser, persisted via localStorage so it
+// survives reloads. Right-click on the counter to reset (for starting a new
+// dataset campaign).
+const CAPTURE_COUNTER_KEY = "amispoof_capture_counter";
+function loadCaptureCounter() {
+  try {
+    return JSON.parse(localStorage.getItem(CAPTURE_COUNTER_KEY)) ?? { LIVE: 0, SPOOF: 0, OTHER: 0 };
+  } catch {
+    return { LIVE: 0, SPOOF: 0, OTHER: 0 };
+  }
+}
+function saveCaptureCounter(c) {
+  try { localStorage.setItem(CAPTURE_COUNTER_KEY, JSON.stringify(c)); } catch {}
+}
+function renderCaptureCounter() {
+  const c = loadCaptureCounter();
+  if (els.countLive) els.countLive.textContent = `L ${c.LIVE ?? 0}`;
+  if (els.countSpoof) els.countSpoof.textContent = `S ${c.SPOOF ?? 0}`;
+  if (els.countOther) els.countOther.textContent = `? ${c.OTHER ?? 0}`;
+}
+function bumpCaptureCounter(label) {
+  const c = loadCaptureCounter();
+  const bucket = label === "LIVE"
+    ? "LIVE"
+    : (label && (label.startsWith("REPLAY") || ["PRINT","MASK","DEEPFAKE"].includes(label)))
+      ? "SPOOF"
+      : "OTHER";
+  c[bucket] = (c[bucket] ?? 0) + 1;
+  saveCaptureCounter(c);
+  renderCaptureCounter();
+}
+function classifyTag(label) {
+  if (label === "LIVE") return "live";
+  if (label && (label.startsWith("REPLAY") || ["PRINT","MASK","DEEPFAKE"].includes(label))) return "spoof";
+  return "unlabeled";
+}
+function refreshCaptureBarState() {
+  if (!els.captureBar || !els.captureLabel) return;
+  const label = els.captureLabel.value || "UNLABELED";
+  els.captureBar.classList.remove("tagged-live", "tagged-spoof", "tagged-unlabeled");
+  els.captureBar.classList.add(`tagged-${classifyTag(label)}`);
+}
+if (els.captureLabel) {
+  els.captureLabel.addEventListener("change", refreshCaptureBarState);
+  refreshCaptureBarState();
+}
+if (els.captureCounter) {
+  els.captureCounter.addEventListener("contextmenu", (e) => {
+    e.preventDefault();
+    if (confirm("Reset session counter (this browser only)?")) {
+      saveCaptureCounter({ LIVE: 0, SPOOF: 0, OTHER: 0 });
+      renderCaptureCounter();
+    }
+  });
+  renderCaptureCounter();
+}
 
 // ---------- Liveness proof panel ----------
 // LivenessProver scores accumulate every frame from passive evidence (blinks,
@@ -1384,7 +1493,12 @@ function updateUI(analysis, v) {
       const key = inc.id ?? `${inc.timestamp}-${inc.type}`;
       knownIncidentIds.add(key);
       const row = document.createElement("div");
-      row.className = "incident";
+      // Texture-collapse incidents (from checkTextureCollapseReplay) are the
+      // new headline detection for video-replay / video-call. Highlight them
+      // so the operator sees them stand out from generic incidents.
+      const isTextureVeto =
+        (inc.description ?? "").startsWith("Texture collapse");
+      row.className = isTextureVeto ? "incident veto-texture" : "incident";
       row.innerHTML = `<b>${inc.type ?? "incident"}</b> @ ${(inc.timestamp ?? 0).toFixed(1)}s — ${
         inc.description ?? ""
       }`;
@@ -1526,6 +1640,10 @@ function download() {
   a.download = `amispoof-session-${labelSlug}-${Date.now()}.json`;
   a.click();
   URL.revokeObjectURL(url);
+  // Persistent dataset campaign counter — each ↓ Report bumps the matching
+  // pill so the operator can see at a glance how many of each class they've
+  // collected without counting files in Explorer.
+  bumpCaptureCounter(captureLabel);
 }
 
 /**

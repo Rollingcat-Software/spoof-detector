@@ -390,6 +390,50 @@
         padding: 1px 5px;
         border-radius: 3px;
       }
+      /* AUC pill — derived 2026-05-31 from in-house frame-log dataset.
+         Shows the operator at a glance which analyzers actually discriminate
+         LIVE vs SPOOF at the top-line .score level (which is what the fuser
+         consumes). green = strong, yellow = mid, grey = noise / no signal. */
+      .analyzer-row .auc {
+        font-size: 10px;
+        padding: 1px 5px;
+        border-radius: 3px;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+      }
+      .analyzer-row .auc.strong { background: rgba(46, 160, 67, 0.18); color: #3fb950; }
+      .analyzer-row .auc.mid    { background: rgba(210, 153, 34, 0.18); color: #d29922; }
+      .analyzer-row .auc.weak   { background: rgba(139, 148, 158, 0.18); color: #8b949e; }
+      /* Capture-bar state. When the user has picked a class in the
+         dropdown, the bar gets a coloured left border so the operator
+         can see at a glance the next ↓ Report will be tagged. */
+      .capture-bar.tagged-live { border-left: 4px solid #3fb950 !important; }
+      .capture-bar.tagged-spoof { border-left: 4px solid #f85149 !important; }
+      .capture-bar.tagged-unlabeled { border-left: 4px solid #8b949e !important; }
+      .capture-counter {
+        display: inline-flex;
+        gap: 6px;
+        align-items: center;
+        font-size: 11px;
+        color: var(--muted);
+        margin-left: auto;
+      }
+      .capture-counter .count-pill {
+        padding: 1px 6px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+      }
+      .capture-counter .count-pill.live { background: rgba(46,160,67,0.2); color: #3fb950; }
+      .capture-counter .count-pill.spoof { background: rgba(248,81,73,0.2); color: #f85149; }
+      .capture-counter .count-pill.other { background: rgba(139,148,158,0.18); color: #8b949e; }
+      /* Texture-collapse incident gets a coloured left border so it stands
+         out from generic incidents. */
+      .incident.veto-texture {
+        border-left: 3px solid #d29922;
+        padding-left: 8px;
+        background: rgba(210, 153, 34, 0.06);
+      }
       .analyzer-row .bar {
         height: 8px;
         background: #21262d;
@@ -760,6 +804,15 @@
           <span style="color:#8b949e;">Notes</span>
           <input id="captureNotes" type="text" placeholder="anything special about this take" style="flex:1;" />
         </label>
+        <!-- Session counter — persists per-browser via localStorage so the
+             operator can see at a glance how many of each class they've saved
+             into the current dataset campaign. Each ↓ Report bumps the
+             matching pill. Reset via the right-click context menu. -->
+        <div class="capture-counter" id="captureCounter" title="Saved this dataset campaign — right-click to reset">
+          <span class="count-pill live" id="countLive">L 0</span>
+          <span class="count-pill spoof" id="countSpoof">S 0</span>
+          <span class="count-pill other" id="countOther">? 0</span>
+        </div>
       </div>
 
       <!-- Pre-flight readiness gate — shown during preview; the session can't
@@ -985,7 +1038,7 @@
       // older cached copy (no AMISPOOF_VERSION export at all), force a
       // one-shot hard reload so the user doesn't get stuck on a broken
       // bundle. Guarded by sessionStorage to avoid infinite loops.
-      window.AMISPOOF_HTML_VERSION = "2026-05-31-veto-cosignal-v3";
+      window.AMISPOOF_HTML_VERSION = "2026-05-31-ui-improvements";
       setTimeout(function () {
         if (
           window.AMISPOOF_VERSION !== window.AMISPOOF_HTML_VERSION &&
@@ -996,7 +1049,7 @@
         }
       }, 4000);
     </script>
-    <script type="module" src="./app.js?v=2026-05-31-veto-cosignal-v3"></script>
+    <script type="module" src="./app.js?v=2026-05-31-ui-improvements"></script>
     <script src="https://app.fivucsas.com/launcher.js?v=2026-05-28" defer></script>
   </body>
 </html>
