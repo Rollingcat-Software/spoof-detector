@@ -48,3 +48,11 @@ initial-prompt.txt
 # Derived sub-protocol directories — built from data/in_house/ on demand
 data/in_house_replay/
 data/in_house_clean/
+
+# Phase F separability dataset — per-session amispoof JSON dumps. These
+# carry user_agent (browser fingerprint) + raw biometric session telemetry
+# and are inherently personal; commit the notebook + analysis artefacts,
+# never the raw dumps. Keep the folder with a .gitkeep so the notebook's
+# folder-discovery logic still finds the directory.
+notebooks/data/*.json
+!notebooks/data/.gitkeep
