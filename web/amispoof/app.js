@@ -18,12 +18,12 @@ import {
   FlashTemporalAnalyzer,
   ReadinessGate,
   DEFAULT_ANALYZER_WEIGHTS,
-} from "./lib/spoof-detector.js?v=2026-05-31-wasm-only-abstain";
+} from "./lib/spoof-detector.js?v=2026-05-31-abc-perf-camera-panel";
 
 // Version handshake — checked by the inline script in index.html.
 // If the user is running a stale cached app.js (no AMISPOOF_VERSION),
 // the HTML triggers a one-shot reload after 4 s.
-window.AMISPOOF_VERSION = "2026-05-31-wasm-only-abstain";
+window.AMISPOOF_VERSION = "2026-05-31-abc-perf-camera-panel";
 
 // SessionEngine.getVerdict() returns a confidence in [0, 0.88] when the
 // LivenessProver is wired (structural ceiling — see SessionEngine.ts
@@ -544,6 +544,12 @@ const els = {
   countLive: $("countLive"),
   countSpoof: $("countSpoof"),
   countOther: $("countOther"),
+  // Inline analysis modal — opens the in-page analysis panel without
+  // needing to download the JSON and run the Python notebook.
+  analysisBtn: $("analysisBtn"),
+  analysisModal: $("analysisModal"),
+  analysisBody: $("analysisBody"),
+  analysisClose: $("analysisClose"),
 };
 
 // === Hard-coded per-analyzer cross-session AUC values =========================
@@ -944,6 +950,17 @@ async function ensureDetector() {
   els.start.disabled = true;
   els.start.textContent = "loading…";
 
+  // Camera-resolution probe. start() runs getUserMedia before calling
+  // ensureDetector, so canvas dimensions are known here. Use them to
+  // gate analyzers whose signal depends on pixel detail.
+  const capW = canvas?.width ?? 0;
+  const capH = canvas?.height ?? 0;
+  const cameraIsHd = capW >= 1280 && capH >= 720;
+  const cameraIsFullHd = capW >= 1920 && capH >= 1080;
+  console.log(
+    `[amispoof] camera ${capW}×${capH} — HD=${cameraIsHd} FullHD=${cameraIsFullHd} → moire ${cameraIsHd ? "ENABLED" : "off"}`,
+  );
+
   detector = await createSpoofDetector({
     miniFasNetModelUrl: "./models/minifasnet_v2.onnx",
     faceLandmarkerTaskUrl: "./models/face_landmarker.task",
@@ -969,20 +986,22 @@ async function ensureDetector() {
     // enough coverage — last 30 samples at skip 5 = 150 frames = ~22 s of
     // history at 6 fps, well above the 5 s the analysis needs.
     heavyAnalyzerFrameSkip: 5,
-    // Disable AUC ≤ 0.55 analyzers (noise per 2026-05-31 in-house data,
-    // n=14 sessions, ~23k frames). Each saves ~3-50 ms / frame and we
-    // never use the resulting evidence anyway:
-    //   moire             AUC 0.509 — saves ~50 ms (heavy worker)
-    //   temporal          AUC 0.505 — saves ~3 ms
-    //   screen_flicker    AUC 0.511 — saves ~5 ms (also Nyquist-blind at our fps)
-    //   micro_tremor      AUC 0.511 — saves ~5 ms (also Nyquist-blind)
-    //   expression_dyn    AUC 0.517 — saves ~3 ms
-    //   background_grid   AUC 0.554 — saves ~5 ms
-    // Net: ~70 ms / frame, ~50 % of the current ~150 ms per-frame budget.
-    // Expected lift: 5.7 fps → ~9-12 fps without losing detection.
-    // Consumers wanting all analyzers (e.g. for cross-deployment AUC
-    // re-measurement) can override via the corresponding enable* flags.
-    enableMoire: false,
+    // Camera-resolution-aware analyzer toggles. Disable when the analyzer
+    // can't physically produce signal at the operator's hardware, enable
+    // when it can. The defaults were calibrated against a 720p capture
+    // (one user, 2026-05-31 in-house dataset, AUC ≤ 0.55 on those
+    // disabled here) — but a different user with a 1080p webcam might
+    // get useful moire signal that the 720p version doesn't.
+    //
+    //   moire             — needs HD+ to resolve LCD subpixel grid
+    //   screen_flicker    — Nyquist-blind below ~18 fps (60 Hz screen
+    //                       refresh aliases). We don't know fps yet at
+    //                       this point — leave off; the in-engine
+    //                       Nyquist gate drops it from fusion anyway.
+    //   micro_tremor      — same Nyquist gate.
+    //   temporal / expr / background_grid — AUC ≤ 0.55 in-house even
+    //                       at HD; keep off unless re-measured later.
+    enableMoire: cameraIsHd,
     enableTemporal: false,
     enableScreenFlicker: false,
     enableMicroTremor: false,
@@ -1295,6 +1314,7 @@ function beginSession() {
   if (els.readinessPanel) els.readinessPanel.style.display = "none";
   els.reset.disabled = false;
   els.download.disabled = false;
+  if (els.analysisBtn) els.analysisBtn.disabled = false;
   els.videoWrap.dataset.state = "running";
   setStatus("running", "live");
 }
@@ -1771,6 +1791,143 @@ els.start.addEventListener("click", start);
 els.stop.addEventListener("click", stop);
 els.reset.addEventListener("click", reset);
 els.download.addEventListener("click", download);
+
+// ===== Inline 📊 Analysis panel =====
+// Renders the current session's analysis directly in the page — verdict
+// trajectory sparkline, top-firing analyzers, incident timeline, environment
+// — without needing to download the JSON and run notebooks/build_report.py.
+// Reads from the in-memory sessionTimeline + lastVerdict + lastProof so the
+// analysis is always for "right now", not a stale download.
+function renderAnalysis() {
+  const v = lastVerdict ?? detector?.getVerdict() ?? null;
+  const proof = lastProof ?? null;
+  const tl = sessionTimeline.slice();
+  if (!els.analysisBody) return;
+
+  if (!v || tl.length === 0) {
+    els.analysisBody.innerHTML =
+      "<p style='color:#8b949e'>No session data yet. Click Start and let a session run for a few seconds, then open this panel.</p>";
+    return;
+  }
+
+  const verdictWord = v.is_live ? "LIVE" : v.quality_uncertain ? "UNCERTAIN" : "SPOOF";
+  const pillClass = v.is_live ? "live" : v.quality_uncertain ? "uncertain" : "spoof";
+  const confPct = Math.round((v.confidence ?? 0) * 100 / 0.88);
+
+  // === Trajectory sparkline (is_live + confidence) ===
+  const sparkW = 700, sparkH = 90, padX = 4, padY = 6;
+  const xStep = (sparkW - 2 * padX) / Math.max(tl.length - 1, 1);
+  const confPath = tl.map((f, i) => {
+    const x = padX + i * xStep;
+    const y = sparkH - padY - (f.confidence ?? 0) * (sparkH - 2 * padY);
+    return `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(" ");
+  const dots = tl.map((f, i) => {
+    const x = padX + i * xStep;
+    const y = f.is_live ? padY + 4 : sparkH - padY - 4;
+    const color = f.is_live ? "#3fb950" : "#f85149";
+    return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="1.2" fill="${color}"/>`;
+  }).join("");
+
+  // === Per-analyzer leaderboard (top + bottom 5) ===
+  const lastFrame = tl[tl.length - 1];
+  const scores = Object.entries(lastFrame.analyzer_scores ?? {})
+    .filter(([_, p]) => p && typeof p.score === "number")
+    .map(([name, p]) => ({ name, score: p.score, auc: ANALYZER_TOPLINE_AUC[name] ?? null }));
+  scores.sort((a, b) => b.score - a.score);
+  const top = scores.slice(0, 5);
+  const bottom = scores.slice(-5).reverse();
+  const renderRow = (s) => `
+    <tr>
+      <td>${s.name}</td>
+      <td><span class="ana-bar" style="width:${Math.max(2, s.score)}px"></span> ${s.score.toFixed(0)}</td>
+      <td>${s.auc != null ? `AUC ${s.auc.toFixed(2)}` : "—"}</td>
+    </tr>`;
+
+  // === Incidents (with veto-texture highlight) ===
+  const incidents = (v.incidents ?? []).slice().reverse();
+  const incidentRows = incidents.length > 0
+    ? incidents.slice(0, 10).map((i) => {
+        const isVeto = (i.description ?? "").startsWith("Texture collapse");
+        const ttColor = isVeto ? "color:#d29922;font-weight:600" : "";
+        return `<tr><td style="${ttColor}">@${(i.timestamp ?? 0).toFixed(1)}s</td><td style="${ttColor}">${i.description ?? i.type ?? "(no description)"}</td></tr>`;
+      }).join("")
+    : `<tr><td colspan="2" style="color:#8b949e">No incidents fired</td></tr>`;
+
+  // === Environment readback ===
+  const env = {
+    class: els.captureLabel?.value || "UNLABELED",
+    room: els.ambientLabel?.value || "(unspecified)",
+    device: els.replayDevice?.value || "(unspecified)",
+    fps: smoothedFps.toFixed(1),
+    frames: tl.length,
+    duration: `${v.session_duration_sec.toFixed(1)}s`,
+  };
+
+  els.analysisBody.innerHTML = `
+    <div style="display:flex;gap:16px;align-items:center;margin-bottom:8px;">
+      <span class="ana-pill ${pillClass}">${verdictWord}</span>
+      <span style="font-size:18px;font-weight:600">${confPct}% confidence</span>
+      <span style="color:#8b949e">·</span>
+      <span style="color:#8b949e">${env.duration} · ${env.frames} frames · ${env.fps} fps</span>
+    </div>
+    <div style="color:#8b949e;font-size:11px;margin-bottom:14px;">
+      Class: <b>${env.class}</b> · Room: ${env.room} · ${env.device !== "(unspecified)" ? `Device: ${env.device}` : ""}
+    </div>
+
+    <h3>Verdict trajectory (green dot = LIVE, red dot = SPOOF/UNCERTAIN)</h3>
+    <svg class="spark" width="100%" viewBox="0 0 ${sparkW} ${sparkH}" preserveAspectRatio="none">
+      <path d="${confPath}" stroke="#58a6ff" stroke-width="1.5" fill="none"/>
+      ${dots}
+    </svg>
+    <div style="font-size:10px;color:#8b949e;margin-top:2px;">Y axis = confidence (0 bottom, 1 top); line = confidence; dots = is_live per frame</div>
+
+    <h3>Top 5 LIVE-side analyzers (lifting the verdict)</h3>
+    <table>
+      <thead><tr><th>analyzer</th><th>score (0-100)</th><th>cross-session AUC</th></tr></thead>
+      <tbody>${top.map(renderRow).join("")}</tbody>
+    </table>
+
+    <h3>Bottom 5 analyzers (dragging the verdict down)</h3>
+    <table>
+      <thead><tr><th>analyzer</th><th>score (0-100)</th><th>cross-session AUC</th></tr></thead>
+      <tbody>${bottom.map(renderRow).join("")}</tbody>
+    </table>
+
+    <h3>Recent incidents${incidents.length > 10 ? ` (showing 10 of ${incidents.length})` : ""}</h3>
+    <table>
+      <thead><tr><th>time</th><th>description</th></tr></thead>
+      <tbody>${incidentRows}</tbody>
+    </table>
+
+    ${proof ? `
+      <h3>Liveness proof — passive evidence</h3>
+      <div style="font-size:12px;color:#c9d1d9;">
+        <b>${Math.round(proof.score)}/100</b> ${proof.is_proven_live ? '<span class="ana-pill live">PROVEN LIVE</span>' : ""}
+        — note: proof measures activity (blinks, head movement, expression). A still real face gets a low score; an animated video replay gets a high one.
+      </div>` : ""}
+  `;
+}
+
+function openAnalysis() {
+  renderAnalysis();
+  if (els.analysisModal) els.analysisModal.classList.add("open");
+}
+function closeAnalysis() {
+  if (els.analysisModal) els.analysisModal.classList.remove("open");
+}
+if (els.analysisBtn) els.analysisBtn.addEventListener("click", openAnalysis);
+if (els.analysisClose) els.analysisClose.addEventListener("click", closeAnalysis);
+if (els.analysisModal) {
+  els.analysisModal.addEventListener("click", (e) => {
+    if (e.target === els.analysisModal) closeAnalysis();
+  });
+}
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && els.analysisModal?.classList.contains("open")) {
+    closeAnalysis();
+  }
+});
 
 // ---------- Phase 5E-3: in-page accuracy bench ----------
 // 5 live + 5 spoof placeholder URLs under ./samples/. The actual sample
