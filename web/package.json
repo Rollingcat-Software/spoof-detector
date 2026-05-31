@@ -24,7 +24,8 @@
     "test:watch": "vitest",
     "prepack": "rm -rf dist/models",
     "amispoof:bundle": "mkdir -p amispoof/lib amispoof/models && cp dist/spoof-detector.js dist/spoof-detector.js.map amispoof/lib/ && cp dist/spoof-detector-*.js dist/spoof-detector-*.js.map amispoof/lib/ 2>/dev/null || true && cp public/models/minifasnet_v2.onnx public/models/face_landmarker.task amispoof/models/",
-    "amispoof:serve": "python3 -m http.server --directory amispoof 8791"
+    "amispoof:serve": "node amispoof/server.mjs 8791",
+    "amispoof:serve-python": "python -m http.server --directory amispoof 8791"
   },
   "keywords": [
     "spoof-detection",
