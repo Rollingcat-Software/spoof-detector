@@ -198,9 +198,18 @@ export class BlinkAnalyzer implements IFaceAnalyzer {
 
     let score: number;
     if (state.blink_count === 0) {
-      if (durationSec > 5.0) score = 10.0;
-      else if (durationSec > 3.0) score = 25.0;
-      else score = 40.0;
+      // Blink-presence ramp re-calibrated 2026-05-31 for low-fps browser
+      // capture. The previous "5 s no-blink → score 10" trip-wire was
+      // calibrated for 30 fps; at our typical 6-9 fps the frame interval
+      // is 110-170 ms — comparable to a natural blink duration — so a
+      // genuine blink frequently lands ENTIRELY between two sample
+      // frames and is uncounted. A real passive user with 0 counted
+      // blinks at 6 s is the normal case, not a photo signal. Score 50
+      // (no-evidence) below the SessionEngine NO_BLINK_ALERT_SEC (15 s);
+      // above that, ramp down as the absence becomes more telling.
+      if (durationSec > 30.0) score = 10.0;
+      else if (durationSec > 15.0) score = 25.0;
+      else score = 50.0;
     } else if (state.blink_count >= expectedBlinks * 0.3) {
       score = 90.0;
     } else {

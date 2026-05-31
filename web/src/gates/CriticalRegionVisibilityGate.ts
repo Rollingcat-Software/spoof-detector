@@ -50,11 +50,15 @@ const DEFAULT_REGION_WEIGHTS: Readonly<Record<string, number>> = {
 const DEFAULT_REGION_SCORE_THRESHOLD = 0.55;
 const DEFAULT_OCCLUSION_SCORE_THRESHOLD = 0.32;
 const EYE_VISIBILITY_THRESHOLD = 0.6;
-const NOSE_VISIBILITY_THRESHOLD = 0.65;
-// Lowered from 0.65 (Python comment): allow slightly covered mouth, but
-// reject fully covered.
-const MOUTH_VISIBILITY_THRESHOLD = 0.45;
-const LOWER_FACE_VISIBILITY_THRESHOLD = 0.58;
+// 2026-05-31 — relaxed for browser MediaPipe landmarks. Original 0.65 nose
+// and 0.45 mouth fired on clearly-visible faces with browser-port landmark
+// noise (user reports + frame-log shows nose/mouth scores in the 0.40-0.55
+// band routinely on a fully visible face at 30-50 cm). Lower the bar to
+// catch only ACTUAL occlusion (genuine 0.15-0.30 scores when a hand or
+// object covers the region).
+const NOSE_VISIBILITY_THRESHOLD = 0.35;
+const MOUTH_VISIBILITY_THRESHOLD = 0.30;
+const LOWER_FACE_VISIBILITY_THRESHOLD = 0.40;
 const MOUTH_REDNESS_OCCLUDED_DELTA = 3.5;
 const MOUTH_REDNESS_WARNING_DELTA = 6.0;
 const LOWER_FACE_TEXTURE_OCCLUDED_RATIO = 0.62;
@@ -677,8 +681,20 @@ function isCriticalOccludedFn(
   // Both eyes physically blocked together.
   if (blocked.has("left_eye") && blocked.has("right_eye")) return true;
 
-  // Nose or mouth individually blocked.
-  if (blocked.has("nose") || blocked.has("mouth")) return true;
+  // 2026-05-31 — was "nose OR mouth individually blocked = critical".
+  // Too aggressive for browser MediaPipe: a single noisy region trips it
+  // even when the face is plainly visible. Now require BOTH nose AND mouth
+  // blocked, OR a single region blocked with a strong physical-occlusion
+  // reason token. Real occlusion (hand over mouth, mask covering nose)
+  // produces both signals; landmark noise produces neither.
+  if (blocked.has("nose") && blocked.has("mouth")) return true;
+  for (const region of ["nose", "mouth"] as const) {
+    if (!blocked.has(region)) continue;
+    const tokens = reasonTokens(regionReasons[region]);
+    for (const t of tokens) {
+      if (PHYSICAL_OCCLUSION_REASON_TOKENS.has(t)) return true;
+    }
+  }
 
   // Lower face: nose + mouth degraded with at least one physical token.
   if (suspicious.has("nose") && suspicious.has("mouth")) {
