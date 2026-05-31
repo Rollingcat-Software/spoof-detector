@@ -720,11 +720,16 @@
       }
     </style>
 
+    <!-- Local vendor importmap. Was jsdelivr CDN URLs but those failed with
+         ERR_QUIC_PROTOCOL_ERROR on slow / unreliable networks, leaving the
+         entire SDK uninitialised and the Start button non-functional.
+         Local files are populated by `npm run amispoof:bundle` from
+         node_modules at build time so amispoof works fully offline. -->
     <script type="importmap">
       {
         "imports": {
-          "onnxruntime-web": "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/+esm",
-          "@mediapipe/tasks-vision": "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/+esm"
+          "onnxruntime-web": "./vendor/onnxruntime-web/ort.all.bundle.min.mjs",
+          "@mediapipe/tasks-vision": "./vendor/mediapipe-tasks-vision/vision_bundle.mjs"
         }
       }
     </script>
@@ -1038,7 +1043,7 @@
       // older cached copy (no AMISPOOF_VERSION export at all), force a
       // one-shot hard reload so the user doesn't get stuck on a broken
       // bundle. Guarded by sessionStorage to avoid infinite loops.
-      window.AMISPOOF_HTML_VERSION = "2026-05-31-proof-trumps-occlusion";
+      window.AMISPOOF_HTML_VERSION = "2026-05-31-local-vendor";
       setTimeout(function () {
         if (
           window.AMISPOOF_VERSION !== window.AMISPOOF_HTML_VERSION &&
@@ -1049,7 +1054,7 @@
         }
       }, 4000);
     </script>
-    <script type="module" src="./app.js?v=2026-05-31-proof-trumps-occlusion"></script>
+    <script type="module" src="./app.js?v=2026-05-31-local-vendor"></script>
     <script src="https://app.fivucsas.com/launcher.js?v=2026-05-28" defer></script>
   </body>
 </html>

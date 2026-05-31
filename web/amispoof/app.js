@@ -18,12 +18,12 @@ import {
   FlashTemporalAnalyzer,
   ReadinessGate,
   DEFAULT_ANALYZER_WEIGHTS,
-} from "./lib/spoof-detector.js?v=2026-05-31-proof-trumps-occlusion";
+} from "./lib/spoof-detector.js?v=2026-05-31-local-vendor";
 
 // Version handshake — checked by the inline script in index.html.
 // If the user is running a stale cached app.js (no AMISPOOF_VERSION),
 // the HTML triggers a one-shot reload after 4 s.
-window.AMISPOOF_VERSION = "2026-05-31-proof-trumps-occlusion";
+window.AMISPOOF_VERSION = "2026-05-31-local-vendor";
 
 // SessionEngine.getVerdict() returns a confidence in [0, 0.88] when the
 // LivenessProver is wired (structural ceiling — see SessionEngine.ts
@@ -220,10 +220,14 @@ function renderProofPanel(proof) {
   }
 }
 
-const ORT_WASM_BASE =
-  "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/";
-const MEDIAPIPE_WASM_BASE =
-  "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/wasm";
+// Point ORT and MediaPipe at LOCAL vendor copies (see amispoof/vendor/).
+// The previous jsdelivr CDN paths failed with ERR_QUIC_PROTOCOL_ERROR on
+// slow / unreliable networks, leaving the page stuck at "idle" with the
+// Start button non-functional (the detector never initialised).
+// vendor/ is populated by `npm run amispoof:bundle` from node_modules/
+// at build time — single source of truth.
+const ORT_WASM_BASE = "./vendor/onnxruntime-web/";
+const MEDIAPIPE_WASM_BASE = "./vendor/mediapipe-tasks-vision/wasm";
 
 // Point ORT WASM resolver at jsdelivr so it can find the .wasm sidecar files.
 // (onnxruntime-web defaults to "relative to the JS bundle", which would 404
