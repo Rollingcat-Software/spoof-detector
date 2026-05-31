@@ -17,12 +17,12 @@ import {
   FlashReflectionAnalyzer,
   FlashTemporalAnalyzer,
   ReadinessGate,
-} from "./lib/spoof-detector.js?v=2026-05-31-readiness-gate";
+} from "./lib/spoof-detector.js?v=2026-05-31-frame-log";
 
 // Version handshake — checked by the inline script in index.html.
 // If the user is running a stale cached app.js (no AMISPOOF_VERSION),
 // the HTML triggers a one-shot reload after 4 s.
-window.AMISPOOF_VERSION = "2026-05-31-readiness-gate";
+window.AMISPOOF_VERSION = "2026-05-31-frame-log";
 
 // SessionEngine.getVerdict() returns a confidence in [0, 0.88] when the
 // LivenessProver is wired (structural ceiling — see SessionEngine.ts
@@ -515,6 +515,15 @@ const els = {
   replayChart: $("replayChart"),
   replayLegend: $("replayLegend"),
   replayClose: $("replayClose"),
+  // Research/dataset capture fields (Phase F — frame_log instrumentation).
+  // The dropdown bakes the ground-truth class into the JSON at save time so
+  // the offline notebook can build a labelled LIVE-vs-REPLAY matrix without
+  // manual relabeling. ambient_label + replay_device + notes are free-form
+  // metadata the operator types before pressing ↓ Report.
+  captureLabel: $("captureLabel"),
+  ambientLabel: $("ambientLabel"),
+  replayDevice: $("replayDevice"),
+  captureNotes: $("captureNotes"),
 };
 
 const analyzerRefs = {};
@@ -778,7 +787,18 @@ let knownIncidentIds = new Set();
 // audit any session frame-by-frame.
 let mediaRecorder = null;
 let recordedChunks = [];
+// sessionTimeline now collects EVERY frame's analyzer snapshot for the entire
+// session — not just when video-recording is on. Powers the ↓ Report download's
+// research-grade `frame_log` time series (LIVE vs REPLAY separability work).
+// Bounded at MAX_FRAME_LOG entries; on overflow we drop the oldest frame so
+// the most recent session window is always retained.
 let sessionTimeline = [];
+const MAX_FRAME_LOG = 18000; // ~10 min at 30 fps, ~20 min at 15 fps
+// Every fired auto/manual flash-temporal probe is appended here so the ↓ Report
+// download exposes the probe time-series (baseline brightness, rise, post-flash
+// persistence) — the discriminator that distinguishes a real face from a phone
+// replay on PC. Without history every report only carries the *latest* probe.
+let flashProbeHistory = [];
 let recordingActive = false;
 // Gate-stability smoother — the per-frame gate state oscillates between
 // CLEAR and OCCLUDED_PENDING under modest landmark jitter. We keep the
@@ -1204,19 +1224,38 @@ function updateUI(analysis, v) {
   els.verdict.classList.toggle("uncertain", uncertain);
   els.verdict.classList.toggle("warming", warming);
 
-  // Integrated active probe: the flash-response temporal test. If the face-
-  // region brightness ramped up slowly and/or stayed elevated after the flash,
-  // a screen's auto-brightness re-arranged itself → video-replay. This is the
-  // one signal that bites on a still, well-lit video replay (where geometry,
-  // no-blink and the spatial reflection all fail). Calibrated live; tune via
-  // the FlashTemporalAnalyzer thresholds. Inconclusive ⇒ no override.
-  if (flashProbe.ran && flashProbe.result && flashProbe.result.isScreen) {
+  // Integrated active probe: the flash-response test. Two paths flag a screen:
+  //   (1) TEMPORAL — brightness ramped up slowly and/or stayed elevated after
+  //       the flash (auto-brightness latch). The primary signal.
+  //   (2) OVER-LIT FALLBACK — a phone screen displaying a face is itself a
+  //       bright light source → baseline saturates → the temporal probe
+  //       abstains (no headroom). Live finding 2026-05-31: a video replay
+  //       trips the over-lit abstain (rise ≈ 5, refl ≈ 7) and the system then
+  //       reads LIVE 95% because no defense fires. Use the SPATIAL reflection
+  //       score as a fallback: a real face's diffuse reflection scores ~70+;
+  //       a flat phone screen scores ≤ 15. Low refl + over-lit baseline ⇒
+  //       likely a screen, override to SPOOF rather than abstain into LIVE.
+  if (flashProbe.ran && flashProbe.result) {
     const t = flashProbe.result;
-    els.verdictText.textContent =
-      `SPOOF (video-replay — flash persistence ${t.persistenceNorm} · ` +
-      `screen ${t.screenScore} · onset ${t.onsetLagMs}ms)`;
-    els.verdict.classList.remove("live", "warming");
-    els.verdict.classList.add("spoof");
+    const refl = flashProbe.reflection;
+    const overLitScreenSuspected =
+      t.inconclusive &&
+      t.baselineMean > 185 &&
+      refl &&
+      refl.score < 20;
+    if (t.isScreen) {
+      els.verdictText.textContent =
+        `SPOOF (video-replay — flash persistence ${t.persistenceNorm} · ` +
+        `screen ${t.screenScore} · onset ${t.onsetLagMs}ms)`;
+      els.verdict.classList.remove("live", "warming");
+      els.verdict.classList.add("spoof");
+    } else if (overLitScreenSuspected) {
+      els.verdictText.textContent =
+        `SPOOF (likely screen — over-lit baseline ${t.baselineMean.toFixed(0)} · ` +
+        `no diffuse reflection: refl ${refl.score})`;
+      els.verdict.classList.remove("live", "warming");
+      els.verdict.classList.add("spoof");
+    }
   }
 
   els.state.textContent = warming ? "warming_up" : "analyzing";
@@ -1262,23 +1301,49 @@ function updateUI(analysis, v) {
   renderProofPanel(proof);
   lastProof = proof;
 
-  // Recording timeline — capture lightweight per-frame snapshot. We
-  // keep this O(1) per frame (no JSON serialisation in the hot path)
-  // and only stringify at download time. Bounded at 10k entries to
-  // avoid runaway memory on hour-long sessions.
-  if (recordingActive && sessionTimeline.length < 10000) {
-    sessionTimeline.push({
-      t_ms: Math.round(performance.now()),
-      t_sec: Number(v.session_duration_sec.toFixed(2)),
-      frame_id: analysis.frame_id,
-      is_live: v.is_live,
-      confidence: Number(v.confidence.toFixed(3)),
-      proof_total: proof ? Math.round(proof.score) : null,
-      proof_breakdown: proof ? proof.details : null,
-      analyzer_scores: snapshot,
-      incident_count: v.incidents.length,
-    });
+  // Frame log — always on (was previously gated on `recordingActive`, which
+  // meant a research-grade ↓ Report JSON had no time series). Lightweight:
+  // we store references to existing JS objects; no JSON serialisation in the
+  // hot path. The full structure is stringified once at download time. Bounded
+  // ring buffer at MAX_FRAME_LOG (~10 min at 30 fps, ~20 min at 15 fps) so
+  // hour-long sessions can't OOM the browser tab.
+  if (sessionTimeline.length >= MAX_FRAME_LOG) {
+    sessionTimeline.shift();
   }
+  const primaryFace = analysis.faces && analysis.faces[0];
+  sessionTimeline.push({
+    t_ms: Math.round(performance.now()),
+    t_sec: Number(v.session_duration_sec.toFixed(2)),
+    frame_id: analysis.frame_id,
+    is_live: v.is_live,
+    confidence: Number(v.confidence.toFixed(3)),
+    proof_total: proof ? Math.round(proof.score) : null,
+    proof_breakdown: proof ? proof.details : null,
+    analyzer_scores: snapshot,
+    incident_count: v.incidents.length,
+    // Geometry — lets the notebook bucket scores by face size / distance.
+    face_bbox: primaryFace
+      ? {
+          x1: Math.round(primaryFace.bbox.x1),
+          y1: Math.round(primaryFace.bbox.y1),
+          x2: Math.round(primaryFace.bbox.x2),
+          y2: Math.round(primaryFace.bbox.y2),
+          area: Math.round(primaryFace.bbox.area),
+        }
+      : null,
+    // Gate (advisory) — slowly-changing; cheap to snapshot. Read directly
+    // from the analysis since the local `gate` const is assigned later in
+    // this function.
+    gate: analysis.gate_result
+      ? {
+          usable: analysis.gate_result.usable,
+          state: analysis.gate_result.state,
+          occlusion: Number((analysis.gate_result.occlusionScore ?? 0).toFixed(3)),
+          illumination: Number((analysis.gate_result.illuminationScore ?? 0).toFixed(3)),
+        }
+      : null,
+    fps: Math.round(smoothedFps * 10) / 10,
+  });
 
   // Per-category P(spoof)
   for (const cat of CATEGORIES) {
@@ -1383,6 +1448,11 @@ function reset() {
   wbProbe.ran = false;
   wbProbe.screenSuspected = false;
   wbProbe.cast = null;
+  // Drop accumulated research-mode buffers — a Reset starts a clean
+  // dataset row, otherwise the next ↓ Report would mix LIVE and REPLAY
+  // frames in the same JSON.
+  sessionTimeline = [];
+  flashProbeHistory = [];
   els.incidentList.innerHTML =
     '<div class="incident">No incidents yet.</div>';
   renderProofPanel(null);
@@ -1392,30 +1462,78 @@ function reset() {
 function download() {
   const verdict = lastVerdict ?? detector?.getVerdict() ?? null;
   if (!verdict) return;
-  const blob = new Blob(
-    [
-      JSON.stringify(
-        {
-          generated_at: new Date().toISOString(),
-          user_agent: navigator.userAgent,
-          verdict,
-          latest_analyzer_scores: lastAnalyzerScores,
-          latest_gate_result: lastGateResult,
-          latest_liveness_proof: lastProof,
-          fps_smoothed: Math.round(smoothedFps * 10) / 10,
-        },
-        null,
-        2,
-      ),
-    ],
-    { type: "application/json" },
-  );
+  // Collect the labels/notes the operator typed before pressing Record. These
+  // are baked into the JSON so the offline notebook can build a labelled
+  // LIVE-vs-REPLAY matrix without manual relabeling — the #1 cause of dirty
+  // datasets in small-N research is misremembered post-hoc labels.
+  const captureLabel = els.captureLabel?.value || "UNLABELED";
+  const environment = {
+    capture_label: captureLabel,
+    ambient_label: (els.ambientLabel?.value || "").trim() || null,
+    replay_device: (els.replayDevice?.value || "").trim() || null,
+    notes: (els.captureNotes?.value || "").trim() || null,
+    camera_settings: captureCameraSettingsSnapshot(),
+  };
+  const payload = {
+    generated_at: new Date().toISOString(),
+    user_agent: navigator.userAgent,
+    amispoof_version: window.AMISPOOF_VERSION,
+    schema_version: 2, // bumped: frame_log + environment + flash_probe_history added
+    environment,
+    verdict,
+    latest_analyzer_scores: lastAnalyzerScores,
+    latest_gate_result: lastGateResult,
+    latest_liveness_proof: lastProof,
+    fps_smoothed: Math.round(smoothedFps * 10) / 10,
+    // Research-grade time series. The latest_* fields are the FINAL frame
+    // only; frame_log is the per-frame trajectory the notebook needs to
+    // compute per-feature AUC, correlation matrices, and temporal models.
+    frame_log: sessionTimeline.slice(),
+    frame_log_truncated: sessionTimeline.length >= MAX_FRAME_LOG,
+    flash_probe_history: flashProbeHistory.slice(),
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {
+    type: "application/json",
+  });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `amispoof-session-${Date.now()}.json`;
+  // File name carries the capture label so a folder of dumps sorts/groups
+  // by class without the user having to open each one.
+  const labelSlug = captureLabel.toLowerCase().replace(/[^a-z0-9_-]+/g, "-");
+  a.download = `amispoof-session-${labelSlug}-${Date.now()}.json`;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+/**
+ * Best-effort snapshot of the current MediaStreamTrack's getSettings().
+ * Returns null silently if no camera stream is attached yet — separability
+ * analysis treats null camera settings as "unknown", not a failure.
+ */
+function captureCameraSettingsSnapshot() {
+  try {
+    const stream = els.video?.srcObject;
+    if (!stream) return null;
+    const track = stream.getVideoTracks?.()[0];
+    if (!track || typeof track.getSettings !== "function") return null;
+    const s = track.getSettings();
+    return {
+      width: s.width ?? null,
+      height: s.height ?? null,
+      frame_rate: s.frameRate ?? null,
+      exposure_mode: s.exposureMode ?? null,
+      exposure_time: s.exposureTime ?? null,
+      white_balance_mode: s.whiteBalanceMode ?? null,
+      color_temperature: s.colorTemperature ?? null,
+      brightness: s.brightness ?? null,
+      contrast: s.contrast ?? null,
+      saturation: s.saturation ?? null,
+      sharpness: s.sharpness ?? null,
+    };
+  } catch {
+    return null;
+  }
 }
 
 els.start.addEventListener("click", start);
@@ -1687,6 +1805,27 @@ async function runFlashProbe(auto = false) {
     flashProbe.lockFailed = !lockedExposure;
     flashProbe.ran = true;
     flashProbe.lastAt = performance.now();
+    // Append this probe to the research-grade history so the ↓ Report
+    // download exposes the full probe trajectory (not just the most
+    // recent one). Each entry is shallow — the raw per-sample arrays live
+    // on window.__flashProbeRaw for live debugging.
+    flashProbeHistory.push({
+      t_ms: Math.round(performance.now()),
+      t_sec: Number((detector?.getVerdict()?.session_duration_sec ?? 0).toFixed(2)),
+      auto,
+      locked_exposure: lockedExposure,
+      // Mirrors the FlashTemporalResult shape exposed by the SDK (see
+      // FlashTemporalAnalyzer.ts). No invented fields — keeps the JSON
+      // schema stable across SDK updates.
+      baseline_mean: temporal.baselineMean ?? null,
+      rise_total: temporal.riseTotal ?? null,
+      onset_lag_ms: temporal.onsetLagMs ?? null,
+      persistence_norm: temporal.persistenceNorm ?? null,
+      screen_score: temporal.screenScore ?? null,
+      is_screen: temporal.isScreen === true,
+      inconclusive: temporal.inconclusive === true,
+      reflection_score: reflection ? (reflection.score ?? null) : null,
+    });
 
     // Debug hook for live calibration — exposes the raw brightness time-series
     // so thresholds can be tuned against real vs screen captures.
@@ -2086,7 +2225,10 @@ if (els.recordToggle) {
         return;
       }
       recordedChunks = [];
-      sessionTimeline = [];
+      // sessionTimeline is no longer cleared at recording start — it now
+      // tracks the entire session for the ↓ Report flow. The recording's
+      // .json will still include the full timeline (recording is a superset
+      // of the report use case).
       const mime = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
         ? "video/webm;codecs=vp9"
         : "video/webm";
