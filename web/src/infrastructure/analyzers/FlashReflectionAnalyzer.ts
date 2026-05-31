@@ -37,8 +37,15 @@ export type FlashColor = "red" | "green" | "blue" | "white";
 export interface FlashReflectionResult {
   /** 0-100, higher = more live (genuine diffuse reflection). */
   score: number;
-  /** score >= liveThreshold. */
+  /** score >= liveThreshold AND not inconclusive. */
   isLive: boolean;
+  /**
+   * True when the flash produced no measurable face-brightness change — i.e.
+   * the screen's light never reached the face (a desktop monitor in normal
+   * ambient). We CANNOT judge live/spoof in this case, so the caller must NOT
+   * treat it as SPOOF. Only `isLive=false && !inconclusive` is a real spoof.
+   */
+  inconclusive: boolean;
   color: FlashColor;
   /** Mean target-channel gain across regions, normalised 0-1. */
   targetGain: number;
@@ -59,6 +66,13 @@ export interface FlashReflectionOptions {
   regionSpreadSaturation?: number;
   /** Final score at/above which the response is judged live. Default 50. */
   liveThreshold?: number;
+  /**
+   * Minimum total photometric response (target+other gain, 0-1) below which
+   * the flash is judged to have NOT reached the face → inconclusive. Default
+   * 0.012 (~3/255 brightness). Prevents a false SPOOF when the screen's light
+   * can't illuminate the face (desktop / bright room).
+   */
+  inconclusiveFloor?: number;
 }
 
 type Region = { x0: number; y0: number; x1: number; y1: number };
@@ -78,12 +92,14 @@ export class FlashReflectionAnalyzer {
   private readonly colorShiftSaturation: number;
   private readonly regionSpreadSaturation: number;
   private readonly liveThreshold: number;
+  private readonly inconclusiveFloor: number;
 
   constructor(options: FlashReflectionOptions = {}) {
     this.colorShiftThreshold = options.colorShiftThreshold ?? 0.05;
     this.colorShiftSaturation = options.colorShiftSaturation ?? 0.15;
     this.regionSpreadSaturation = options.regionSpreadSaturation ?? 0.03;
     this.liveThreshold = options.liveThreshold ?? 50;
+    this.inconclusiveFloor = options.inconclusiveFloor ?? 0.012;
   }
 
   /**
@@ -155,6 +171,7 @@ export class FlashReflectionAnalyzer {
       return {
         score: 0,
         isLive: false,
+        inconclusive: true,
         color,
         targetGain: 0,
         otherGain: 0,
@@ -181,9 +198,17 @@ export class FlashReflectionAnalyzer {
     const spreadPart = clamp01(regionSpread / this.regionSpreadSaturation);
     const score = Math.round((0.75 * responsePart + 0.25 * spreadPart) * 100);
 
+    // Did the flash actually register on the face? If the total photometric
+    // response is below the floor, the screen's light didn't reach the face
+    // (desktop / bright ambient) — we can't judge, so report inconclusive
+    // rather than a false SPOOF.
+    const flashMagnitude = targetGain + otherGain;
+    const inconclusive = flashMagnitude < this.inconclusiveFloor;
+
     return {
       score,
-      isLive: score >= this.liveThreshold,
+      isLive: !inconclusive && score >= this.liveThreshold,
+      inconclusive,
       color,
       targetGain: round(targetGain, 4),
       otherGain: round(otherGain, 4),

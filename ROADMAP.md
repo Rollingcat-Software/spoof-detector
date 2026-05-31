@@ -3,7 +3,59 @@
 **Project**: FIVUCSAS Session-Based Face Presentation Attack Detection
 **Paper Target**: BIOSIG 2026 / IJCB 2026
 **Demo**: https://amispoof.fivucsas.com/ — browser-side reference implementation (migrated 2026-05-17 from fivucsas.com/amispoof/; old URL 301s)
-**Last Updated**: 2026-05-17 (PRs #25–#48 — full multi-signal roadmap shipped: 19 analyzers + 15-axis passive liveness-proof scorer, subdomain migration, recorder + replay UI, browser-first paper reframe)
+**Last Updated**: 2026-05-25 (active-illumination video-replay probe + anti-print planarity veto + camera-restore safeguards — see "Latest" below)
+
+## Latest (2026-05-25) — Active-illumination video-replay probe (PC-first)
+
+Driven by real false-ACCEPT feedback (spoofs passing as LIVE) on the amispoof
+demo. Two passive hardenings shipped first, then a new active probe:
+
+| Change | What it adds | Status |
+|---|---|---|
+| **Anti-print planarity veto** (PR #51) | `LandmarkPlanarityAnalyzer` — rotation-normalised affine-reprojection residual vetoes a flat print/phone-photo; quality floor → UNCERTAIN; Nyquist fps-gating; blink depth-gate | shipped + deployed 2026-05-24 |
+| **Camera-restore safeguard** (PR #53) | auto-restore exposure/WB on reset/stop/exit so experimentation never strands the webcam | shipped + deployed |
+| **`FlashTemporalAnalyzer`** — active flash-response video-replay detector | the content-independent screen detector (this iteration) | **built + live-validated on PC/Brave; pending PR + deploy approval** |
+
+**FlashTemporalAnalyzer (opt-in, active).** Locks camera exposure to a
+mid-range value, flashes the screen white ~1.5 s while sampling face-region
+brightness, then watches the drop-back. Decision signal is **post-flash
+persistence** (a real 3-D face reflects instantly and drops straight back; a
+phone whose auto-brightness latched its backlight stays elevated). Onset-lag is
+computed but **informational only** — it is confounded by subject motion (a
+moving real face reads a slow onset). Replaces the earlier WB-colour-cast probe,
+which was content-dependent and unreliable.
+
+- **Live validation (PC / Brave, this PC's webcam):** real face **6/6 LIVE**
+  (persistence clustered ≤0.03), phone video-replay **caught** (persistence
+  0.74–0.98). Threshold band 0.15–0.45 sits between with ~5× margin. Spatial
+  reflection agrees independently (real refl ~100, phone ~5).
+- **Quality guards (abstain rather than guess):** **baseline-saturation ceiling**
+  (face over-lit / near sensor saturation → no flash headroom → inconclusive;
+  fixes a bright-room false-positive where the tiny rise gave noisy persistence);
+  `minRise` floor (tiny rise → inconclusive, covers a maxed screen); `afterSkip=2`
+  discards the camera-latency tail; **abstain if exposure can't lock** (mobile
+  front cameras); the session **pauses** during a flash so washed-out frames don't
+  spawn false `face missing` / `static image` incidents.
+- **Lighting note:** the active flash check needs a **dim-to-moderate** room (so
+  the screen flash dominates); in a bright room it abstains (over-lit). The
+  passive verdict is unaffected and still wants normal light.
+- **Integration:** runs as a manual "💡 Light" probe AND an automatic session
+  probe (post-warmup + 45 s cadence) that overrides the verdict to SPOOF on a
+  clear screen detection. **Not** part of the passive SDK fusion (active/intrusive
+  by design — opt-in only).
+- **Scope: PC-first.** Manual exposure control is required; most mobile front
+  cameras don't expose it via the web API, so the probe abstains there (bonus,
+  not a target this iteration).
+- **Honest limits:** a fixed-brightness screen (auto-brightness OFF) won't ramp
+  or persist → not caught by this probe (spatial reflection + planarity cover
+  it partially); large post-flash subject movement is a residual false-positive
+  risk; needs the screen flash to reach the subject.
+- **Tests:** `FlashTemporalAnalyzer` 9 vitest (incl. the live real-face
+  regression + motion-onset + maxed-screen cases); full web suite 241 green.
+
+**Pending (this iteration):** dark-room edge-case test (expect UNCERTAIN via the
+quality gate, not LIVE/SPOOF); doc + paper audit; PR + production deploy
+(amispoof) on approval.
 
 ## Status (2026-05-17)
 

@@ -122,6 +122,7 @@ export class SessionEngine {
   private lastBlinkObservedAt = 0;
   private lastNoBlinkIncidentAt = -Infinity;
   private lastPlanarIncidentAt = -Infinity;
+  private lastFaceMissingIncidentAt = -Infinity;
   private qualitySamples = new RingBuffer<{ usable: boolean; illum: number }>(90);
 
   private readonly prover: LivenessProver | null;
@@ -178,6 +179,7 @@ export class SessionEngine {
     this.lastBlinkObservedAt = 0;
     this.lastNoBlinkIncidentAt = -Infinity;
     this.lastPlanarIncidentAt = -Infinity;
+    this.lastFaceMissingIncidentAt = -Infinity;
     this.qualitySamples.clear();
     this.prover?.reset();
   }
@@ -203,13 +205,24 @@ export class SessionEngine {
     if (analysis.faces.length > 0) {
       this.facePresentCount += 1;
       this.faceMissingFrames = 0;
+      // Re-arm: the next missing episode should raise its own incident.
+      this.lastFaceMissingIncidentAt = -Infinity;
     } else {
       this.faceMissingFrames += 1;
+      // Edge/throttled: raise at most one face-missing incident per
+      // FACE_MISSING_ALERT_SEC, NOT once per frame. Without this the detector
+      // fired every frame — a 30 s absence at 50 fps produced ~1,500 duplicate
+      // incidents and instantly tripped the >=3-incident override (a real
+      // visitor whose camera went dark was flagged SPOOF). Mirrors the
+      // no-blink/planar throttles above.
       if (
         this.faceMissingFrames >
           SessionEngine.FACE_MISSING_ALERT_SEC * 30 &&
-        elapsed > 5.0
+        elapsed > 5.0 &&
+        elapsed - this.lastFaceMissingIncidentAt >=
+          SessionEngine.FACE_MISSING_ALERT_SEC
       ) {
+        this.lastFaceMissingIncidentAt = elapsed;
         this.addIncident(
           analysis.frame_id,
           Severity.MEDIUM,

@@ -705,6 +705,7 @@
 
       <div class="controls">
         <button id="start">Start</button>
+        <button id="beginSession" disabled style="display: none" title="Enabled once the readiness checks pass — the session won't start on an unusable capture.">Begin session</button>
         <button id="stop" class="ghost" disabled>Stop</button>
         <button id="reset" class="ghost" disabled>Reset</button>
         <button id="download" class="ghost" disabled title="Download the current session as JSON.">↓ Report</button>
@@ -721,6 +722,54 @@
           accept=".json,application/json"
           style="display: none"
         />
+      </div>
+
+      <!-- Research / dataset-capture bar (Phase F — frame_log instrumentation).
+           Pre-tags the next ↓ Report download so the offline separability
+           notebook can build a labelled LIVE-vs-REPLAY matrix without manual
+           relabeling. All fields optional except the capture-label dropdown
+           (UNLABELED is recorded if the operator forgets to set it).
+           Display: a single compact row that mirrors the .controls aesthetic.
+           Mobile: wraps; nothing here is interactive-critical so wrapping is
+           preferable to a horizontal scroll. -->
+      <div class="capture-bar" id="captureBar" style="margin-top:8px;padding:8px;border:1px solid var(--border, #2a3550);border-radius:6px;background:#161b22;display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:12px;">
+        <label for="captureLabel" style="display:flex;align-items:center;gap:4px;">
+          <span style="color:#8b949e;">Class</span>
+          <select id="captureLabel" title="Ground-truth label baked into the next ↓ Report download. Pick the class BEFORE you stop the session so you don't have to remember when relabeling.">
+            <option value="UNLABELED">unlabeled</option>
+            <option value="LIVE">LIVE (real face)</option>
+            <option value="REPLAY_PHONE_CLOSE">REPLAY · phone close</option>
+            <option value="REPLAY_PHONE_FAR">REPLAY · phone arm's length</option>
+            <option value="REPLAY_PHONE_TILTED">REPLAY · phone tilted</option>
+            <option value="REPLAY_LAPTOP">REPLAY · laptop screen</option>
+            <option value="PRINT">PRINT · paper photo</option>
+            <option value="MASK">MASK · 3D / silicone</option>
+            <option value="DEEPFAKE">DEEPFAKE · injected</option>
+            <option value="OTHER">other (specify in notes)</option>
+          </select>
+        </label>
+        <label for="ambientLabel" style="display:flex;align-items:center;gap:4px;">
+          <span style="color:#8b949e;">Room</span>
+          <input id="ambientLabel" type="text" placeholder="e.g. office_daylight, dim_lamp" style="width:160px;" title="Free-form room descriptor — separability notebook can bucket sessions by ambient." />
+        </label>
+        <label for="replayDevice" style="display:flex;align-items:center;gap:4px;">
+          <span style="color:#8b949e;">Replay device</span>
+          <input id="replayDevice" type="text" placeholder="e.g. iPhone 14 100% bright" style="width:180px;" title="If this is a REPLAY capture, which screen — only meaningful for REPLAY_*/PRINT/MASK classes." />
+        </label>
+        <label for="captureNotes" style="display:flex;align-items:center;gap:4px;flex:1;min-width:200px;">
+          <span style="color:#8b949e;">Notes</span>
+          <input id="captureNotes" type="text" placeholder="anything special about this take" style="flex:1;" />
+        </label>
+      </div>
+
+      <!-- Pre-flight readiness gate — shown during preview; the session can't
+           begin until every check is green (abstain-first: fix conditions
+           before any verdict). -->
+      <div id="readinessPanel" style="display: none; margin-top: 10px">
+        <div id="readinessHeadline" class="gate-headline">
+          Getting ready — line up your face…
+        </div>
+        <div id="readinessList"></div>
       </div>
 
       <!-- Active-illumination (opt-in) result line + full-screen flash overlay.
@@ -936,7 +985,7 @@
       // older cached copy (no AMISPOOF_VERSION export at all), force a
       // one-shot hard reload so the user doesn't get stuck on a broken
       // bundle. Guarded by sessionStorage to avoid infinite loops.
-      window.AMISPOOF_HTML_VERSION = "2026-05-24-camera-restore";
+      window.AMISPOOF_HTML_VERSION = "2026-05-31-frame-log";
       setTimeout(function () {
         if (
           window.AMISPOOF_VERSION !== window.AMISPOOF_HTML_VERSION &&
@@ -947,7 +996,7 @@
         }
       }, 4000);
     </script>
-    <script type="module" src="./app.js?v=2026-05-31-weights"></script>
+    <script type="module" src="./app.js?v=2026-05-31-frame-log"></script>
     <script src="https://app.fivucsas.com/launcher.js?v=2026-05-28" defer></script>
   </body>
 </html>

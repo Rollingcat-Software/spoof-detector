@@ -15,13 +15,15 @@ import {
   createSpoofDetector,
   runCasiaFasdMicroBench,
   FlashReflectionAnalyzer,
+  FlashTemporalAnalyzer,
+  ReadinessGate,
   DEFAULT_ANALYZER_WEIGHTS,
-} from "./lib/spoof-detector.js?v=2026-05-31-weights";
+} from "./lib/spoof-detector.js?v=2026-05-31-frame-log";
 
 // Version handshake — checked by the inline script in index.html.
 // If the user is running a stale cached app.js (no AMISPOOF_VERSION),
 // the HTML triggers a one-shot reload after 4 s.
-window.AMISPOOF_VERSION = "2026-05-31-weights";
+window.AMISPOOF_VERSION = "2026-05-31-frame-log";
 
 // SessionEngine.getVerdict() returns a confidence in [0, 0.88] when the
 // LivenessProver is wired (structural ceiling — see SessionEngine.ts
@@ -420,11 +422,67 @@ let lastFaceBbox = null;
 // than leaving it in a manual/locked state from experimentation).
 let cameraDefaults = null;
 
+// ===== Auto flash-response TEMPORAL probe (integrated video-replay detector) =====
+// The validated, content-INDEPENDENT screen detector. We lock exposure, flash
+// the screen white for ~1.5 s while sampling face-region brightness, then watch
+// what happens after the flash. A real 3D face reflects instantly and drops
+// straight back; a phone/replay's auto-brightness ramps up over ~1 s and stays
+// elevated (its sensor saw our flash and re-arranged its own backlight). Runs
+// automatically once past warmup, then on a cadence, and folds the result into
+// the verdict. See FlashTemporalAnalyzer for the physics + discriminators.
+const FLASH_PROBE_AT_FRAME = 90; // first probe ~a few seconds past warmup
+const FLASH_PROBE_INTERVAL_MS = 45000; // re-probe cadence (intrusive → infrequent)
+const FLASH_BASELINE_SAMPLES = 3; // pre-flash brightness samples
+const FLASH_DURING_SAMPLES = 15; // ~1.5 s of flash at 100 ms spacing
+const FLASH_AFTER_SAMPLES = 8; // post-flash drop-back samples
+const FLASH_SAMPLE_MS = 100; // spacing between brightness samples
+const flashTemporalAnalyzer = new FlashTemporalAnalyzer({ sampleIntervalMs: FLASH_SAMPLE_MS });
+const flashProbe = {
+  ran: false,
+  running: false,
+  lastAt: 0,
+  result: null, // FlashTemporalResult
+  reflection: null, // FlashReflectionResult (spatial, from the same flash)
+  screenSuspected: false,
+};
+
+// ===== WB-cast probe (dormant diagnostic) =====
+// Earlier attempt: lock white balance, measure the face colour cast. Found
+// CONTENT-DEPENDENT (a screen's cast varies with the replayed scene), so it no
+// longer drives the verdict — the flash-temporal probe above replaced it. Kept
+// callable from the console (runWbProbe()) for diagnostics only.
+const WB_PROBE_TEMP = 5000; // locked neutral white-balance temp (K)
+window.WB_CAST_THRESHOLD = 0.5;
+const wbProbe = {
+  ran: false,
+  running: false,
+  lastAt: 0,
+  faceRB: null,
+  faceGB: null,
+  cast: null,
+  screenSuspected: false,
+};
+
+// ===== Pre-flight readiness gate (blocks session start) =====
+// After the camera turns on we enter PREVIEW: the loop runs detection and
+// evaluates capture readiness each frame, but the session verdict is NOT shown
+// until the user clicks "Begin session", which is enabled only after the checks
+// stay green for READINESS_STABLE_FRAMES consecutive frames. Abstain-first: a
+// dark/over-lit/occluded/no-face capture yields "fix this", never a verdict.
+const readinessGate = new ReadinessGate();
+const READINESS_STABLE_FRAMES = 8;
+let previewMode = false;
+let readinessStreak = 0;
+
 const els = {
   videoWrap: $("videoWrap"),
   video: $("video"),
   overlay: $("overlay"),
   start: $("start"),
+  beginSession: $("beginSession"),
+  readinessPanel: $("readinessPanel"),
+  readinessHeadline: $("readinessHeadline"),
+  readinessList: $("readinessList"),
   stop: $("stop"),
   reset: $("reset"),
   download: $("download"),
@@ -469,6 +527,15 @@ const els = {
   replayChart: $("replayChart"),
   replayLegend: $("replayLegend"),
   replayClose: $("replayClose"),
+  // Research/dataset capture fields (Phase F — frame_log instrumentation).
+  // The dropdown bakes the ground-truth class into the JSON at save time so
+  // the offline notebook can build a labelled LIVE-vs-REPLAY matrix without
+  // manual relabeling. ambient_label + replay_device + notes are free-form
+  // metadata the operator types before pressing ↓ Report.
+  captureLabel: $("captureLabel"),
+  ambientLabel: $("ambientLabel"),
+  replayDevice: $("replayDevice"),
+  captureNotes: $("captureNotes"),
 };
 
 const analyzerRefs = {};
@@ -732,7 +799,18 @@ let knownIncidentIds = new Set();
 // audit any session frame-by-frame.
 let mediaRecorder = null;
 let recordedChunks = [];
+// sessionTimeline now collects EVERY frame's analyzer snapshot for the entire
+// session — not just when video-recording is on. Powers the ↓ Report download's
+// research-grade `frame_log` time series (LIVE vs REPLAY separability work).
+// Bounded at MAX_FRAME_LOG entries; on overflow we drop the oldest frame so
+// the most recent session window is always retained.
 let sessionTimeline = [];
+const MAX_FRAME_LOG = 18000; // ~10 min at 30 fps, ~20 min at 15 fps
+// Every fired auto/manual flash-temporal probe is appended here so the ↓ Report
+// download exposes the probe time-series (baseline brightness, rise, post-flash
+// persistence) — the discriminator that distinguishes a real face from a phone
+// replay on PC. Without history every report only carries the *latest* probe.
+let flashProbeHistory = [];
 let recordingActive = false;
 // Gate-stability smoother — the per-frame gate state oscillates between
 // CLEAR and OCCLUDED_PENDING under modest landmark jitter. We keep the
@@ -824,13 +902,20 @@ async function start() {
 
     await ensureDetector();
 
+    // Enter PREVIEW (readiness check) — the session does NOT start until the
+    // readiness checks pass and the user clicks "Begin session".
     els.start.style.display = "none";
+    if (els.beginSession) {
+      els.beginSession.style.display = "";
+      els.beginSession.disabled = true;
+    }
+    if (els.readinessPanel) els.readinessPanel.style.display = "block";
     els.stop.disabled = false;
-    els.reset.disabled = false;
-    els.download.disabled = false;
     els.videoWrap.dataset.state = "running";
-    setStatus("running", "live");
+    setStatus("readiness check…", "live");
 
+    previewMode = true;
+    readinessStreak = 0;
     running = true;
     loop();
 
@@ -879,6 +964,14 @@ async function stop() {
   els.start.style.display = "";
   els.start.disabled = false;
   els.start.textContent = "Start";
+  // Clear any preview / readiness state so a fresh Start re-runs the check.
+  previewMode = false;
+  readinessStreak = 0;
+  if (els.beginSession) {
+    els.beginSession.style.display = "none";
+    els.beginSession.disabled = true;
+  }
+  if (els.readinessPanel) els.readinessPanel.style.display = "none";
   els.videoWrap.dataset.state = "idle";
   setStatus("stopped", "live");
 }
@@ -901,6 +994,18 @@ async function loop() {
     requestAnimationFrame(loop);
     return;
   }
+  // === Flash-probe guard ===
+  // While an active flash probe runs (~3 s of locked exposure + a white
+  // screen flash), the face washes out / drops from detection. Feeding those
+  // frames to the SessionEngine spawns false "face missing" / "static image"
+  // incidents that latch the peak-sensitive verdict to SPOOF — a self-inflicted
+  // false reject. The probe samples the video itself (it doesn't need the
+  // detector), so we PAUSE the passive analysis for its duration and let the
+  // engine see a clean gap, exactly like the tab-hidden case above.
+  if (flashBusy) {
+    requestAnimationFrame(loop);
+    return;
+  }
   try {
     ctx.drawImage(els.video, 0, 0, canvas.width, canvas.height);
     const analysis = await detector.analyzeFrame(canvas);
@@ -908,6 +1013,31 @@ async function loop() {
       analysis.faces && analysis.faces[0] ? analysis.faces[0].bbox : null;
     const v = detector.getVerdict();
     lastVerdict = v;
+
+    // === Pre-flight readiness (preview) ===
+    // Before the session begins we only evaluate capture readiness and gate
+    // the "Begin session" button — no verdict, no active flash probe. The
+    // engine still ingests frames (cheap) but that accumulation is discarded by
+    // detector.reset() when the session actually begins.
+    if (previewMode) {
+      drawOverlay(analysis, v);
+      evaluateReadiness(analysis);
+      if (running) requestAnimationFrame(loop);
+      return;
+    }
+
+    // Auto flash-response temporal probe — run a few seconds past warmup, then
+    // on a (longer, since it's intrusive) cadence, to catch a screen/video-
+    // replay swapped in mid-session. Fire-and-forget; it restores the camera.
+    if (running && !flashProbe.running && !flashBusy) {
+      const nowP = performance.now();
+      if (
+        (!flashProbe.ran && v.frames_analyzed >= FLASH_PROBE_AT_FRAME) ||
+        (flashProbe.ran && nowP - flashProbe.lastAt > FLASH_PROBE_INTERVAL_MS)
+      ) {
+        runFlashProbe(true); // auto=true: silent, no button toggling
+      }
+    }
     drawOverlay(analysis, v);
     updateUI(analysis, v);
   } catch (err) {
@@ -915,6 +1045,76 @@ async function loop() {
     setStatus(`frame error: ${err.message || err}`, "error");
   }
   if (running) requestAnimationFrame(loop);
+}
+
+// ===== Pre-flight readiness evaluation (preview phase) =====
+// Maps the per-frame analysis onto the SDK ReadinessGate, renders the live
+// checklist, and enables "Begin session" only after the checks stay green for
+// READINESS_STABLE_FRAMES consecutive frames (debounce against per-frame jitter).
+function evaluateReadiness(analysis) {
+  const faces = analysis.faces || [];
+  const bbox = faces[0] ? faces[0].bbox : null;
+  const frameArea = (canvas.width || 1) * (canvas.height || 1);
+  const faceAreaFraction = bbox && bbox.area ? bbox.area / frameArea : 0;
+  const gate = analysis.gate_result || null;
+  const result = readinessGate.evaluate({
+    faceCount: faces.length,
+    faceAreaFraction,
+    faceBrightness: gate ? gate.globalFaceBrightness : 0,
+    occluded: gate ? !!gate.occluded : false,
+    occludedRegions: gate ? gate.occludedRegions || [] : [],
+    cameraResponsive: !!(els.video && els.video.readyState >= 2 && !els.video.paused),
+  });
+  renderReadiness(result);
+
+  if (result.ready) readinessStreak += 1;
+  else readinessStreak = 0;
+  const stable = readinessStreak >= READINESS_STABLE_FRAMES;
+  if (els.beginSession) els.beginSession.disabled = !stable;
+  if (els.readinessHeadline) {
+    els.readinessHeadline.textContent = stable
+      ? "Ready — click “Begin session”"
+      : result.ready
+        ? "Holding steady…"
+        : "Getting ready — fix the items below";
+    els.readinessHeadline.className = "gate-headline " + (stable ? "ok" : "warn");
+  }
+  if (els.verdictText) els.verdictText.textContent = "Readiness check — see checklist";
+}
+
+function renderReadiness(result) {
+  if (!els.readinessList) return;
+  els.readinessList.innerHTML = result.checks
+    .map((c) => {
+      const color = c.pass ? "var(--green)" : "var(--amber)";
+      const mark = c.pass ? "✓" : "•";
+      return (
+        `<div class="row"><span>${mark} ${c.label}</span>` +
+        `<span style="color:${color};text-align:right">${c.message}</span></div>`
+      );
+    })
+    .join("");
+}
+
+/** Leave PREVIEW and start the real session (discarding preview accumulation). */
+function beginSession() {
+  if (!previewMode || !detector) return;
+  previewMode = false;
+  readinessStreak = 0;
+  detector.reset(); // discard frames accumulated during readiness preview
+  if (els.beginSession) {
+    els.beginSession.disabled = true;
+    els.beginSession.style.display = "none";
+  }
+  if (els.readinessPanel) els.readinessPanel.style.display = "none";
+  els.reset.disabled = false;
+  els.download.disabled = false;
+  els.videoWrap.dataset.state = "running";
+  setStatus("running", "live");
+}
+
+if (els.beginSession) {
+  els.beginSession.addEventListener("click", beginSession);
 }
 
 // Visibility change handler — pauses/resumes the run loop and, on
@@ -1036,6 +1236,40 @@ function updateUI(analysis, v) {
   els.verdict.classList.toggle("uncertain", uncertain);
   els.verdict.classList.toggle("warming", warming);
 
+  // Integrated active probe: the flash-response test. Two paths flag a screen:
+  //   (1) TEMPORAL — brightness ramped up slowly and/or stayed elevated after
+  //       the flash (auto-brightness latch). The primary signal.
+  //   (2) OVER-LIT FALLBACK — a phone screen displaying a face is itself a
+  //       bright light source → baseline saturates → the temporal probe
+  //       abstains (no headroom). Live finding 2026-05-31: a video replay
+  //       trips the over-lit abstain (rise ≈ 5, refl ≈ 7) and the system then
+  //       reads LIVE 95% because no defense fires. Use the SPATIAL reflection
+  //       score as a fallback: a real face's diffuse reflection scores ~70+;
+  //       a flat phone screen scores ≤ 15. Low refl + over-lit baseline ⇒
+  //       likely a screen, override to SPOOF rather than abstain into LIVE.
+  if (flashProbe.ran && flashProbe.result) {
+    const t = flashProbe.result;
+    const refl = flashProbe.reflection;
+    const overLitScreenSuspected =
+      t.inconclusive &&
+      t.baselineMean > 185 &&
+      refl &&
+      refl.score < 20;
+    if (t.isScreen) {
+      els.verdictText.textContent =
+        `SPOOF (video-replay — flash persistence ${t.persistenceNorm} · ` +
+        `screen ${t.screenScore} · onset ${t.onsetLagMs}ms)`;
+      els.verdict.classList.remove("live", "warming");
+      els.verdict.classList.add("spoof");
+    } else if (overLitScreenSuspected) {
+      els.verdictText.textContent =
+        `SPOOF (likely screen — over-lit baseline ${t.baselineMean.toFixed(0)} · ` +
+        `no diffuse reflection: refl ${refl.score})`;
+      els.verdict.classList.remove("live", "warming");
+      els.verdict.classList.add("spoof");
+    }
+  }
+
   els.state.textContent = warming ? "warming_up" : "analyzing";
   els.frames.textContent = String(v.frames_analyzed);
   els.fps.textContent = smoothedFps.toFixed(1);
@@ -1079,23 +1313,49 @@ function updateUI(analysis, v) {
   renderProofPanel(proof);
   lastProof = proof;
 
-  // Recording timeline — capture lightweight per-frame snapshot. We
-  // keep this O(1) per frame (no JSON serialisation in the hot path)
-  // and only stringify at download time. Bounded at 10k entries to
-  // avoid runaway memory on hour-long sessions.
-  if (recordingActive && sessionTimeline.length < 10000) {
-    sessionTimeline.push({
-      t_ms: Math.round(performance.now()),
-      t_sec: Number(v.session_duration_sec.toFixed(2)),
-      frame_id: analysis.frame_id,
-      is_live: v.is_live,
-      confidence: Number(v.confidence.toFixed(3)),
-      proof_total: proof ? Math.round(proof.score) : null,
-      proof_breakdown: proof ? proof.details : null,
-      analyzer_scores: snapshot,
-      incident_count: v.incidents.length,
-    });
+  // Frame log — always on (was previously gated on `recordingActive`, which
+  // meant a research-grade ↓ Report JSON had no time series). Lightweight:
+  // we store references to existing JS objects; no JSON serialisation in the
+  // hot path. The full structure is stringified once at download time. Bounded
+  // ring buffer at MAX_FRAME_LOG (~10 min at 30 fps, ~20 min at 15 fps) so
+  // hour-long sessions can't OOM the browser tab.
+  if (sessionTimeline.length >= MAX_FRAME_LOG) {
+    sessionTimeline.shift();
   }
+  const primaryFace = analysis.faces && analysis.faces[0];
+  sessionTimeline.push({
+    t_ms: Math.round(performance.now()),
+    t_sec: Number(v.session_duration_sec.toFixed(2)),
+    frame_id: analysis.frame_id,
+    is_live: v.is_live,
+    confidence: Number(v.confidence.toFixed(3)),
+    proof_total: proof ? Math.round(proof.score) : null,
+    proof_breakdown: proof ? proof.details : null,
+    analyzer_scores: snapshot,
+    incident_count: v.incidents.length,
+    // Geometry — lets the notebook bucket scores by face size / distance.
+    face_bbox: primaryFace
+      ? {
+          x1: Math.round(primaryFace.bbox.x1),
+          y1: Math.round(primaryFace.bbox.y1),
+          x2: Math.round(primaryFace.bbox.x2),
+          y2: Math.round(primaryFace.bbox.y2),
+          area: Math.round(primaryFace.bbox.area),
+        }
+      : null,
+    // Gate (advisory) — slowly-changing; cheap to snapshot. Read directly
+    // from the analysis since the local `gate` const is assigned later in
+    // this function.
+    gate: analysis.gate_result
+      ? {
+          usable: analysis.gate_result.usable,
+          state: analysis.gate_result.state,
+          occlusion: Number((analysis.gate_result.occlusionScore ?? 0).toFixed(3)),
+          illumination: Number((analysis.gate_result.illuminationScore ?? 0).toFixed(3)),
+        }
+      : null,
+    fps: Math.round(smoothedFps * 10) / 10,
+  });
 
   // Per-category P(spoof)
   for (const cat of CATEGORIES) {
@@ -1191,6 +1451,20 @@ function reset() {
   lastTs = 0;
   lastProof = null;
   knownIncidentIds = new Set();
+  // Clear the active probes so a fresh session re-probes from scratch.
+  flashProbe.ran = false;
+  flashProbe.running = false;
+  flashProbe.result = null;
+  flashProbe.reflection = null;
+  flashProbe.screenSuspected = false;
+  wbProbe.ran = false;
+  wbProbe.screenSuspected = false;
+  wbProbe.cast = null;
+  // Drop accumulated research-mode buffers — a Reset starts a clean
+  // dataset row, otherwise the next ↓ Report would mix LIVE and REPLAY
+  // frames in the same JSON.
+  sessionTimeline = [];
+  flashProbeHistory = [];
   els.incidentList.innerHTML =
     '<div class="incident">No incidents yet.</div>';
   renderProofPanel(null);
@@ -1200,30 +1474,78 @@ function reset() {
 function download() {
   const verdict = lastVerdict ?? detector?.getVerdict() ?? null;
   if (!verdict) return;
-  const blob = new Blob(
-    [
-      JSON.stringify(
-        {
-          generated_at: new Date().toISOString(),
-          user_agent: navigator.userAgent,
-          verdict,
-          latest_analyzer_scores: lastAnalyzerScores,
-          latest_gate_result: lastGateResult,
-          latest_liveness_proof: lastProof,
-          fps_smoothed: Math.round(smoothedFps * 10) / 10,
-        },
-        null,
-        2,
-      ),
-    ],
-    { type: "application/json" },
-  );
+  // Collect the labels/notes the operator typed before pressing Record. These
+  // are baked into the JSON so the offline notebook can build a labelled
+  // LIVE-vs-REPLAY matrix without manual relabeling — the #1 cause of dirty
+  // datasets in small-N research is misremembered post-hoc labels.
+  const captureLabel = els.captureLabel?.value || "UNLABELED";
+  const environment = {
+    capture_label: captureLabel,
+    ambient_label: (els.ambientLabel?.value || "").trim() || null,
+    replay_device: (els.replayDevice?.value || "").trim() || null,
+    notes: (els.captureNotes?.value || "").trim() || null,
+    camera_settings: captureCameraSettingsSnapshot(),
+  };
+  const payload = {
+    generated_at: new Date().toISOString(),
+    user_agent: navigator.userAgent,
+    amispoof_version: window.AMISPOOF_VERSION,
+    schema_version: 2, // bumped: frame_log + environment + flash_probe_history added
+    environment,
+    verdict,
+    latest_analyzer_scores: lastAnalyzerScores,
+    latest_gate_result: lastGateResult,
+    latest_liveness_proof: lastProof,
+    fps_smoothed: Math.round(smoothedFps * 10) / 10,
+    // Research-grade time series. The latest_* fields are the FINAL frame
+    // only; frame_log is the per-frame trajectory the notebook needs to
+    // compute per-feature AUC, correlation matrices, and temporal models.
+    frame_log: sessionTimeline.slice(),
+    frame_log_truncated: sessionTimeline.length >= MAX_FRAME_LOG,
+    flash_probe_history: flashProbeHistory.slice(),
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {
+    type: "application/json",
+  });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `amispoof-session-${Date.now()}.json`;
+  // File name carries the capture label so a folder of dumps sorts/groups
+  // by class without the user having to open each one.
+  const labelSlug = captureLabel.toLowerCase().replace(/[^a-z0-9_-]+/g, "-");
+  a.download = `amispoof-session-${labelSlug}-${Date.now()}.json`;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+/**
+ * Best-effort snapshot of the current MediaStreamTrack's getSettings().
+ * Returns null silently if no camera stream is attached yet — separability
+ * analysis treats null camera settings as "unknown", not a failure.
+ */
+function captureCameraSettingsSnapshot() {
+  try {
+    const stream = els.video?.srcObject;
+    if (!stream) return null;
+    const track = stream.getVideoTracks?.()[0];
+    if (!track || typeof track.getSettings !== "function") return null;
+    const s = track.getSettings();
+    return {
+      width: s.width ?? null,
+      height: s.height ?? null,
+      frame_rate: s.frameRate ?? null,
+      exposure_mode: s.exposureMode ?? null,
+      exposure_time: s.exposureTime ?? null,
+      white_balance_mode: s.whiteBalanceMode ?? null,
+      color_temperature: s.colorTemperature ?? null,
+      brightness: s.brightness ?? null,
+      contrast: s.contrast ?? null,
+      saturation: s.saturation ?? null,
+      sharpness: s.sharpness ?? null,
+    };
+  } catch {
+    return null;
+  }
 }
 
 els.start.addEventListener("click", start);
@@ -1341,34 +1663,84 @@ function captureFaceCrop() {
   return cx.getImageData(bx0, by0, bw, bh);
 }
 
-async function runFlashChallenge() {
-  if (!running || !detector || flashBusy) return;
+/** Mean per-pixel brightness (max of R,G,B) over the current face crop, 0-255. */
+function brightnessOfImageData(img) {
+  if (!img) return null;
+  const d = img.data;
+  let s = 0;
+  let n = 0;
+  for (let i = 0; i < d.length; i += 4) {
+    const r = d[i];
+    const g = d[i + 1];
+    const b = d[i + 2];
+    s += r > g ? (r > b ? r : b) : g > b ? g : b;
+    n++;
+  }
+  return n ? s / n : null;
+}
+
+/** One face-region brightness sample from the live video. */
+function sampleBrightness() {
+  return brightnessOfImageData(captureFaceCrop());
+}
+
+// Choose a MID-RANGE exposureTime to lock and snap it onto the camera's
+// [min,max] step grid. Two camera gotchas drive this:
+//   • exposureMode:'manual' ALONE silently reverts to continuous, and an
+//     unaligned exposureTime is rejected ("out of range") — so we must pass
+//     a step-aligned value.
+//   • getSettings().exposureTime is UNRELIABLE in continuous mode (this
+//     webcam reports 10000 while caps cap at 1250). Locking to that clamps to
+//     MAX exposure → the sensor saturates under the flash and the webcam's
+//     auto-gain stays elevated afterwards, which mimics a screen's persistence
+//     (a real face then false-flags as a replay). A mid-range lock leaves
+//     headroom so a real face's brightness drops straight back after the flash.
+function alignedExposureTime(track) {
+  const caps = track.getCapabilities ? track.getCapabilities() : null;
+  if (!caps || !caps.exposureMode || !caps.exposureMode.includes("manual")) {
+    return null;
+  }
+  const et = caps.exposureTime;
+  if (!et || typeof et.min !== "number") return 156;
+  // ~45 % of the range: bright enough to read a reflection, far from saturation.
+  let exp = et.min + (et.max - et.min) * 0.45;
+  exp = Math.max(et.min, Math.min(et.max, exp));
+  exp = et.min + Math.round((exp - et.min) / et.step) * et.step;
+  return exp;
+}
+
+/**
+ * Active flash-response probe (opt-in). Locks exposure, flashes the screen
+ * white for ~1.5 s while sampling face-region brightness, then watches the
+ * drop-back. Scores BOTH:
+ *   • TEMPORAL (FlashTemporalAnalyzer) — onset lag + post-flash persistence.
+ *     A screen's auto-brightness ramps slowly and stays elevated; a real face
+ *     reflects instantly and drops straight back. The content-independent
+ *     video-replay detector — this drives the verdict override.
+ *   • SPATIAL (FlashReflectionAnalyzer) — diffuse region-spread of the lit
+ *     crop, reported as supporting evidence.
+ * `auto=true` runs it silently from the session loop (no button toggling).
+ * Always restores auto-exposure, even on error.
+ */
+async function runFlashProbe(auto = false) {
+  if (!running || !detector || flashBusy || flashProbe.running) return;
   flashBusy = true;
-  if (els.lightCheck) els.lightCheck.disabled = true;
+  flashProbe.running = true;
+  if (!auto && els.lightCheck) els.lightCheck.disabled = true;
   const track =
     els.video.srcObject && els.video.srcObject.getVideoTracks
       ? els.video.srcObject.getVideoTracks()[0]
       : null;
-  const COLORS = { white: "#ffffff", green: "#00ff00", blue: "#0000ff", red: "#ff0000" };
-  const color = "white"; // strongest brightness delta; channel colours can be added later
   let lockedExposure = false;
+  const setMsg = (m) => {
+    if (els.lightResult) els.lightResult.textContent = m;
+  };
   try {
-    els.lightResult.textContent = "💡 Light check: locking exposure…";
-    // 1. Lock exposure so the camera can't auto-compensate for the flash.
-    if (track && track.getCapabilities) {
-      const caps = track.getCapabilities();
-      if (caps.exposureMode && caps.exposureMode.includes("manual")) {
-        // exposureMode:'manual' ALONE silently reverts to continuous on some
-        // cameras; we must pass a valid exposureTime. An unaligned value is
-        // rejected ("out of range") since the camera quantises to a step, so
-        // clamp into [min,max] and snap to the step grid before applying.
-        const et = caps.exposureTime;
-        let exp =
-          track.getSettings().exposureTime || (et ? (et.min + et.max) / 2 : 156);
-        if (et) {
-          exp = Math.max(et.min, Math.min(et.max, exp));
-          exp = et.min + Math.round((exp - et.min) / et.step) * et.step;
-        }
+    setMsg("💡 Flash probe: locking exposure…");
+    // 1. Lock exposure so auto-exposure can't fight the flash.
+    if (track) {
+      const exp = alignedExposureTime(track);
+      if (exp != null) {
         await track.applyConstraints({
           advanced: [{ exposureMode: "manual", exposureTime: exp }],
         });
@@ -1376,15 +1748,40 @@ async function runFlashChallenge() {
         await flashSleep(350); // let the lock settle
       }
     }
-    // 2. Baseline crop (screen at rest).
-    const baseline = captureFaceCrop();
-    // 3. Flash the screen, then capture the lit crop near the end of the flash.
-    els.flashOverlay.style.background = COLORS[color] || "#ffffff";
+
+    // 2. Baseline: a crop (for the spatial test) + brightness samples (temporal).
+    const baselineCrop = captureFaceCrop();
+    const baselineSamples = [];
+    for (let i = 0; i < FLASH_BASELINE_SAMPLES; i++) {
+      const b = sampleBrightness();
+      if (b != null) baselineSamples.push(b);
+      await flashSleep(FLASH_SAMPLE_MS);
+    }
+
+    // 3. Flash white; sample brightness across the flash, grab a lit crop near
+    //    the end (settled) for the spatial reflection score.
+    setMsg("💡 Flash probe: flashing…");
+    els.flashOverlay.style.background = "#ffffff";
     els.flashOverlay.style.display = "block";
-    await flashSleep(170);
-    const flash = captureFaceCrop();
+    const flashSamples = [];
+    let peakCrop = null;
+    for (let i = 0; i < FLASH_DURING_SAMPLES; i++) {
+      const b = sampleBrightness();
+      if (b != null) flashSamples.push(b);
+      if (i === FLASH_DURING_SAMPLES - 2) peakCrop = captureFaceCrop();
+      await flashSleep(FLASH_SAMPLE_MS);
+    }
     els.flashOverlay.style.display = "none";
-    // 4. Restore auto-exposure.
+
+    // 4. After: brightness samples as the flash turns off (drop-back vs persist).
+    const afterSamples = [];
+    for (let i = 0; i < FLASH_AFTER_SAMPLES; i++) {
+      const b = sampleBrightness();
+      if (b != null) afterSamples.push(b);
+      await flashSleep(FLASH_SAMPLE_MS);
+    }
+
+    // 5. Restore auto-exposure.
     if (lockedExposure && track) {
       try {
         await track.applyConstraints({ advanced: [{ exposureMode: "continuous" }] });
@@ -1392,18 +1789,76 @@ async function runFlashChallenge() {
         /* best-effort restore */
       }
     }
-    if (!baseline || !flash) {
-      els.lightResult.textContent =
-        "💡 Light check: couldn't capture a face crop — centre your face and retry.";
-      return;
+
+    // 6. Score temporal (drives the verdict) + spatial (supporting evidence).
+    const temporal = flashTemporalAnalyzer.score(
+      baselineSamples,
+      flashSamples,
+      afterSamples,
+    );
+    // Quality constraint: without a genuine exposure lock the webcam's own
+    // auto-gain hunts after the flash and mimics a screen's persistence — so
+    // persistence can't be trusted and we must ABSTAIN rather than risk a false
+    // flag (this is what would otherwise bite cameras lacking manual exposure,
+    // e.g. most mobile front cameras). On PC/Brave the lock engages, so this
+    // never trips. Mirrors the FaceUsabilityGate principle: don't issue a
+    // confident verdict on input we couldn't control.
+    if (!lockedExposure) {
+      temporal.inconclusive = true;
+      temporal.isScreen = false;
     }
-    const r = flashAnalyzer.scoreResponse(baseline, flash, color);
-    const verdict = r.isLive
-      ? "LIVE (diffuse reflection)"
-      : "SPOOF (no reflection — screen/replay)";
-    els.lightResult.textContent =
-      `💡 Light check (${color}): ${verdict} · score ${r.score} · ` +
-      `colorShift ${r.colorShift} · targetGain ${r.targetGain} · spread ${r.regionSpread}`;
+    const reflection =
+      baselineCrop && peakCrop
+        ? flashAnalyzer.scoreResponse(baselineCrop, peakCrop, "white")
+        : null;
+    flashProbe.result = temporal;
+    flashProbe.reflection = reflection;
+    flashProbe.screenSuspected = temporal.isScreen;
+    flashProbe.lockFailed = !lockedExposure;
+    flashProbe.ran = true;
+    flashProbe.lastAt = performance.now();
+    // Append this probe to the research-grade history so the ↓ Report
+    // download exposes the full probe trajectory (not just the most
+    // recent one). Each entry is shallow — the raw per-sample arrays live
+    // on window.__flashProbeRaw for live debugging.
+    flashProbeHistory.push({
+      t_ms: Math.round(performance.now()),
+      t_sec: Number((detector?.getVerdict()?.session_duration_sec ?? 0).toFixed(2)),
+      auto,
+      locked_exposure: lockedExposure,
+      // Mirrors the FlashTemporalResult shape exposed by the SDK (see
+      // FlashTemporalAnalyzer.ts). No invented fields — keeps the JSON
+      // schema stable across SDK updates.
+      baseline_mean: temporal.baselineMean ?? null,
+      rise_total: temporal.riseTotal ?? null,
+      onset_lag_ms: temporal.onsetLagMs ?? null,
+      persistence_norm: temporal.persistenceNorm ?? null,
+      screen_score: temporal.screenScore ?? null,
+      is_screen: temporal.isScreen === true,
+      inconclusive: temporal.inconclusive === true,
+      reflection_score: reflection ? (reflection.score ?? null) : null,
+    });
+
+    // Debug hook for live calibration — exposes the raw brightness time-series
+    // so thresholds can be tuned against real vs screen captures.
+    window.__flashProbeRaw = { baselineSamples, flashSamples, afterSamples, temporal, lockedExposure };
+
+    const overLit = temporal.baselineMean > 185;
+    const verdict = !lockedExposure
+      ? "INCONCLUSIVE — couldn't lock camera exposure (active probe needs a controllable camera)"
+      : temporal.inconclusive
+        ? overLit
+          ? "INCONCLUSIVE — face is over-lit; the flash has no headroom (dim the room for the light check)"
+          : "INCONCLUSIVE — flash didn't reach the face (dim the room / move closer)"
+        : temporal.isScreen
+          ? "SCREEN / VIDEO-REPLAY (auto-brightness ramp/persistence)"
+          : "LIVE (instant reflection, no persistence)";
+    setMsg(
+      `💡 Flash probe: ${verdict} · onset ${temporal.onsetLagMs}ms · ` +
+        `persistence ${temporal.persistenceNorm} · rise ${temporal.riseTotal} · ` +
+        `screen ${temporal.screenScore}` +
+        (reflection ? ` · refl ${reflection.score}` : ""),
+    );
   } catch (e) {
     els.flashOverlay.style.display = "none";
     if (lockedExposure && track) {
@@ -1413,17 +1868,19 @@ async function runFlashChallenge() {
         /* ignore */
       }
     }
-    els.lightResult.textContent =
-      "💡 Light check error: " + (e && e.message ? e.message : e);
+    setMsg("💡 Flash probe error: " + (e && e.message ? e.message : e));
   } finally {
     flashBusy = false;
-    if (els.lightCheck) els.lightCheck.disabled = false;
+    flashProbe.running = false;
+    if (!auto && els.lightCheck) els.lightCheck.disabled = false;
   }
 }
 
 if (els.lightCheck) {
-  els.lightCheck.addEventListener("click", runFlashChallenge);
+  els.lightCheck.addEventListener("click", () => runFlashProbe(false));
 }
+// Debug hook for live calibration — fire a probe on demand from the console.
+window.__runFlashProbe = () => runFlashProbe(false);
 
 // ===== Manual camera controls (operator experimentation) =====
 // Builds sliders/toggles from the live track's getCapabilities() so the
@@ -1605,6 +2062,98 @@ window.addEventListener("pagehide", () => {
   restoreCameraDefaults();
 });
 
+// Mean RGB over a fractional region of the live video frame.
+function probeRegionRGB(x0f, y0f, x1f, y1f) {
+  const vEl = els.video;
+  const w = vEl.videoWidth;
+  const h = vEl.videoHeight;
+  if (!w || !h) return null;
+  const c = document.createElement("canvas");
+  c.width = w;
+  c.height = h;
+  const cx = c.getContext("2d");
+  if (!cx) return null;
+  cx.drawImage(vEl, 0, 0, w, h);
+  const x0 = Math.max(0, Math.floor(x0f * w));
+  const y0 = Math.max(0, Math.floor(y0f * h));
+  const x1 = Math.min(w, Math.floor(x1f * w));
+  const y1 = Math.min(h, Math.floor(y1f * h));
+  if (x1 - x0 < 2 || y1 - y0 < 2) return null;
+  const d = cx.getImageData(x0, y0, x1 - x0, y1 - y0).data;
+  let R = 0,
+    G = 0,
+    B = 0,
+    n = 0;
+  for (let i = 0; i < d.length; i += 4) {
+    R += d[i];
+    G += d[i + 1];
+    B += d[i + 2];
+    n++;
+  }
+  return n ? { R: R / n, G: G / n, B: B / n } : null;
+}
+
+// Lock white balance to a fixed neutral temp, measure the face-region colour
+// cast, restore auto WB. A strong cast ⇒ a screen/replay (its own white point
+// isn't being corrected away). Always restores WB in `finally`.
+async function runWbProbe() {
+  if (!running || wbProbe.running) return;
+  const track = camTrack();
+  if (!track || !track.getCapabilities) return;
+  const caps = track.getCapabilities();
+  if (!(caps.whiteBalanceMode || []).includes("manual") || !caps.colorTemperature) {
+    return;
+  }
+  wbProbe.running = true;
+  try {
+    const t = Math.max(
+      caps.colorTemperature.min,
+      Math.min(caps.colorTemperature.max, WB_PROBE_TEMP),
+    );
+    await track.applyConstraints({
+      advanced: [{ whiteBalanceMode: "manual", colorTemperature: t }],
+    });
+    await flashSleep(450);
+    let reg = null;
+    if (lastFaceBbox && canvas) {
+      reg = probeRegionRGB(
+        lastFaceBbox.x1 / canvas.width,
+        lastFaceBbox.y1 / canvas.height,
+        lastFaceBbox.x2 / canvas.width,
+        lastFaceBbox.y2 / canvas.height,
+      );
+    }
+    if (!reg) reg = probeRegionRGB(0.3, 0.25, 0.7, 0.75);
+    if (reg) {
+      const rb = reg.R / Math.max(reg.B, 1);
+      const gb = reg.G / Math.max(reg.B, 1);
+      const cast = Math.abs(Math.log(rb)) + Math.abs(Math.log(gb));
+      wbProbe.faceRB = +rb.toFixed(2);
+      wbProbe.faceGB = +gb.toFixed(2);
+      wbProbe.cast = +cast.toFixed(3);
+      wbProbe.screenSuspected = cast >= (window.WB_CAST_THRESHOLD ?? 0.5);
+      wbProbe.ran = true;
+      wbProbe.lastAt = performance.now();
+      if (els.lightResult) {
+        els.lightResult.textContent =
+          `🔬 Screen probe (WB-cast): R/B ${wbProbe.faceRB} · cast ${wbProbe.cast} · ` +
+          (wbProbe.screenSuspected
+            ? "SCREEN / VIDEO-REPLAY suspected"
+            : "clear (real-scene colour)");
+      }
+    }
+  } catch (e) {
+    /* best-effort */
+  } finally {
+    try {
+      await track.applyConstraints({ advanced: [{ whiteBalanceMode: "continuous" }] });
+    } catch (e) {
+      /* ignore */
+    }
+    wbProbe.running = false;
+  }
+}
+
 // Phase D3 — wire the microphone toggle. The SDK requires audio to be
 // enabled at construction time (see createSpoofDetector opts). When the
 // page wasn't started with ?audio=1, clicking the button reloads with
@@ -1688,7 +2237,10 @@ if (els.recordToggle) {
         return;
       }
       recordedChunks = [];
-      sessionTimeline = [];
+      // sessionTimeline is no longer cleared at recording start — it now
+      // tracks the entire session for the ↓ Report flow. The recording's
+      // .json will still include the full timeline (recording is a superset
+      // of the report use case).
       const mime = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
         ? "video/webm;codecs=vp9"
         : "video/webm";

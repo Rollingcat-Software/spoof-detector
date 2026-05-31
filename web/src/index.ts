@@ -84,9 +84,22 @@ export type {
   FlashReflectionResult,
   FlashReflectionOptions,
 } from "./infrastructure/analyzers/FlashReflectionAnalyzer";
+export { FlashTemporalAnalyzer } from "./infrastructure/analyzers/FlashTemporalAnalyzer";
+export type {
+  FlashTemporalResult,
+  FlashTemporalOptions,
+} from "./infrastructure/analyzers/FlashTemporalAnalyzer";
 export { BackgroundGridAnalyzer } from "./infrastructure/analyzers/BackgroundGridAnalyzer";
 export { TemporalAnalyzer } from "./infrastructure/analyzers/TemporalAnalyzer";
 export { LivenessProver } from "./application/LivenessProver";
+export { ReadinessGate } from "./application/ReadinessGate";
+export type {
+  ReadinessSignals,
+  ReadinessCheck,
+  ReadinessCheckId,
+  ReadinessResult,
+  ReadinessOptions,
+} from "./application/ReadinessGate";
 // MoireAnalyzer / TextureAnalyzer / ScreenReplayAnalyzer are intentionally
 // NOT re-exported eagerly here (Phase 5E-1) so Vite/Rollup emits each as
 // its own lazy chunk under dist/. Callers that need the constructors can
