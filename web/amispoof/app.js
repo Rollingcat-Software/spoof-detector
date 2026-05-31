@@ -18,12 +18,12 @@ import {
   FlashTemporalAnalyzer,
   ReadinessGate,
   DEFAULT_ANALYZER_WEIGHTS,
-} from "./lib/spoof-detector.js?v=2026-05-31-frame-log";
+} from "./lib/spoof-detector.js?v=2026-05-31-over-lit-uncertain";
 
 // Version handshake — checked by the inline script in index.html.
 // If the user is running a stale cached app.js (no AMISPOOF_VERSION),
 // the HTML triggers a one-shot reload after 4 s.
-window.AMISPOOF_VERSION = "2026-05-31-frame-log";
+window.AMISPOOF_VERSION = "2026-05-31-over-lit-uncertain";
 
 // SessionEngine.getVerdict() returns a confidence in [0, 0.88] when the
 // LivenessProver is wired (structural ceiling — see SessionEngine.ts
@@ -1244,13 +1244,23 @@ function updateUI(analysis, v) {
   //       abstains (no headroom). Live finding 2026-05-31: a video replay
   //       trips the over-lit abstain (rise ≈ 5, refl ≈ 7) and the system then
   //       reads LIVE 95% because no defense fires. Use the SPATIAL reflection
-  //       score as a fallback: a real face's diffuse reflection scores ~70+;
-  //       a flat phone screen scores ≤ 15. Low refl + over-lit baseline ⇒
-  //       likely a screen, override to SPOOF rather than abstain into LIVE.
+  //       score as a fallback signal.
+  //
+  //       BUT: live in a sun-lit office a REAL face also drives baselineMean
+  //       past 185 and refl below 20 (the diffuse-reflection signal collapses
+  //       when ambient light already saturates the sensor — there's no flash
+  //       headroom to read). Calling SPOOF in that case false-rejects real
+  //       users (2026-05-31 confirmed: user's real face flipped SPOOF in a
+  //       bright office). The honest disposition is UNCERTAIN — "we can't
+  //       judge in this lighting, dim the room and re-test" — never LIVE
+  //       (so an over-lit-room attacker still can't authenticate) and never
+  //       a confident SPOOF (so a real user isn't falsely rejected).
+  //       SessionEngine already has a quality_uncertain path; we mirror its
+  //       visual treatment here.
   if (flashProbe.ran && flashProbe.result) {
     const t = flashProbe.result;
     const refl = flashProbe.reflection;
-    const overLitScreenSuspected =
+    const overLitInconclusive =
       t.inconclusive &&
       t.baselineMean > 185 &&
       refl &&
@@ -1259,14 +1269,14 @@ function updateUI(analysis, v) {
       els.verdictText.textContent =
         `SPOOF (video-replay — flash persistence ${t.persistenceNorm} · ` +
         `screen ${t.screenScore} · onset ${t.onsetLagMs}ms)`;
-      els.verdict.classList.remove("live", "warming");
+      els.verdict.classList.remove("live", "warming", "uncertain");
       els.verdict.classList.add("spoof");
-    } else if (overLitScreenSuspected) {
+    } else if (overLitInconclusive) {
       els.verdictText.textContent =
-        `SPOOF (likely screen — over-lit baseline ${t.baselineMean.toFixed(0)} · ` +
-        `no diffuse reflection: refl ${refl.score})`;
-      els.verdict.classList.remove("live", "warming");
-      els.verdict.classList.add("spoof");
+        `UNCERTAIN — over-lit (baseline ${t.baselineMean.toFixed(0)}, ` +
+        `refl ${refl.score}). Dim the room (close blinds / move away from windows) and re-test.`;
+      els.verdict.classList.remove("live", "warming", "spoof");
+      els.verdict.classList.add("uncertain");
     }
   }
 
