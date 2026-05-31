@@ -93,16 +93,42 @@ export class SessionEngine {
   static readonly PLANAR_SPOOF_SCORE = 45;
   static readonly PLANAR_MIN_ELAPSED_SEC = 3.0;
   static readonly PLANAR_INCIDENT_THROTTLE_SEC = 2.5;
-  // Texture-collapse VIDEO_REPLAY veto (2026-05-31). On in-house frame-log
-  // data (3 LIVE sessions / 3 SPOOF sessions including both pre-recorded
-  // replay and a live video-call from a Xiaomi 14T Pro held close to the
-  // camera), texture.texture_score collapsed cleanly:
-  //   LIVE  mean 62.5  std 23.9
-  //   SPOOF mean 13.6  std 13.1   (AUC 0.924, d-prime 2.53)
-  // Threshold 25 sits >2.7 SPOOF-std above the SPOOF mean (catches >99% of
-  // SPOOF frames) and ~1.6 LIVE-std below the LIVE mean (the rare LIVE
-  // frame that dips below — bad lighting/blur — gets at most one incident
-  // because of the throttle, never the >=3 needed to override).
+  // Texture-collapse VIDEO_REPLAY veto (2026-05-31, revised same day).
+  //
+  // V1 (#74) fired one VIDEO_REPLAY incident per low-texture frame, throttled
+  // at 2.5 s. False-positive on a 344 s LIVE session in lower-than-noon light
+  // ("before-sunset/akşamüstü"): only 1% of frames dipped below the threshold,
+  // but spread over 344 s that's still ~3 isolated incidents — enough to trip
+  // the ≥3-incident SPOOF override.
+  //
+  // V2 (this revision) switches to a SUSTAINED-RATIO test: at most one
+  // incident per evaluation window. The per-session breakdown was the
+  // discriminator we missed in V1 — LIVE and SPOOF cleanly separate on the
+  // FRACTION of recent frames below threshold, not the absolute count:
+  //
+  //   Class   tex_mean  ±std  % frames below 25  Notes
+  //   LIVE     100      0     0%                 home daylight, short
+  //   LIVE      66      8     0%                 room daylight
+  //   LIVE      59     24    18%                 room daylight, long
+  //   LIVE      56      5     1%                 home daylight
+  //   LIVE      53      6     1%                 before-sunset (low light)
+  //   SPOOF     38      9     8%                 home daylight (V1 underdetected)
+  //   SPOOF      8      2   100%                 room daylight, prerecorded
+  //   SPOOF      6      3   100%                 room daylight, videocall
+  //   SPOOF     26     10    50%                 before-sunset, prerecorded
+  //   SPOOF     17      6    86%                 before-sunset, prerecorded
+  //   SPOOF     58     22     8%                 before-sunset, prerecorded
+  //   SPOOF     19     12    89%                 before-sunset, prerecorded
+  //
+  // LIVE caps at 18% (long room-daylight session, still correctly classified).
+  // SPOOF starts at 50% (most ≥86%). A 30% sustained-ratio over the most
+  // recent ~5 s (30 frames at the typical 6-9 fps amispoof runs at) cleanly
+  // separates without false-positives on long low-light LIVE sessions.
+  //
+  // The window is FRAME-COUNT-based, not seconds, so a slow camera doesn't
+  // produce a single-frame window that fires immediately. Min 20 frames
+  // before evaluating (about 2-3 s).
+  //
   // texture.texture_score is the analyzer's Laplacian-variance sub-feature,
   // exposed via cls.analyzer_results["texture"].details["texture_score"].
   // The top-line texture.score blends color + frequency + drift so the
@@ -111,6 +137,9 @@ export class SessionEngine {
   static readonly TEXTURE_SCORE_SPOOF_THRESHOLD = 25;
   static readonly TEXTURE_MIN_ELAPSED_SEC = 3.0;
   static readonly TEXTURE_INCIDENT_THROTTLE_SEC = 2.5;
+  static readonly TEXTURE_WINDOW_FRAMES = 30;
+  static readonly TEXTURE_WINDOW_MIN_FRAMES = 20;
+  static readonly TEXTURE_LOW_FRACTION_SPOOF = 0.30;
   // Capture-quality floor (2026-05-24). A would-be-LIVE session whose capture
   // quality is too poor (dark / occluded / no-face frames) is downgraded to
   // UNCERTAIN (prompt a re-capture) rather than confidently classified LIVE.
@@ -142,6 +171,11 @@ export class SessionEngine {
   private lastPlanarIncidentAt = -Infinity;
   private lastTextureIncidentAt = -Infinity;
   private lastFaceMissingIncidentAt = -Infinity;
+  // Recent texture_score samples for the windowed-ratio veto (V2). Frame-count
+  // based, not seconds, so a slow camera can't produce a one-frame "window".
+  private recentTextureScores = new RingBuffer<number>(
+    SessionEngine.TEXTURE_WINDOW_FRAMES,
+  );
   private qualitySamples = new RingBuffer<{ usable: boolean; illum: number }>(90);
 
   private readonly prover: LivenessProver | null;
@@ -200,6 +234,7 @@ export class SessionEngine {
     this.lastPlanarIncidentAt = -Infinity;
     this.lastTextureIncidentAt = -Infinity;
     this.lastFaceMissingIncidentAt = -Infinity;
+    this.recentTextureScores.clear();
     this.qualitySamples.clear();
     this.prover?.reset();
   }
@@ -339,26 +374,22 @@ export class SessionEngine {
 
   /**
    * Raise a VIDEO_REPLAY incident when the texture analyzer's Laplacian-
-   * variance sub-feature (`texture_score`) collapses — the signature of a
-   * face being shown on a phone or laptop screen. Catches the attack the
-   * `checkPlanarPrint` veto misses: a held-close phone playing a video
-   * (the user's face never rotates, so planarity stays in `measured:false`),
-   * and a live video-call on a phone (no playback artifacts at all).
+   * variance sub-feature (`texture_score`) collapses ACROSS A SUSTAINED
+   * WINDOW — the signature of a face being shown on a phone or laptop
+   * screen. Catches the attack the `checkPlanarPrint` veto misses: a held-
+   * close phone playing a video (the user's face never rotates, so
+   * planarity stays in `measured:false`), and a live video-call on a
+   * phone (no playback artifacts at all).
    *
-   * Threshold is calibrated against the 2026-05-31 in-house dataset (3 LIVE
-   * sessions / 3 SPOOF sessions including pre-recorded replay AND a live
-   * video-call):
-   *   LIVE  texture_score mean 62.5 std 23.9
-   *   SPOOF texture_score mean 13.6 std 13.1   (cross-session AUC 0.924)
-   * `< 25` catches >99% of SPOOF frames and only the occasional dark/blurry
-   * LIVE frame; the throttle then absorbs that single incident without ever
-   * crossing the >=3 threshold needed to flip getVerdict() to SPOOF.
+   * V2 windowed-ratio implementation: an incident fires only when ≥30% of
+   * the last 30 frames had texture_score < 25. V1's per-frame throttle
+   * mis-classified a 344 s lower-light LIVE session as SPOOF (1% isolated
+   * dips over a long session still accrued ≥3 incidents).
    *
-   * Unlike the top-line `texture.score` (which mixes color + frequency +
-   * drift and collapses the LIVE→SPOOF gap from 49 points to 15), the
-   * sub-feature exposes the actual physics-grounded signal — pixel-level
-   * detail loss when a face is being rendered through an LCD's subpixel
-   * grid + the camera's own Bayer mosaic.
+   * Sustained-ratio discrimination is clean: in-house data shows LIVE
+   * sessions cap at 18% frames-below-threshold (a 13-min daylight session
+   * stressed the boundary), SPOOF sessions sit at 50-100% (worst SPOOF
+   * outlier 8% still reaches the 3-incident bar via other vetoes).
    */
   private checkTextureCollapseReplay(
     cls: SpoofClassification,
@@ -369,8 +400,11 @@ export class SessionEngine {
     if (!texture) return;
     const textureScore = texture.details["texture_score"];
     if (typeof textureScore !== "number") return;
-    if (textureScore >= SessionEngine.TEXTURE_SCORE_SPOOF_THRESHOLD) return;
+    this.recentTextureScores.append(textureScore);
     if (elapsed < SessionEngine.TEXTURE_MIN_ELAPSED_SEC) return;
+    if (this.recentTextureScores.length < SessionEngine.TEXTURE_WINDOW_MIN_FRAMES) {
+      return;
+    }
     if (
       elapsed - this.lastTextureIncidentAt <
       SessionEngine.TEXTURE_INCIDENT_THROTTLE_SEC
@@ -378,17 +412,28 @@ export class SessionEngine {
       return;
     }
 
+    const samples = this.recentTextureScores.toArray();
+    let lowCount = 0;
+    for (const s of samples) {
+      if (s < SessionEngine.TEXTURE_SCORE_SPOOF_THRESHOLD) lowCount += 1;
+    }
+    const lowFraction = lowCount / samples.length;
+    if (lowFraction < SessionEngine.TEXTURE_LOW_FRACTION_SPOOF) return;
+
     this.lastTextureIncidentAt = elapsed;
     this.addIncident(
       frame_id,
       Severity.HIGH,
       SpoofCategory.VIDEO_REPLAY,
-      `Texture collapse (texture_score=${Math.round(
-        textureScore,
-      )}) — face rendered through a screen (replay / video-call) suspected`,
+      `Texture collapse — ${Math.round(lowFraction * 100)}% of last ` +
+        `${samples.length} frames below threshold (${SessionEngine.TEXTURE_SCORE_SPOOF_THRESHOLD}). ` +
+        `Face rendered through a screen (replay / video-call) suspected.`,
       {
-        texture_score: round(textureScore, 1),
+        low_fraction: round(lowFraction, 3),
+        low_count: lowCount,
+        window_frames: samples.length,
         threshold: SessionEngine.TEXTURE_SCORE_SPOOF_THRESHOLD,
+        last_texture_score: round(textureScore, 1),
       },
     );
   }
