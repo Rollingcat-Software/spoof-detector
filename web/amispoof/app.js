@@ -15,12 +15,13 @@ import {
   createSpoofDetector,
   runCasiaFasdMicroBench,
   FlashReflectionAnalyzer,
-} from "./lib/spoof-detector.js?v=2026-05-24-camera-restore";
+  DEFAULT_ANALYZER_WEIGHTS,
+} from "./lib/spoof-detector.js?v=2026-05-31-weights";
 
 // Version handshake — checked by the inline script in index.html.
 // If the user is running a stale cached app.js (no AMISPOOF_VERSION),
 // the HTML triggers a one-shot reload after 4 s.
-window.AMISPOOF_VERSION = "2026-05-31-uncertain-state";
+window.AMISPOOF_VERSION = "2026-05-31-weights";
 
 // SessionEngine.getVerdict() returns a confidence in [0, 0.88] when the
 // LivenessProver is wired (structural ceiling — see SessionEngine.ts
@@ -397,6 +398,17 @@ const ANALYZER_ORDER = [
     desc: "Pearson correlation of audio RMS with the jawOpen blendshape over the last 2 s. Strongest single anti-replay signal: live speech correlates above 0.7; replay either has no audio or is desynced.",
   },
 ];
+
+// SINGLE SOURCE OF TRUTH: the per-analyzer weight badges shown in the UI must
+// reflect the weights the running fuser ACTUALLY uses. Previously each entry's
+// `weight` was hardcoded here and had drifted from DEFAULT_ANALYZER_WEIGHTS in
+// the lib (e.g. device_boundary/micro_tremor showed "w 2.5" while the fuser used
+// 0.5), so the badges lied. Overwrite each from the lib's exported table by name.
+for (const a of ANALYZER_ORDER) {
+  if (Object.prototype.hasOwnProperty.call(DEFAULT_ANALYZER_WEIGHTS, a.name)) {
+    a.weight = DEFAULT_ANALYZER_WEIGHTS[a.name];
+  }
+}
 
 const $ = (id) => document.getElementById(id);
 
