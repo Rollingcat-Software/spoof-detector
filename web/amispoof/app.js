@@ -18,12 +18,12 @@ import {
   FlashTemporalAnalyzer,
   ReadinessGate,
   DEFAULT_ANALYZER_WEIGHTS,
-} from "./lib/spoof-detector.js?v=2026-05-31-ux-cleanup";
+} from "./lib/spoof-detector.js?v=2026-05-31-lenient-readiness";
 
 // Version handshake — checked by the inline script in index.html.
 // If the user is running a stale cached app.js (no AMISPOOF_VERSION),
 // the HTML triggers a one-shot reload after 4 s.
-window.AMISPOOF_VERSION = "2026-05-31-ux-cleanup";
+window.AMISPOOF_VERSION = "2026-05-31-lenient-readiness";
 
 // SessionEngine.getVerdict() returns a confidence in [0, 0.88] when the
 // LivenessProver is wired (structural ceiling — see SessionEngine.ts
@@ -986,8 +986,8 @@ async function start() {
     // satisfiable everywhere.
     const stream = await navigator.mediaDevices.getUserMedia({
       video: {
-        width: { ideal: 1280, min: 640 },
-        height: { ideal: 720, min: 480 },
+        width: { ideal: 1920, min: 640 },
+        height: { ideal: 1080, min: 480 },
         facingMode: "user",
       },
       audio: false,
@@ -1198,6 +1198,11 @@ function evaluateReadiness(analysis) {
     faceAreaFraction,
     faceBrightness: gate ? gate.globalFaceBrightness : 0,
     occluded: gate ? !!gate.occluded : false,
+    // V3 readiness — pass the continuous occlusion score so the gate can
+    // use a confident-only threshold (0.85) instead of the boolean (which
+    // fires at ~0.5). Eliminates "Uncover your face (mouth)" false alarms
+    // on clearly visible faces at moderate distance / awkward pose.
+    occlusionScore: gate ? gate.occlusionScore : undefined,
     occludedRegions: gate ? gate.occludedRegions || [] : [],
     cameraResponsive: !!(els.video && els.video.readyState >= 2 && !els.video.paused),
   });

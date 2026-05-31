@@ -27,6 +27,12 @@ export interface ReadinessSignals {
   faceBrightness: number;
   /** Whether a critical face region is occluded (FaceUsabilityGate.occluded). */
   occluded: boolean;
+  /** Continuous occlusion score 0-1 from FaceUsabilityGate, when available.
+   *  Preferred over the boolean — the readiness gate uses a HIGH threshold
+   *  (0.85) so only severe occlusion blocks session start. The boolean
+   *  fires at ~0.5 and produces too many false alarms on visible faces at
+   *  awkward distance / pose. */
+  occlusionScore?: number;
   /** Occluded region names, for the fix-it message. */
   occludedRegions?: readonly string[];
   /** Camera stream live AND frames advancing (caller-supplied). */
@@ -133,41 +139,40 @@ export class ReadinessGate {
 
     // 5. Face not occluded.
     //
-    // SKIP this check when the face is too small / too far from the camera.
-    // MediaPipe's landmark detector becomes unreliable on faces below ~10%
-    // of frame area — the mouth / nose regions get coarse, the
-    // FaceUsabilityGate's region-pixel thresholds fire false "occlusion"
-    // alarms, and the user sees "Uncover your face (mouth)" while their
-    // face is plainly visible. They then move closer and the false alarm
-    // clears — confusing and unprofessional.
-    //
-    // Below the OCCLUSION_RELIABLE_AREA threshold we return `pass: true`
-    // with a "checking…" message (instead of a green tick) so the operator
-    // knows the check is deferred, not skipped silently. The user is
-    // already being told to move closer via the size check; layering a
-    // bogus mouth-occlusion message on top adds noise without information.
-    const OCCLUSION_RELIABLE_AREA = 0.10;
-    if (s.faceAreaFraction < OCCLUSION_RELIABLE_AREA) {
-      checks.push({
-        id: "occlusion",
-        label: "Visibility",
-        pass: true,
-        message: "Move closer for a reliable visibility check",
-      });
-    } else {
-      const occluded = s.occluded;
-      const regions = (s.occludedRegions ?? []).join(", ").replace(/_/g, " ");
-      checks.push({
-        id: "occlusion",
-        label: "Visibility",
-        pass: !occluded,
-        message: occluded
-          ? regions
-            ? `Uncover your face (${regions})`
-            : "Uncover your face"
+    // Decision history:
+    //   V1 — use FaceUsabilityGate's BOOLEAN `occluded`. False-positive on a
+    //        clearly visible face when the user is too far (small landmarks
+    //        → coarse region pixels → mis-read as occlusion). User saw
+    //        "Uncover your face (mouth)" while their face was plainly visible.
+    //   V2 — defer the check when faceAreaFraction < 0.10. Helped at distance
+    //        but a 30 cm capture (face IS big, score = 0.51) still fired
+    //        because the boolean is calibrated for the Python pipeline, not
+    //        browser landmarks at all distances.
+    //   V3 (this) — prefer the continuous `occlusionScore`. Only fire the
+    //        block when it's CONFIDENTLY high (>= 0.85). The boolean trips
+    //        around 0.5; that's too aggressive to gate session start. The
+    //        in-session capture-quality floor still handles mid-range
+    //        occlusion (it routes to quality_uncertain), so a session that
+    //        squeaks past readiness with score 0.4-0.85 isn't unsafe — it
+    //        just gets UNCERTAIN if quality stays poor, never a false LIVE.
+    const OCCLUSION_BLOCK_THRESHOLD = 0.85;
+    const occludedConfident =
+      typeof s.occlusionScore === "number"
+        ? s.occlusionScore >= OCCLUSION_BLOCK_THRESHOLD
+        : s.occluded; // fallback when score isn't supplied (legacy callers)
+    const regions = (s.occludedRegions ?? []).join(", ").replace(/_/g, " ");
+    checks.push({
+      id: "occlusion",
+      label: "Visibility",
+      pass: !occludedConfident,
+      message: occludedConfident
+        ? regions
+          ? `Uncover your face (${regions})`
+          : "Uncover your face"
+        : typeof s.occlusionScore === "number" && s.occlusionScore >= 0.5
+          ? "Face mostly visible (continue)"
           : "Face fully visible",
-      });
-    }
+    });
 
     return { ready: checks.every((c) => c.pass), checks };
   }
