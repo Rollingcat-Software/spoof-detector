@@ -20,7 +20,7 @@ import {
 // Version handshake — checked by the inline script in index.html.
 // If the user is running a stale cached app.js (no AMISPOOF_VERSION),
 // the HTML triggers a one-shot reload after 4 s.
-window.AMISPOOF_VERSION = "2026-05-24-camera-restore";
+window.AMISPOOF_VERSION = "2026-05-31-uncertain-state";
 
 // SessionEngine.getVerdict() returns a confidence in [0, 0.88] when the
 // LivenessProver is wired (structural ceiling — see SessionEngine.ts
@@ -41,7 +41,10 @@ function displayConfPct(rawConfidence) {
 // raw 80% in another. v.summary from the engine is left untouched so
 // SDK consumers keep the raw scale.
 function displaySummary(v) {
-  const verdictWord = v.is_live ? "LIVE" : "SPOOF";
+  // Tri-state: the engine emits quality_uncertain when the capture is too poor to
+  // judge (low light / occlusion / look-away). It is NOT a spoof — painting it
+  // "SPOOF" made a real person flicker red on a momentary quality dip.
+  const verdictWord = v.is_live ? "LIVE" : v.quality_uncertain ? "UNCERTAIN" : "SPOOF";
   const threat = v.dominant_threat ? ` (${v.dominant_threat})` : "";
   return (
     `${verdictWord}${threat} | conf=${displayConfPct(v.confidence)}% | ` +
@@ -968,7 +971,9 @@ function drawOverlay(analysis, v) {
   if (!analysis.faces || analysis.faces.length === 0) return;
 
   const warming = v.frames_analyzed < 30;
-  const color = warming
+  // Amber for warming OR quality-uncertain; green for live; red ONLY for a real
+  // spoof verdict (not a poor-quality capture).
+  const color = warming || (!v.is_live && v.quality_uncertain)
     ? "rgba(210, 153, 34, 0.95)"
     : v.is_live
       ? "rgba(63, 185, 80, 0.95)"
@@ -1011,8 +1016,12 @@ function updateUI(analysis, v) {
   els.verdictText.textContent = displaySummary(v);
   els.verdictConf.textContent = `${displayConfPct(v.confidence)}% conf`;
   const warming = v.frames_analyzed < 30;
+  // UNCERTAIN (poor-quality capture) is its own state — amber, not red. Only a
+  // genuine spoof verdict (is_live=false AND not quality_uncertain) goes red.
+  const uncertain = !warming && !v.is_live && v.quality_uncertain;
   els.verdict.classList.toggle("live", !warming && v.is_live);
-  els.verdict.classList.toggle("spoof", !warming && !v.is_live);
+  els.verdict.classList.toggle("spoof", !warming && !v.is_live && !v.quality_uncertain);
+  els.verdict.classList.toggle("uncertain", uncertain);
   els.verdict.classList.toggle("warming", warming);
 
   els.state.textContent = warming ? "warming_up" : "analyzing";

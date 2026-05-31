@@ -327,6 +327,12 @@
       #verdict.warming {
         color: var(--amber);
       }
+      #verdict.uncertain {
+        color: var(--amber);
+        border-color: var(--amber);
+        background: rgba(210, 153, 34, 0.10);
+        box-shadow: 0 0 0 1px rgba(210, 153, 34, 0.35);
+      }
       #verdict .conf {
         font-size: 13px;
         font-weight: 500;
@@ -941,7 +947,7 @@
         }
       }, 4000);
     </script>
-    <script type="module" src="./app.js?v=2026-05-24-camera-restore"></script>
+    <script type="module" src="./app.js?v=2026-05-31-uncertain-state"></script>
     <script src="https://app.fivucsas.com/launcher.js?v=2026-05-28" defer></script>
   </body>
 </html>
