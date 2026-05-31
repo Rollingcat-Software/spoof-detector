@@ -112,17 +112,32 @@ describe("BlinkAnalyzer", () => {
     expect(r.details.blinks as number).toBeGreaterThanOrEqual(1);
   });
 
-  it("no blinks for >5s → low score", () => {
-    // Pin fps so the synthetic-loop frames produce a real duration_sec
-    // (otherwise the measured-fps path would clamp to 120 and a 180-frame
-    // burst would only count as 1.5s — under the 5s threshold).
+  it("no blinks for >30s → low score (re-calibrated for low-fps browser)", () => {
+    // Pin fps so the synthetic-loop frames produce a real duration_sec.
+    // Score-ramp re-calibrated 2026-05-31 for low-fps browser capture:
+    // 5 s was too aggressive — at 6-9 fps a real passive user can easily
+    // have blinks missed between sample frames at the 5 s mark, and
+    // scoring them 10 (looks like a photo) is a false-positive against
+    // a real face. New thresholds:
+    //   < 15 s with 0 blinks  → 50 (no evidence yet)
+    //   15-30 s with 0 blinks → 25
+    //   > 30 s with 0 blinks  → 10
     const a = new BlinkAnalyzer({ warmupFrames: 30, fps: 30 });
     const open = makeLandmarks(4);
     let last = a.analyze(null, makeFace(open));
-    // 31 + 150 frames @ 30fps = 6 seconds — Python source thresholds:
-    // duration_sec > 5.0 with 0 blinks → score=10.
-    for (let i = 0; i < 180; i++) last = a.analyze(null, makeFace(open));
+    // 31 + 1000 frames @ 30 fps ≈ 34 s — past the new 30 s threshold.
+    for (let i = 0; i < 1000; i++) last = a.analyze(null, makeFace(open));
     expect(last.details.blinks).toBe(0);
     expect(last.score).toBeLessThanOrEqual(20);
+  });
+
+  it("no blinks for < 15s → abstain (score 50)", () => {
+    const a = new BlinkAnalyzer({ warmupFrames: 30, fps: 30 });
+    const open = makeLandmarks(4);
+    let last = a.analyze(null, makeFace(open));
+    // 31 + 150 frames @ 30 fps = 6 s — below the new 15 s "no evidence" cutoff.
+    for (let i = 0; i < 180; i++) last = a.analyze(null, makeFace(open));
+    expect(last.details.blinks).toBe(0);
+    expect(last.score).toBe(50);
   });
 });

@@ -805,9 +805,23 @@ export class SessionEngine {
     // that's almost always the FaceUsabilityGate's mouth-region false
     // alarm at the browser's MediaPipe landmark confidence.
     const qualityOk = this.computeQualityOk();
+    // 2026-05-31 V2 — tightened. User correctly observed that
+    // LivenessProver measures ACTIVITY (blinks, head movement, expressions),
+    // not strict liveness — a passive real user gets a low score, while an
+    // animated video replay gets a high one. So "proof_proven_live" can only
+    // override quality_uncertain when there's ALSO no countervailing spoof
+    // evidence: zero incidents AND at least one blink observed. That makes
+    // proof-trumps a tie-breaker, not a magic override.
+    //
+    // (The right fix is making qualityOk accurate — the CriticalRegionVisibilityGate
+    // thresholds were lowered in the same commit so quality_uncertain stops
+    // firing on visible faces. This is the belt-and-braces safety net.)
     const proofProvenLive = (proverScore?.total ?? 0) >= 60;
-    const qualityUncertain = baseLive && !qualityOk && !proofProvenLive;
-    const isLive = baseLive && (qualityOk || proofProvenLive);
+    const noSpoofIncidents = this.incidents.length === 0;
+    const observedBlinks = this.lastBlinkCount >= 1;
+    const proofTrumpsQuality = proofProvenLive && noSpoofIncidents && observedBlinks;
+    const qualityUncertain = baseLive && !qualityOk && !proofTrumpsQuality;
+    const isLive = baseLive && (qualityOk || proofTrumpsQuality);
 
     const proverConfidence = proverScore ? proverScore.total / 100.0 : 0;
     let confidence = this.prover

@@ -18,12 +18,12 @@ import {
   FlashTemporalAnalyzer,
   ReadinessGate,
   DEFAULT_ANALYZER_WEIGHTS,
-} from "./lib/spoof-detector.js?v=2026-05-31-local-vendor";
+} from "./lib/spoof-detector.js?v=2026-05-31-wasm-only-abstain";
 
 // Version handshake — checked by the inline script in index.html.
 // If the user is running a stale cached app.js (no AMISPOOF_VERSION),
 // the HTML triggers a one-shot reload after 4 s.
-window.AMISPOOF_VERSION = "2026-05-31-local-vendor";
+window.AMISPOOF_VERSION = "2026-05-31-wasm-only-abstain";
 
 // SessionEngine.getVerdict() returns a confidence in [0, 0.88] when the
 // LivenessProver is wired (structural ceiling — see SessionEngine.ts
@@ -220,19 +220,18 @@ function renderProofPanel(proof) {
   }
 }
 
-// Point ORT and MediaPipe at LOCAL vendor copies (see amispoof/vendor/).
-// The previous jsdelivr CDN paths failed with ERR_QUIC_PROTOCOL_ERROR on
-// slow / unreliable networks, leaving the page stuck at "idle" with the
-// Start button non-functional (the detector never initialised).
-// vendor/ is populated by `npm run amispoof:bundle` from node_modules/
-// at build time — single source of truth.
-const ORT_WASM_BASE = "./vendor/onnxruntime-web/";
+// MediaPipe WASM lives in our local vendor dir (the import map already routes
+// the JS bundle to vendor/mediapipe-tasks-vision/vision_bundle.mjs).
 const MEDIAPIPE_WASM_BASE = "./vendor/mediapipe-tasks-vision/wasm";
 
-// Point ORT WASM resolver at jsdelivr so it can find the .wasm sidecar files.
-// (onnxruntime-web defaults to "relative to the JS bundle", which would 404
-// when our bundle is served from /amispoof/lib/.)
-ort.env.wasm.wasmPaths = ORT_WASM_BASE;
+// ORT auto-resolves its WASM sidecar files (ort-wasm-simd-threaded.* etc.)
+// RELATIVE TO ITS OWN BUNDLE URL via import.meta.url — since the importmap
+// points "onnxruntime-web" at "./vendor/onnxruntime-web/ort.all.bundle.min.mjs",
+// ORT looks for siblings in that same directory automatically. Setting
+// `ort.env.wasm.wasmPaths` here would DOUBLE the path (e.g.
+// "vendor/onnxruntime-web/vendor/onnxruntime-web/ort-wasm-...") — that's
+// the 404 the user saw after the local-vendor switch. Leaving wasmPaths
+// unset is correct for any layout where the WASM lives next to the JS.
 ort.env.wasm.numThreads = 2;
 
 // Grouped by what the analyzer measures over time.
@@ -949,12 +948,17 @@ async function ensureDetector() {
     miniFasNetModelUrl: "./models/minifasnet_v2.onnx",
     faceLandmarkerTaskUrl: "./models/face_landmarker.task",
     mediaPipeWasmBaseUrl: MEDIAPIPE_WASM_BASE,
-    // Try WebGPU first (Chrome/Edge ≥113, Brave, recent Safari TP) — 3-5×
-    // faster MiniFASNet inference than WASM. Falls back to WASM if WebGPU
-    // isn't supported / fails to initialise — onnxruntime-web's createSession
-    // walks the EP list in order. The session-create log line in
-    // MiniFASNetAnalyzer tells the operator which EP actually attached.
-    ortExecutionProviders: ["webgpu", "wasm"],
+    // WASM only. WebGPU dropped from the EP list:
+    //   1. MiniFASNet is a 1.7 MB model; WebGPU buffer-transfer overhead
+    //      exceeded the inference savings (measured: WASM ~9-12 fps,
+    //      WebGPU ~3 fps end-to-end).
+    //   2. Including "webgpu" in the EP list still triggers Brave's
+    //      "site uses unsafe WebGPU" advisory (because ORT registers
+    //      WebGPU bindings at session-create time even if WASM attaches
+    //      first). Removing it silences the warning.
+    // When/if we wire up the larger downloaded .pt model (~90 MB),
+    // re-add "webgpu" — bigger models amortise the GPU transfer cost.
+    ortExecutionProviders: ["wasm"],
     numFaces: 1,
     useGpu: true,
     // Raise heavy-analyzer frame_skip 3 → 5. Texture / Moire / ScreenReplay
@@ -1447,13 +1451,27 @@ function updateUI(analysis, v) {
       t.baselineMean > 185 &&
       refl &&
       refl.score < 20;
+    // V2: don't let the over-lit flash-probe message override a confidently-
+    // LIVE engine verdict. User-reported 2026-05-31: verdict text stuck on
+    // "UNCERTAIN — over-lit" while the engine simultaneously showed conf=83 %
+    // and the LivenessProver panel showed "PROVEN LIVE 68/100" with zero
+    // incidents. The flash probe runs once early in the session; its
+    // over-lit verdict (a snapshot from one moment) shouldn't permanently
+    // hijack a verdict that has since accumulated proof-of-life evidence.
+    // If proof is proven_live AND no spoof incidents are firing, the engine
+    // verdict is the authoritative signal — the probe message moves to the
+    // flash-result strip above (els.lightResult) instead.
+    const proofProvenLive =
+      lastProof && (lastProof.is_proven_live || (lastProof.score ?? 0) >= 60);
+    const probeShouldOverride =
+      !proofProvenLive || (v.incidents && v.incidents.length >= 3);
     if (t.isScreen) {
       els.verdictText.textContent =
         `SPOOF (video-replay — flash persistence ${t.persistenceNorm} · ` +
         `screen ${t.screenScore} · onset ${t.onsetLagMs}ms)`;
       els.verdict.classList.remove("live", "warming", "uncertain");
       els.verdict.classList.add("spoof");
-    } else if (overLitInconclusive) {
+    } else if (overLitInconclusive && probeShouldOverride) {
       els.verdictText.textContent =
         `UNCERTAIN — over-lit (baseline ${t.baselineMean.toFixed(0)}, ` +
         `refl ${refl.score}). Dim the room (close blinds / move away from windows) and re-test.`;
