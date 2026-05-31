@@ -793,9 +793,21 @@ export class SessionEngine {
     // Capture-quality floor: a would-be-LIVE poor-quality capture is reported
     // UNCERTAIN (re-capture), never a confident LIVE. A genuine spoof
     // (baseLive false) is NOT downgraded — it stays SPOOF.
+    //
+    // EXCEPT when the LivenessProver has accumulated >= 60 / 100 of passive
+    // movement evidence over 5+ s (its `is_proven_live` threshold). That's
+    // a strong, observation-grounded LIVE signal — blink + landmark variance
+    // + head rotation + eye/mouth motion all checked passively — and it's
+    // perverse to display "UNCERTAIN, 34 %" on screen while the proof panel
+    // simultaneously displays "PROVEN LIVE 100/100" (a real user-reported
+    // inconsistency 2026-05-31). When proof has crossed the threshold AND
+    // no spoof incidents are firing, we trust it over a quality-floor flag
+    // that's almost always the FaceUsabilityGate's mouth-region false
+    // alarm at the browser's MediaPipe landmark confidence.
     const qualityOk = this.computeQualityOk();
-    const qualityUncertain = baseLive && !qualityOk;
-    const isLive = baseLive && qualityOk;
+    const proofProvenLive = (proverScore?.total ?? 0) >= 60;
+    const qualityUncertain = baseLive && !qualityOk && !proofProvenLive;
+    const isLive = baseLive && (qualityOk || proofProvenLive);
 
     const proverConfidence = proverScore ? proverScore.total / 100.0 : 0;
     let confidence = this.prover
