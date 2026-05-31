@@ -56,3 +56,8 @@ data/in_house_clean/
 # folder-discovery logic still finds the directory.
 notebooks/data/*.json
 !notebooks/data/.gitkeep
+
+# amispoof vendor bundle — onnxruntime-web + @mediapipe/tasks-vision copied
+# from node_modules at build time (`npm run amispoof:bundle`). 80+ MB binary
+# WASM blobs; not source code. Regenerate locally; do not commit.
+web/amispoof/vendor/
