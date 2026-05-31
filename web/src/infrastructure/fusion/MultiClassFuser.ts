@@ -44,7 +44,15 @@ import { SPOOF_SIGNAL_MAP } from "../../domain/taxonomy";
  * capture or for ablation studies.
  */
 export const DEFAULT_ANALYZER_WEIGHTS: Readonly<Record<string, number>> = {
-  minifasnet: 5.0,        // PROVEN: +94.7 gap
+  // 2026-05-31 in-house frame-log dataset (n=14 sessions, ~23k frames):
+  // minifasnet's TOP-LINE score had AUC 0.645 (LIVE 99.99, SPOOF 98.62 —
+  // barely distinguishable). Original weight 5.0 was calibrated against
+  // CASIA-FASD where the model is much stronger; on browser-port captures
+  // it votes confidently on both classes and dominates the fusion without
+  // earning it. Dropped to 1.5 — same order as the other valid signals.
+  // Consumers with cross-dataset deployments can override via constructor
+  // analyzerWeights.
+  minifasnet: 1.5,
   planarity: 2.0,         // 2026-05-24: camera-independent flat-surface (print/screen) detector — see LandmarkPlanarityAnalyzer. Backed by a session-level veto.
   screen_flicker: 3.0,    // 50/60Hz temporal detection — catches ANY screen
   landmark_variance: 2.0, // STRONG: zero variance = photo

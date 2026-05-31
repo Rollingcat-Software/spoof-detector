@@ -750,7 +750,16 @@ export class SessionEngine {
       }
     }
 
-    const dataConfidence = Math.min(1.0, this.frameCount / 150.0);
+    // dataConfidence ramps from 0 → 1 as we accumulate evidence. Was
+    // frameCount / 150 (5 s at 30 fps). On a 5-7 fps capture that worked
+    // out to ~25 s before the engine would issue a confident verdict,
+    // which combined with the quality_uncertain 0.3-confidence pin made
+    // the displayed confidence appear stuck at 30% for ~50 s, then jump
+    // to 96 % once both gates cleared — a jarring UX.
+    // Switching to elapsed-seconds means the ramp matches wall-clock time
+    // regardless of fps. 5 s full ramp keeps the original "1 s warmup +
+    // 4 s evidence-build" intent of the original constant.
+    const dataConfidence = Math.min(1.0, this.elapsedSec / 5.0);
     const temporalBoost = this.computeTemporalConfidence();
     const incidentPenalty = this.computeIncidentPenalty();
 
