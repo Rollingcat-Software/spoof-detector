@@ -18,12 +18,12 @@ import {
   FlashTemporalAnalyzer,
   ReadinessGate,
   DEFAULT_ANALYZER_WEIGHTS,
-} from "./lib/spoof-detector.js?v=2026-05-31-perf-webgpu";
+} from "./lib/spoof-detector.js?v=2026-05-31-disable-noise";
 
 // Version handshake — checked by the inline script in index.html.
 // If the user is running a stale cached app.js (no AMISPOOF_VERSION),
 // the HTML triggers a one-shot reload after 4 s.
-window.AMISPOOF_VERSION = "2026-05-31-perf-webgpu";
+window.AMISPOOF_VERSION = "2026-05-31-disable-noise";
 
 // SessionEngine.getVerdict() returns a confidence in [0, 0.88] when the
 // LivenessProver is wired (structural ceiling — see SessionEngine.ts
@@ -961,6 +961,25 @@ async function ensureDetector() {
     // enough coverage — last 30 samples at skip 5 = 150 frames = ~22 s of
     // history at 6 fps, well above the 5 s the analysis needs.
     heavyAnalyzerFrameSkip: 5,
+    // Disable AUC ≤ 0.55 analyzers (noise per 2026-05-31 in-house data,
+    // n=14 sessions, ~23k frames). Each saves ~3-50 ms / frame and we
+    // never use the resulting evidence anyway:
+    //   moire             AUC 0.509 — saves ~50 ms (heavy worker)
+    //   temporal          AUC 0.505 — saves ~3 ms
+    //   screen_flicker    AUC 0.511 — saves ~5 ms (also Nyquist-blind at our fps)
+    //   micro_tremor      AUC 0.511 — saves ~5 ms (also Nyquist-blind)
+    //   expression_dyn    AUC 0.517 — saves ~3 ms
+    //   background_grid   AUC 0.554 — saves ~5 ms
+    // Net: ~70 ms / frame, ~50 % of the current ~150 ms per-frame budget.
+    // Expected lift: 5.7 fps → ~9-12 fps without losing detection.
+    // Consumers wanting all analyzers (e.g. for cross-deployment AUC
+    // re-measurement) can override via the corresponding enable* flags.
+    enableMoire: false,
+    enableTemporal: false,
+    enableScreenFlicker: false,
+    enableMicroTremor: false,
+    enableExpressionDynamics: false,
+    enableBackgroundGrid: false,
     // Proctoring profile — passive observation only, no mid-session
     // challenge prompts. The new passive axes (eye_motion, mouth_motion,
     // face_motion) plus the looser gates below let a natural live face
