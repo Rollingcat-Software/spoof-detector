@@ -53,7 +53,7 @@ export interface IdentityMatcherOptions {
 }
 
 export class IdentityMatcher {
-  private readonly matchThreshold: number;
+  private matchThreshold: number;
   private readonly impostorStreak: number;
   private readonly enrollSamples: number;
 
@@ -70,6 +70,15 @@ export class IdentityMatcher {
 
   getState(): IdentityState {
     return this.state;
+  }
+
+  /** Live-tune the same-person cosine threshold (for calibration). */
+  setMatchThreshold(t: number): void {
+    this.matchThreshold = t;
+  }
+
+  getMatchThreshold(): number {
+    return this.matchThreshold;
   }
 
   /** Begin a fresh enrollment, discarding any previous template/samples. */

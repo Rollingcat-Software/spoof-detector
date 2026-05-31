@@ -17,12 +17,17 @@ import {
   FlashReflectionAnalyzer,
   FlashTemporalAnalyzer,
   ReadinessGate,
-} from "./lib/spoof-detector.js?v=2026-05-25-readiness-gate";
+  IdentityMatcher,
+} from "./lib/spoof-detector.js?v=2026-05-26-identity-match";
+// MediaPipe ImageEmbedder (appearance embedding) — loaded from the same
+// jsdelivr importmap entry as the FaceLandmarker. Powers client-side identity
+// continuity (research): enroll a face → flag a sustained person-swap.
+import { FilesetResolver, ImageEmbedder } from "@mediapipe/tasks-vision";
 
 // Version handshake — checked by the inline script in index.html.
 // If the user is running a stale cached app.js (no AMISPOOF_VERSION),
 // the HTML triggers a one-shot reload after 4 s.
-window.AMISPOOF_VERSION = "2026-05-25-readiness-gate";
+window.AMISPOOF_VERSION = "2026-05-26-identity-match";
 
 // SessionEngine.getVerdict() returns a confidence in [0, 0.88] when the
 // LivenessProver is wired (structural ceiling — see SessionEngine.ts
@@ -459,6 +464,26 @@ const READINESS_STABLE_FRAMES = 8;
 let previewMode = false;
 let readinessStreak = 0;
 
+// ===== Client-side identity continuity (research) =====
+// Enroll a face → continuously check it's the SAME person. A sustained mismatch
+// is an IMPERSONATION (a real live face, but the wrong person — distinct from
+// SPOOF). 100% on-device: a MediaPipe ImageEmbedder (appearance embedding)
+// feeds the SDK IdentityMatcher. Nothing is uploaded; the template is ephemeral
+// unless the visitor opts into "remember on this device".
+const IMAGE_EMBEDDER_MODEL_URL =
+  "https://storage.googleapis.com/mediapipe-models/image_embedder/mobilenet_v3_small/float32/1/mobilenet_v3_small.tflite";
+const ENROLL_SAMPLES = 5;
+const IDENTITY_MATCH_INTERVAL_MS = 700;
+const IDENTITY_STORE_KEY = "amispoof_identity_template_v1";
+window.IDENTITY_THRESHOLD = 0.5; // live-tunable (calibrate like the flash probe)
+const identityMatcher = new IdentityMatcher({ enrollSamples: ENROLL_SAMPLES });
+let imageEmbedder = null;
+let imageEmbedderLoading = null;
+let identityBusy = false;
+let identityResult = null; // last IdentityMatchResult
+let lastIdentityMatchAt = 0;
+const _embCanvas = typeof document !== "undefined" ? document.createElement("canvas") : null;
+
 const els = {
   videoWrap: $("videoWrap"),
   video: $("video"),
@@ -475,6 +500,9 @@ const els = {
   lightCheck: $("lightCheck"),
   flashOverlay: $("flashOverlay"),
   lightResult: $("lightResult"),
+  identityToggle: $("identityToggle"),
+  identityStatus: $("identityStatus"),
+  identityRemember: $("identityRemember"),
   cameraToggle: $("cameraToggle"),
   cameraPanel: $("cameraPanel"),
   benchPanel: $("benchPanel"),
@@ -1001,6 +1029,21 @@ async function loop() {
         (flashProbe.ran && nowP - flashProbe.lastAt > FLASH_PROBE_INTERVAL_MS)
       ) {
         runFlashProbe(true); // auto=true: silent, no button toggling
+      }
+    }
+
+    // Continuous identity check — after enrollment, verify it's still the same
+    // person on a cadence. Fire-and-forget; folds IMPERSONATION into the verdict.
+    if (
+      running &&
+      identityMatcher.getState() === "enrolled" &&
+      !identityBusy &&
+      !flashBusy
+    ) {
+      const nowI = performance.now();
+      if (nowI - lastIdentityMatchAt > IDENTITY_MATCH_INTERVAL_MS) {
+        lastIdentityMatchAt = nowI;
+        runIdentityMatch();
       }
     }
     drawOverlay(analysis, v);
@@ -1721,6 +1764,164 @@ if (els.lightCheck) {
 }
 // Debug hook for live calibration — fire a probe on demand from the console.
 window.__runFlashProbe = () => runFlashProbe(false);
+
+// ===== Client-side identity continuity (enroll → continuous match) =====
+// Lazy-load a MediaPipe ImageEmbedder (appearance embedding) and feed it to the
+// SDK IdentityMatcher. Pluggable: swapping in a real face-recognition ONNX
+// model later only changes embedFaceCrop(). 100% on-device, nothing uploaded.
+async function ensureImageEmbedder() {
+  if (imageEmbedder) return imageEmbedder;
+  if (imageEmbedderLoading) return imageEmbedderLoading;
+  imageEmbedderLoading = (async () => {
+    const vision = await FilesetResolver.forVisionTasks(MEDIAPIPE_WASM_BASE);
+    imageEmbedder = await ImageEmbedder.createFromOptions(vision, {
+      baseOptions: { modelAssetPath: IMAGE_EMBEDDER_MODEL_URL },
+      runningMode: "IMAGE",
+      quantize: false,
+    });
+    return imageEmbedder;
+  })();
+  return imageEmbedderLoading;
+}
+
+/** Embed the current face crop → Float32Array appearance vector (or null). */
+async function embedFaceCrop() {
+  const crop = captureFaceCrop();
+  if (!crop || !_embCanvas) return null;
+  _embCanvas.width = crop.width;
+  _embCanvas.height = crop.height;
+  const cx = _embCanvas.getContext("2d");
+  if (!cx) return null;
+  cx.putImageData(crop, 0, 0);
+  const emb = await ensureImageEmbedder();
+  const res = emb.embed(_embCanvas);
+  const fe =
+    res && res.embeddings && res.embeddings[0] && res.embeddings[0].floatEmbedding;
+  return fe ? new Float32Array(fe) : null;
+}
+
+/** Capture ENROLL_SAMPLES embeddings into the matcher's reference template. */
+async function runEnroll() {
+  if (!running || previewMode || identityBusy) return;
+  identityBusy = true;
+  if (els.identityToggle) els.identityToggle.disabled = true;
+  try {
+    setIdentityStatus("Identity: loading model…");
+    await ensureImageEmbedder();
+    identityMatcher.beginEnroll();
+    for (let i = 0; i < ENROLL_SAMPLES; i++) {
+      const emb = await embedFaceCrop();
+      if (emb) identityMatcher.addEnrollSample(emb);
+      setIdentityStatus(
+        `Identity: enrolling ${identityMatcher.enrollProgress().captured}/${ENROLL_SAMPLES} — hold still…`,
+      );
+      await flashSleep(220);
+    }
+    if (identityMatcher.getState() !== "enrolled") identityMatcher.finalizeEnroll();
+    identityResult = null;
+    if (els.identityRemember && els.identityRemember.checked) saveIdentity();
+    updateIdentityUI();
+  } catch (e) {
+    setIdentityStatus(
+      "Identity: model failed to load — " + (e && e.message ? e.message : e),
+    );
+  } finally {
+    identityBusy = false;
+    if (els.identityToggle) els.identityToggle.disabled = false;
+  }
+}
+
+/** One continuous identity check; fire-and-forget from the loop. */
+async function runIdentityMatch() {
+  if (identityBusy || identityMatcher.getState() !== "enrolled") return;
+  identityBusy = true;
+  try {
+    identityMatcher.setMatchThreshold(window.IDENTITY_THRESHOLD ?? 0.5);
+    const emb = await embedFaceCrop();
+    if (emb) {
+      identityResult = identityMatcher.match(emb);
+      updateIdentityUI();
+    }
+  } catch (e) {
+    /* best-effort */
+  } finally {
+    identityBusy = false;
+  }
+}
+
+function setIdentityStatus(text) {
+  if (els.identityStatus) els.identityStatus.textContent = text;
+}
+
+function updateIdentityUI() {
+  const st = identityMatcher.getState();
+  if (st === "unenrolled") {
+    setIdentityStatus("Identity: not enrolled — click 🧑 Identity to enroll your face");
+    return;
+  }
+  if (st === "enrolling") return; // progress shown live by runEnroll
+  const r = identityResult;
+  if (!r || r.similarity === null) {
+    setIdentityStatus("Identity: enrolled ✓ — verifying…");
+    return;
+  }
+  const sim = r.similarity.toFixed(2);
+  setIdentityStatus(
+    r.impersonation
+      ? `Identity: ⚠ IMPERSONATION — different person (sim ${sim})`
+      : r.samePerson
+        ? `Identity: ✓ same person (sim ${sim})`
+        : `Identity: mismatch ${r.mismatchStreak}/5 (sim ${sim})`,
+  );
+}
+
+// "Remember on this device" — opt-in persistence of the embedding VECTOR only
+// (never a face image), in localStorage. No server, nothing uploaded.
+function saveIdentity() {
+  try {
+    const t = identityMatcher.getTemplate();
+    if (t) localStorage.setItem(IDENTITY_STORE_KEY, JSON.stringify(Array.from(t)));
+  } catch (e) {
+    /* ignore */
+  }
+}
+function loadSavedIdentity() {
+  try {
+    const raw = localStorage.getItem(IDENTITY_STORE_KEY);
+    if (!raw) return false;
+    const arr = JSON.parse(raw);
+    if (Array.isArray(arr) && arr.length) {
+      identityMatcher.loadTemplate(new Float32Array(arr));
+      return true;
+    }
+  } catch (e) {
+    /* ignore */
+  }
+  return false;
+}
+
+if (els.identityToggle) {
+  // Click (re)enrolls the current face as the reference identity.
+  els.identityToggle.addEventListener("click", runEnroll);
+}
+if (els.identityRemember) {
+  els.identityRemember.addEventListener("change", () => {
+    if (els.identityRemember.checked) saveIdentity();
+    else
+      try {
+        localStorage.removeItem(IDENTITY_STORE_KEY);
+      } catch (e) {
+        /* ignore */
+      }
+  });
+}
+// Restore a remembered identity on load (opt-in persisted vector).
+if (loadSavedIdentity() && els.identityRemember) {
+  els.identityRemember.checked = true;
+  updateIdentityUI();
+}
+// Debug hook for live calibration (window.IDENTITY_THRESHOLD tunes the cutoff).
+window.__identity = { matcher: identityMatcher, last: () => identityResult };
 
 // ===== Manual camera controls (operator experimentation) =====
 // Builds sliders/toggles from the live track's getCapabilities() so the
