@@ -175,13 +175,27 @@ export class FaceUsabilityGate {
       blurScore: opts.blurScore,
     });
 
+    // Visibility-score thresholds (2026-05-31 relaxation). The original
+    // 0.65 nose/mouth bar was calibrated against the Python reference
+    // pipeline (480p Python-OpenCV pipeline). On the browser port with
+    // MediaPipe FaceLandmarker, a clearly-visible mouth at moderate
+    // distance often scores 0.55-0.70 — landmarks are slightly noisy
+    // but the region IS visible. At 0.65 the gate was firing
+    // "OCCLUDED_NO_FACE / OCCLUDED_CONFIRMED" on 50 %+ of frames in
+    // multiple LIVE captures, which pinned the displayed confidence at
+    // 34 % even though the LivenessProver was reporting 100/100 PROVEN
+    // LIVE — a glaring user-facing inconsistency.
+    //
+    // Lowered to 0.45 (still well above the ~0.3 "actually occluded"
+    // band). Eyes left at 0.6 — eyelid detection is more reliable and
+    // a 0.6 score really does indicate eye obstruction.
     const leftEyeScore = visibility.visibilityScores["left_eye"] ?? 1.0;
     const rightEyeScore = visibility.visibilityScores["right_eye"] ?? 1.0;
     const leftEyeVisible = leftEyeScore >= 0.6;
     const rightEyeVisible = rightEyeScore >= 0.6;
-    const noseVisible = (visibility.visibilityScores["nose"] ?? 1.0) >= 0.65;
-    const mouthVisible = (visibility.visibilityScores["mouth"] ?? 1.0) >= 0.65;
-    const lowerFaceVisible = (visibility.visibilityScores["lower_face"] ?? 1.0) >= 0.6;
+    const noseVisible = (visibility.visibilityScores["nose"] ?? 1.0) >= 0.45;
+    const mouthVisible = (visibility.visibilityScores["mouth"] ?? 1.0) >= 0.45;
+    const lowerFaceVisible = (visibility.visibilityScores["lower_face"] ?? 1.0) >= 0.45;
     const bothEyesUnreliable =
       leftEyeScore < EYE_STRICT_UNRELIABLE_THRESHOLD &&
       rightEyeScore < EYE_STRICT_UNRELIABLE_THRESHOLD;
@@ -197,13 +211,18 @@ export class FaceUsabilityGate {
 
     const lowerFaceRegionsMissing =
       (noseVisible ? 0 : 1) + (mouthVisible ? 0 : 1) + (lowerFaceVisible ? 0 : 1);
+    // Structural-occlusion AND-conditions tightened in parallel with the
+    // visibility-threshold relaxation above: require a higher occlusionScore
+    // to flag, and require more regions missing for the lower-bar trigger.
+    // 0.70 occlusionScore is a clearly-bad reading (typical visible-face
+    // captures land 0.20-0.45). The original 0.55-0.60 fired too often.
     const structuralOcclusionNow =
       bothEyesUnreliable ||
       (!leftEyeVisible && !rightEyeVisible) ||
-      ((!mouthVisible && !lowerFaceVisible) && visibility.occlusionScore >= 0.55) ||
-      (lowerFaceRegionsMissing >= 2 && visibility.occlusionScore >= 0.6) ||
-      (visibility.occlusionScore >= 0.58 &&
-        lowerFaceRegionsMissing >= 1 &&
+      ((!mouthVisible && !lowerFaceVisible) && visibility.occlusionScore >= 0.70) ||
+      (lowerFaceRegionsMissing >= 3 && visibility.occlusionScore >= 0.65) ||
+      (visibility.occlusionScore >= 0.75 &&
+        lowerFaceRegionsMissing >= 2 &&
         (!mouthVisible || !lowerFaceVisible));
 
     const occludedNow = visibility.isCriticalOccluded || structuralOcclusionNow;
