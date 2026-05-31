@@ -23,6 +23,13 @@ export interface ReadinessSignals {
   faceCount: number;
   /** Detected face bbox area as a fraction of the frame (0-1). Ignored unless faceCount === 1. */
   faceAreaFraction: number;
+  /** Detected face bbox area in absolute pixels (width*height). Preferred over
+   *  fraction when supplied: at 480p, 5 % fraction = 14 000 pixels (analyzable);
+   *  at 1080p, 5 % = 100 000 pixels — same fraction, vastly different analysis
+   *  fidelity. The pixel floor (default 10 000 ≈ 100×100) reflects what the
+   *  texture / moire / MiniFASNet analyzers actually need to produce a stable
+   *  reading. When undefined, falls back to faceAreaFraction. */
+  faceAreaPixels?: number;
   /** Mean face-region brightness, 0-255 (FaceUsabilityGate.globalFaceBrightness). */
   faceBrightness: number;
   /** Whether a critical face region is occluded (FaceUsabilityGate.occluded). */
@@ -58,6 +65,11 @@ export interface ReadinessResult {
 export interface ReadinessOptions {
   /** Min face bbox area / frame area. Below ⇒ "move closer". Default 0.05. */
   minFaceAreaFraction?: number;
+  /** Min face bbox area in absolute pixels (width*height). Default 10 000
+   *  (≈ 100×100 — the floor below which texture / MiniFASNet readings become
+   *  noisy regardless of frame size). When the caller supplies `faceAreaPixels`
+   *  in the signals, BOTH this and `minFaceAreaFraction` must pass. */
+  minFaceAreaPixels?: number;
   /** Min mean face brightness (0-255). Below ⇒ "too dark". Default 60. */
   minFaceBrightness?: number;
   /** Max mean face brightness (0-255). Above ⇒ "too bright" (matches the flash
@@ -67,11 +79,13 @@ export interface ReadinessOptions {
 
 export class ReadinessGate {
   private readonly minFaceAreaFraction: number;
+  private readonly minFaceAreaPixels: number;
   private readonly minFaceBrightness: number;
   private readonly maxFaceBrightness: number;
 
   constructor(options: ReadinessOptions = {}) {
     this.minFaceAreaFraction = options.minFaceAreaFraction ?? 0.05;
+    this.minFaceAreaPixels = options.minFaceAreaPixels ?? 10000;
     this.minFaceBrightness = options.minFaceBrightness ?? 60;
     this.maxFaceBrightness = options.maxFaceBrightness ?? 185;
   }
@@ -113,13 +127,25 @@ export class ReadinessGate {
       return { ready: false, checks };
     }
 
-    // 3. Face large enough (not too far).
-    const sizeOk = s.faceAreaFraction >= this.minFaceAreaFraction;
+    // 3. Face large enough (not too far). Combined fraction + pixel test:
+    // fraction guards the user's framing intuition ("face takes a reasonable
+    // share of the frame"), pixels guard analyzer fidelity ("texture analyzer
+    // actually has enough pixels to score from"). The pixel floor is the
+    // honest constraint for our analyzers; the fraction is the human-readable
+    // one. BOTH must pass when pixels are supplied.
+    const fractionOk = s.faceAreaFraction >= this.minFaceAreaFraction;
+    const pixelsOk =
+      s.faceAreaPixels === undefined || s.faceAreaPixels >= this.minFaceAreaPixels;
+    const sizeOk = fractionOk && pixelsOk;
     checks.push({
       id: "size",
       label: "Distance",
       pass: sizeOk,
-      message: sizeOk ? "Good distance" : "Move closer to the camera",
+      message: sizeOk
+        ? "Good distance"
+        : !fractionOk
+          ? "Move closer to the camera"
+          : `Move closer — face is too small in pixels (${s.faceAreaPixels} < ${this.minFaceAreaPixels})`,
     });
 
     // 4. Lighting in the dim-to-moderate band.
