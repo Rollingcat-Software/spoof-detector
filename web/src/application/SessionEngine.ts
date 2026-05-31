@@ -140,6 +140,20 @@ export class SessionEngine {
   static readonly TEXTURE_WINDOW_FRAMES = 30;
   static readonly TEXTURE_WINDOW_MIN_FRAMES = 20;
   static readonly TEXTURE_LOW_FRACTION_SPOOF = 0.30;
+  // V3 CO-SIGNAL gate (2026-05-31, third revision). A LIVE session captured
+  // in twilight ("home sunset") had texture_score mean = 19 — the texture
+  // analyzer cannot tell that case apart from a SPOOF (which had mean = 6
+  // in the same room). Per-session breakdown showed `screen_replay.skin_score`
+  // still discriminates cleanly even at twilight:
+  //   LIVE  skin_score range across all light conditions: 0.1 - 27.8
+  //   SPOOF skin_score range across all light conditions: 31.9 - 65.5
+  // So the texture veto now requires `skin_score` to ALSO look REPLAY-like
+  // (median in window >= 30) before firing. A twilight LIVE has low texture
+  // AND low skin_score → veto stays silent. A genuine REPLAY has low texture
+  // AND high skin_score → veto fires fast. Single-feature thresholds suffer
+  // from low-light camera-noise overlap; the co-signal AND-gate is the
+  // anti-false-positive primitive.
+  static readonly TEXTURE_COSIGNAL_SKIN_MIN = 30;
   // Capture-quality floor (2026-05-24). A would-be-LIVE session whose capture
   // quality is too poor (dark / occluded / no-face frames) is downgraded to
   // UNCERTAIN (prompt a re-capture) rather than confidently classified LIVE.
@@ -174,6 +188,11 @@ export class SessionEngine {
   // Recent texture_score samples for the windowed-ratio veto (V2). Frame-count
   // based, not seconds, so a slow camera can't produce a one-frame "window".
   private recentTextureScores = new RingBuffer<number>(
+    SessionEngine.TEXTURE_WINDOW_FRAMES,
+  );
+  // V3 co-signal: parallel ring of screen_replay.skin_score samples; the
+  // texture veto checks both before firing.
+  private recentSkinScores = new RingBuffer<number>(
     SessionEngine.TEXTURE_WINDOW_FRAMES,
   );
   private qualitySamples = new RingBuffer<{ usable: boolean; illum: number }>(90);
@@ -235,6 +254,7 @@ export class SessionEngine {
     this.lastTextureIncidentAt = -Infinity;
     this.lastFaceMissingIncidentAt = -Infinity;
     this.recentTextureScores.clear();
+    this.recentSkinScores.clear();
     this.qualitySamples.clear();
     this.prover?.reset();
   }
@@ -401,6 +421,17 @@ export class SessionEngine {
     const textureScore = texture.details["texture_score"];
     if (typeof textureScore !== "number") return;
     this.recentTextureScores.append(textureScore);
+
+    // V3: also sample the co-signal (screen_replay.skin_score). Pushed on
+    // every frame the texture sample comes in so the two windows stay
+    // aligned. When skin_score isn't available we push NaN so the median
+    // computation is still defined (Number.isNaN filter below).
+    const screenReplay = cls.analyzer_results["screen_replay"];
+    const skinScore = screenReplay?.details["skin_score"];
+    this.recentSkinScores.append(
+      typeof skinScore === "number" ? skinScore : Number.NaN,
+    );
+
     if (elapsed < SessionEngine.TEXTURE_MIN_ELAPSED_SEC) return;
     if (this.recentTextureScores.length < SessionEngine.TEXTURE_WINDOW_MIN_FRAMES) {
       return;
@@ -420,13 +451,37 @@ export class SessionEngine {
     const lowFraction = lowCount / samples.length;
     if (lowFraction < SessionEngine.TEXTURE_LOW_FRACTION_SPOOF) return;
 
+    // V3 co-signal gate. Compute the median skin_score over the same
+    // window. A genuine REPLAY has both signals collaborating (low texture
+    // + high skin_score); a twilight LIVE has only the texture symptom
+    // (camera noise reduction → smooth pixels → low Laplacian variance)
+    // but skin_score remains low because the face is real skin not
+    // through-a-screen rendering.
+    const skinSamples = this.recentSkinScores
+      .toArray()
+      .filter((x) => !Number.isNaN(x));
+    let skinMedian = Number.NaN;
+    if (skinSamples.length >= SessionEngine.TEXTURE_WINDOW_MIN_FRAMES / 2) {
+      const sorted = skinSamples.slice().sort((a, b) => a - b);
+      skinMedian = sorted[Math.floor(sorted.length / 2)];
+    }
+    if (
+      Number.isNaN(skinMedian) ||
+      skinMedian < SessionEngine.TEXTURE_COSIGNAL_SKIN_MIN
+    ) {
+      // Texture collapsed but skin_score is LIVE-like — likely camera
+      // noise in low light, not a screen. Suppress the incident.
+      return;
+    }
+
     this.lastTextureIncidentAt = elapsed;
     this.addIncident(
       frame_id,
       Severity.HIGH,
       SpoofCategory.VIDEO_REPLAY,
-      `Texture collapse — ${Math.round(lowFraction * 100)}% of last ` +
-        `${samples.length} frames below threshold (${SessionEngine.TEXTURE_SCORE_SPOOF_THRESHOLD}). ` +
+      `Texture collapse + skin co-signal — ${Math.round(lowFraction * 100)}% of last ` +
+        `${samples.length} frames below texture threshold (${SessionEngine.TEXTURE_SCORE_SPOOF_THRESHOLD}), ` +
+        `skin_score median ${Math.round(skinMedian)} (>= ${SessionEngine.TEXTURE_COSIGNAL_SKIN_MIN}). ` +
         `Face rendered through a screen (replay / video-call) suspected.`,
       {
         low_fraction: round(lowFraction, 3),
@@ -434,6 +489,8 @@ export class SessionEngine {
         window_frames: samples.length,
         threshold: SessionEngine.TEXTURE_SCORE_SPOOF_THRESHOLD,
         last_texture_score: round(textureScore, 1),
+        skin_score_median: round(skinMedian, 1),
+        skin_cosignal_min: SessionEngine.TEXTURE_COSIGNAL_SKIN_MIN,
       },
     );
   }
