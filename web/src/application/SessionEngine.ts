@@ -160,7 +160,20 @@ export class SessionEngine {
   // A genuine spoof (real spoof evidence) is NEVER downgraded — it stays SPOOF.
   // illuminationScore is 0-1 from the FaceUsabilityGate (normal lit face ~0.8).
   static readonly QUALITY_MIN_SAMPLES = 15;
-  static readonly QUALITY_USABLE_RATIO = 0.5;
+  // 2026-05-31 — relaxed from 0.5 → 0.3. The capture-quality floor is the
+  // gate that pins displayed confidence to 30 % when triggered. At 0.5 the
+  // floor was firing on bright-room LIVE captures whose FaceUsabilityGate
+  // boolean was incorrectly flagging mouth as occluded (state breakdown
+  // observed: CLEAR 47 %, OCCLUDED_* 47 %, RECOVERING 6 % — the gate's
+  // mouth-region pixel threshold is calibrated for the Python pipeline and
+  // misfires on browser-port landmarks at moderate distance, same root
+  // cause as the readiness gate's false occlusion fix).
+  //
+  // At 0.3 the floor still catches genuinely poor captures (a dark or
+  // unfaced session sees usable_ratio < 0.1) while letting a clearly-lit
+  // face with intermittent landmark noise reach a confident LIVE. The
+  // illumination floor below remains the hard gate against dim captures.
+  static readonly QUALITY_USABLE_RATIO = 0.3;
   static readonly QUALITY_ILLUM_FLOOR = 0.35;
 
   private readonly sessionId: string;
