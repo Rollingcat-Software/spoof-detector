@@ -56,8 +56,18 @@ export const DEFAULT_ANALYZER_WEIGHTS: Readonly<Record<string, number>> = {
   screen_replay: 0.5,     // WEAK: +9.6 gap
   ar_filter: 0.3,         // heuristic mode
   temporal: 0.3,          // micro-motion
-  texture: 0.0,           // PAPER ANTI-CORRELATED — disabled by default
-  moire: 0.0,             // PAPER ANTI-CORRELATED — disabled by default
+  // 2026-05-31 in-house frame-log dataset (3 LIVE / 3 SPOOF including a
+  // live video-call) measured texture.score cross-session AUC = 0.919,
+  // d-prime 2.67 (LIVE 71.0 vs SPOOF 55.9). Cross-dataset CASIA-FASD
+  // judged it anti-correlated (which is why this was 0.0); in-house it
+  // is one of the strongest passive replay signals. The bulk of the work
+  // for replay detection is done by SessionEngine.checkTextureCollapseReplay,
+  // which vetoes on the texture_score SUB-feature (cliff 100→16) and
+  // raises VIDEO_REPLAY incidents. The 1.5 weight here is the modest
+  // top-line nudge to keep evidence accumulating even when the veto
+  // hasn't reached its 3-incident override threshold yet.
+  texture: 1.5,           // IN-HOUSE: AUC 0.919; CASIA cross-dataset anti-correlated — pair with checkTextureCollapseReplay veto
+  moire: 0.0,             // PAPER ANTI-CORRELATED — disabled by default (in-house sub-feature std_mean AUC 0.91 but top-line score not separating; keep at 0 until a sub-feature is promoted)
 };
 
 /**

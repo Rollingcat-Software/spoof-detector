@@ -93,6 +93,24 @@ export class SessionEngine {
   static readonly PLANAR_SPOOF_SCORE = 45;
   static readonly PLANAR_MIN_ELAPSED_SEC = 3.0;
   static readonly PLANAR_INCIDENT_THROTTLE_SEC = 2.5;
+  // Texture-collapse VIDEO_REPLAY veto (2026-05-31). On in-house frame-log
+  // data (3 LIVE sessions / 3 SPOOF sessions including both pre-recorded
+  // replay and a live video-call from a Xiaomi 14T Pro held close to the
+  // camera), texture.texture_score collapsed cleanly:
+  //   LIVE  mean 62.5  std 23.9
+  //   SPOOF mean 13.6  std 13.1   (AUC 0.924, d-prime 2.53)
+  // Threshold 25 sits >2.7 SPOOF-std above the SPOOF mean (catches >99% of
+  // SPOOF frames) and ~1.6 LIVE-std below the LIVE mean (the rare LIVE
+  // frame that dips below — bad lighting/blur — gets at most one incident
+  // because of the throttle, never the >=3 needed to override).
+  // texture.texture_score is the analyzer's Laplacian-variance sub-feature,
+  // exposed via cls.analyzer_results["texture"].details["texture_score"].
+  // The top-line texture.score blends color + frequency + drift so the
+  // cliff (100 → 16 on SPOOF) gets averaged into a much smaller drop
+  // (73 → 56) the fuser can't act on at any reasonable weight.
+  static readonly TEXTURE_SCORE_SPOOF_THRESHOLD = 25;
+  static readonly TEXTURE_MIN_ELAPSED_SEC = 3.0;
+  static readonly TEXTURE_INCIDENT_THROTTLE_SEC = 2.5;
   // Capture-quality floor (2026-05-24). A would-be-LIVE session whose capture
   // quality is too poor (dark / occluded / no-face frames) is downgraded to
   // UNCERTAIN (prompt a re-capture) rather than confidently classified LIVE.
@@ -122,6 +140,7 @@ export class SessionEngine {
   private lastBlinkObservedAt = 0;
   private lastNoBlinkIncidentAt = -Infinity;
   private lastPlanarIncidentAt = -Infinity;
+  private lastTextureIncidentAt = -Infinity;
   private lastFaceMissingIncidentAt = -Infinity;
   private qualitySamples = new RingBuffer<{ usable: boolean; illum: number }>(90);
 
@@ -179,6 +198,7 @@ export class SessionEngine {
     this.lastBlinkObservedAt = 0;
     this.lastNoBlinkIncidentAt = -Infinity;
     this.lastPlanarIncidentAt = -Infinity;
+    this.lastTextureIncidentAt = -Infinity;
     this.lastFaceMissingIncidentAt = -Infinity;
     this.qualitySamples.clear();
     this.prover?.reset();
@@ -270,6 +290,7 @@ export class SessionEngine {
       this.checkMiniFasNetInstability(signals, analysis.frame_id, elapsed);
       this.checkNoBlink(cls, analysis.frame_id, elapsed);
       this.checkPlanarPrint(cls, analysis.frame_id, elapsed);
+      this.checkTextureCollapseReplay(cls, analysis.frame_id, elapsed);
     }
   }
 
@@ -312,6 +333,62 @@ export class SessionEngine {
       {
         planarity_score: round(planarity.score, 1),
         residual_norm: planarity.details["residual_norm"] ?? null,
+      },
+    );
+  }
+
+  /**
+   * Raise a VIDEO_REPLAY incident when the texture analyzer's Laplacian-
+   * variance sub-feature (`texture_score`) collapses — the signature of a
+   * face being shown on a phone or laptop screen. Catches the attack the
+   * `checkPlanarPrint` veto misses: a held-close phone playing a video
+   * (the user's face never rotates, so planarity stays in `measured:false`),
+   * and a live video-call on a phone (no playback artifacts at all).
+   *
+   * Threshold is calibrated against the 2026-05-31 in-house dataset (3 LIVE
+   * sessions / 3 SPOOF sessions including pre-recorded replay AND a live
+   * video-call):
+   *   LIVE  texture_score mean 62.5 std 23.9
+   *   SPOOF texture_score mean 13.6 std 13.1   (cross-session AUC 0.924)
+   * `< 25` catches >99% of SPOOF frames and only the occasional dark/blurry
+   * LIVE frame; the throttle then absorbs that single incident without ever
+   * crossing the >=3 threshold needed to flip getVerdict() to SPOOF.
+   *
+   * Unlike the top-line `texture.score` (which mixes color + frequency +
+   * drift and collapses the LIVE→SPOOF gap from 49 points to 15), the
+   * sub-feature exposes the actual physics-grounded signal — pixel-level
+   * detail loss when a face is being rendered through an LCD's subpixel
+   * grid + the camera's own Bayer mosaic.
+   */
+  private checkTextureCollapseReplay(
+    cls: SpoofClassification,
+    frame_id: number,
+    elapsed: number,
+  ): void {
+    const texture = cls.analyzer_results["texture"];
+    if (!texture) return;
+    const textureScore = texture.details["texture_score"];
+    if (typeof textureScore !== "number") return;
+    if (textureScore >= SessionEngine.TEXTURE_SCORE_SPOOF_THRESHOLD) return;
+    if (elapsed < SessionEngine.TEXTURE_MIN_ELAPSED_SEC) return;
+    if (
+      elapsed - this.lastTextureIncidentAt <
+      SessionEngine.TEXTURE_INCIDENT_THROTTLE_SEC
+    ) {
+      return;
+    }
+
+    this.lastTextureIncidentAt = elapsed;
+    this.addIncident(
+      frame_id,
+      Severity.HIGH,
+      SpoofCategory.VIDEO_REPLAY,
+      `Texture collapse (texture_score=${Math.round(
+        textureScore,
+      )}) — face rendered through a screen (replay / video-call) suspected`,
+      {
+        texture_score: round(textureScore, 1),
+        threshold: SessionEngine.TEXTURE_SCORE_SPOOF_THRESHOLD,
       },
     );
   }
