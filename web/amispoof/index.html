@@ -69,7 +69,7 @@
           "name": "Rollingcat Software",
           "url": "https://github.com/Rollingcat-Software"
         },
-        "description": "Browser-side face anti-spoof and liveness tester implementing the FIVUCSAS / Rollingcat spoof-detector pipeline. Runs MiniFASNet ONNX inference, MediaPipe FaceLandmarker, blink (EAR), rPPG pulse detection, screen-flicker FFT, micro-tremor FFT, device-boundary Sobel/Hough, moire Gabor+FFT, texture Laplacian variance, screen-replay CLAHE+skin-mask, landmark variance, and Ayşenur's face-usability gate entirely client-side. No frames uploaded.",
+        "description": "Browser-side face anti-spoof and liveness tester implementing the FIVUCSAS / Rollingcat spoof-detector pipeline. Runs MiniFASNet ONNX inference, MediaPipe FaceLandmarker, blink (EAR), rPPG pulse detection, screen-flicker FFT, micro-tremor FFT, device-boundary Sobel/Hough, moire Gabor+FFT, texture Laplacian variance, screen-replay CLAHE+skin-mask, landmark variance, and a face-usability gate entirely client-side. No frames uploaded.",
         "keywords": "face anti-spoofing, liveness detection, presentation attack detection, ISO 30107-3, MiniFASNet, rPPG, blink detection, browser ML, biometric authentication",
         "sameAs": [
           "https://github.com/Rollingcat-Software/spoof-detector",
@@ -958,10 +958,10 @@
         <div id="proofRows"></div>
       </div>
 
-      <h2 title="Independent second-opinion check. Calibrated against Python; the browser port may flag live faces at low mobile FPS — the main verdict above is the authoritative signal.">
+      <h2 title="Independent second-opinion check. Calibrated against the Python reference pipeline; the browser port may flag live faces at low FPS — the main verdict above is the authoritative signal.">
         Face usability gate
         <span style="font-size: 9px; color: #58a6ff; font-weight: normal"
-          >Ayşenur — advisory, second opinion</span
+          >advisory · second opinion</span
         >
       </h2>
       <div id="gateBanner"><div id="gateBody">waiting…</div></div>
@@ -1038,7 +1038,7 @@
       // older cached copy (no AMISPOOF_VERSION export at all), force a
       // one-shot hard reload so the user doesn't get stuck on a broken
       // bundle. Guarded by sessionStorage to avoid infinite loops.
-      window.AMISPOOF_HTML_VERSION = "2026-05-31-ui-improvements";
+      window.AMISPOOF_HTML_VERSION = "2026-05-31-ux-cleanup";
       setTimeout(function () {
         if (
           window.AMISPOOF_VERSION !== window.AMISPOOF_HTML_VERSION &&
@@ -1049,7 +1049,7 @@
         }
       }, 4000);
     </script>
-    <script type="module" src="./app.js?v=2026-05-31-ui-improvements"></script>
+    <script type="module" src="./app.js?v=2026-05-31-ux-cleanup"></script>
     <script src="https://app.fivucsas.com/launcher.js?v=2026-05-28" defer></script>
   </body>
 </html>

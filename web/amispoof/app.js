@@ -18,12 +18,12 @@ import {
   FlashTemporalAnalyzer,
   ReadinessGate,
   DEFAULT_ANALYZER_WEIGHTS,
-} from "./lib/spoof-detector.js?v=2026-05-31-ui-improvements";
+} from "./lib/spoof-detector.js?v=2026-05-31-ux-cleanup";
 
 // Version handshake — checked by the inline script in index.html.
 // If the user is running a stale cached app.js (no AMISPOOF_VERSION),
 // the HTML triggers a one-shot reload after 4 s.
-window.AMISPOOF_VERSION = "2026-05-31-ui-improvements";
+window.AMISPOOF_VERSION = "2026-05-31-ux-cleanup";
 
 // SessionEngine.getVerdict() returns a confidence in [0, 0.88] when the
 // LivenessProver is wired (structural ceiling — see SessionEngine.ts
@@ -977,8 +977,19 @@ async function ensureDetector() {
 
 async function start() {
   try {
+    // Request 1280×720 (HD). The texture / moire / screen-replay analyzers
+    // need enough pixel detail to see the screen's subpixel grid + camera
+    // Bayer aliasing — at 640×480 those signals are weak (the user's first
+    // captures ran at VGA and texture_score on a real face dropped below
+    // a phone screen's). `ideal` lets the browser fall back when the
+    // camera maxes out at lower; `min: 640×480` keeps the request
+    // satisfiable everywhere.
     const stream = await navigator.mediaDevices.getUserMedia({
-      video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" },
+      video: {
+        width: { ideal: 1280, min: 640 },
+        height: { ideal: 720, min: 480 },
+        facingMode: "user",
+      },
       audio: false,
     });
     els.video.srcObject = stream;
@@ -995,6 +1006,22 @@ async function start() {
       if (vt0 && vt0.getSettings) cameraDefaults = vt0.getSettings();
     } catch (e) {
       /* ignore */
+    }
+
+    // Camera-resolution sanity check. If the browser/camera couldn't deliver
+    // anything ≥720p, surface a one-shot warning so the operator knows their
+    // pixel-level analyzers (texture, moire, screen_replay) are running at
+    // reduced sensitivity. Doesn't block — just informs.
+    const w = els.video.videoWidth ?? 0;
+    const h = els.video.videoHeight ?? 0;
+    if (w > 0 && h > 0 && (w < 1280 || h < 720)) {
+      console.warn(`amispoof: camera delivered ${w}×${h} (sub-HD). Texture / moire signals will be weak.`);
+      if (els.lightResult) {
+        els.lightResult.textContent =
+          `⚠ Camera at ${w}×${h} (below HD). Texture-based spoof detection will be less reliable; ` +
+          `try a higher-resolution camera if available.`;
+        els.lightResult.style.color = "#d29922";
+      }
     }
 
     canvas = document.createElement("canvas");
@@ -1252,8 +1279,8 @@ async function recoverCameraStream() {
       setStatus("camera reacquiring…", "live");
       const fresh = await navigator.mediaDevices.getUserMedia({
         video: {
-          width: { ideal: 640 },
-          height: { ideal: 480 },
+          width: { ideal: 1280, min: 640 },
+          height: { ideal: 720, min: 480 },
           facingMode: "user",
         },
         audio: false,
@@ -1512,7 +1539,7 @@ function updateUI(analysis, v) {
   );
   els.details.textContent = JSON.stringify(detailDump, null, 2);
 
-  // Aysenur's face-usability gate result. Advisory only — never blocks
+  // Face-usability gate result (Python-reference port). Advisory only — never blocks
   // the main verdict. On mobile cameras at low FPS the per-region pixel
   // thresholds (calibrated for the Python desktop pipeline) tend to
   // false-positive on a perfectly live face, so the labels here are

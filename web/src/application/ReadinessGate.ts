@@ -14,7 +14,7 @@
 //
 // Signals are read from what the SDK already produces per frame
 // (`analysis.faces` for count + bbox area, `analysis.gate_result` for
-// brightness + occlusion — Ayşenur's FaceUsabilityGate), so this is a thin,
+// brightness + occlusion from the FaceUsabilityGate), so this is a thin,
 // stateless function over existing data. Stability (requiring N consecutive
 // green frames before enabling "Begin") is the caller's concern.
 
@@ -132,18 +132,42 @@ export class ReadinessGate {
     });
 
     // 5. Face not occluded.
-    const occluded = s.occluded;
-    const regions = (s.occludedRegions ?? []).join(", ").replace(/_/g, " ");
-    checks.push({
-      id: "occlusion",
-      label: "Visibility",
-      pass: !occluded,
-      message: occluded
-        ? regions
-          ? `Uncover your face (${regions})`
-          : "Uncover your face"
-        : "Face fully visible",
-    });
+    //
+    // SKIP this check when the face is too small / too far from the camera.
+    // MediaPipe's landmark detector becomes unreliable on faces below ~10%
+    // of frame area — the mouth / nose regions get coarse, the
+    // FaceUsabilityGate's region-pixel thresholds fire false "occlusion"
+    // alarms, and the user sees "Uncover your face (mouth)" while their
+    // face is plainly visible. They then move closer and the false alarm
+    // clears — confusing and unprofessional.
+    //
+    // Below the OCCLUSION_RELIABLE_AREA threshold we return `pass: true`
+    // with a "checking…" message (instead of a green tick) so the operator
+    // knows the check is deferred, not skipped silently. The user is
+    // already being told to move closer via the size check; layering a
+    // bogus mouth-occlusion message on top adds noise without information.
+    const OCCLUSION_RELIABLE_AREA = 0.10;
+    if (s.faceAreaFraction < OCCLUSION_RELIABLE_AREA) {
+      checks.push({
+        id: "occlusion",
+        label: "Visibility",
+        pass: true,
+        message: "Move closer for a reliable visibility check",
+      });
+    } else {
+      const occluded = s.occluded;
+      const regions = (s.occludedRegions ?? []).join(", ").replace(/_/g, " ");
+      checks.push({
+        id: "occlusion",
+        label: "Visibility",
+        pass: !occluded,
+        message: occluded
+          ? regions
+            ? `Uncover your face (${regions})`
+            : "Uncover your face"
+          : "Face fully visible",
+      });
+    }
 
     return { ready: checks.every((c) => c.pass), checks };
   }
