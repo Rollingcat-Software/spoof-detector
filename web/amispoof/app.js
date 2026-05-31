@@ -18,12 +18,12 @@ import {
   FlashTemporalAnalyzer,
   ReadinessGate,
   DEFAULT_ANALYZER_WEIGHTS,
-} from "./lib/spoof-detector.js?v=2026-05-31-lenient-readiness";
+} from "./lib/spoof-detector.js?v=2026-05-31-perf-webgpu";
 
 // Version handshake — checked by the inline script in index.html.
 // If the user is running a stale cached app.js (no AMISPOOF_VERSION),
 // the HTML triggers a one-shot reload after 4 s.
-window.AMISPOOF_VERSION = "2026-05-31-lenient-readiness";
+window.AMISPOOF_VERSION = "2026-05-31-perf-webgpu";
 
 // SessionEngine.getVerdict() returns a confidence in [0, 0.88] when the
 // LivenessProver is wired (structural ceiling — see SessionEngine.ts
@@ -945,9 +945,22 @@ async function ensureDetector() {
     miniFasNetModelUrl: "./models/minifasnet_v2.onnx",
     faceLandmarkerTaskUrl: "./models/face_landmarker.task",
     mediaPipeWasmBaseUrl: MEDIAPIPE_WASM_BASE,
-    ortExecutionProviders: ["wasm"],
+    // Try WebGPU first (Chrome/Edge ≥113, Brave, recent Safari TP) — 3-5×
+    // faster MiniFASNet inference than WASM. Falls back to WASM if WebGPU
+    // isn't supported / fails to initialise — onnxruntime-web's createSession
+    // walks the EP list in order. The session-create log line in
+    // MiniFASNetAnalyzer tells the operator which EP actually attached.
+    ortExecutionProviders: ["webgpu", "wasm"],
     numFaces: 1,
     useGpu: true,
+    // Raise heavy-analyzer frame_skip 3 → 5. Texture / Moire / ScreenReplay
+    // each take ~50ms on the worker pool; even with worker offload they
+    // dominate the per-frame cost. At skip 5 they run on frames 1, 6, 11…
+    // (5 fps cadence at 30 fps capture; ~1 fps at our current 5-7 fps
+    // measured rate). The veto's windowed-ratio over 30 samples still has
+    // enough coverage — last 30 samples at skip 5 = 150 frames = ~22 s of
+    // history at 6 fps, well above the 5 s the analysis needs.
+    heavyAnalyzerFrameSkip: 5,
     // Proctoring profile — passive observation only, no mid-session
     // challenge prompts. The new passive axes (eye_motion, mouth_motion,
     // face_motion) plus the looser gates below let a natural live face
@@ -1196,6 +1209,11 @@ function evaluateReadiness(analysis) {
   const result = readinessGate.evaluate({
     faceCount: faces.length,
     faceAreaFraction,
+    // Pixel count is what the texture / MiniFASNet analyzers actually care
+    // about — 100×100 minimum produces stable readings. Pass it through so
+    // the gate can enforce the honest analyzer-fidelity floor in addition
+    // to the human-readable framing fraction.
+    faceAreaPixels: bbox && bbox.area ? Math.round(bbox.area) : 0,
     faceBrightness: gate ? gate.globalFaceBrightness : 0,
     occluded: gate ? !!gate.occluded : false,
     // V3 readiness — pass the continuous occlusion score so the gate can
