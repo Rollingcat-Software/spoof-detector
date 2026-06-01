@@ -63,7 +63,11 @@ def main():
     v = d.get("verdict", {})
     fl = d.get("frame_log", [])
 
+    CURRENT_BUILDS = ("threat-coop", "prod-cdn-restore")
+    ver = d.get("amispoof_version") or "unknown"
+    build_tag = "CURRENT" if any(b in ver for b in CURRENT_BUILDS) else "STALE — verdict from obsolete logic"
     print(f"=== {os.path.basename(path)} ===")
+    print(f"  build={ver}  [{build_tag}]")
     print(f"  label={env.get('capture_label')}  ambient={env.get('ambient_label')}  "
           f"device={env.get('replay_device')}  notes={env.get('notes')}")
     print(f"  VERDICT: is_live={v.get('is_live')}  conf={v.get('confidence')}  "
