@@ -8,7 +8,7 @@
     <!-- Primary SEO -->
     <meta
       name="description"
-      content="Am I spoof? amispoof answers the question in the browser. Open face anti-spoof + liveness tester — 19 analyzers (MiniFASNet, blink, rPPG, gaze, blendshapes, 3D pose, audio-mouth sync, ...) + 15-axis passive liveness-proof scorer running entirely client-side. No server, no upload. Point your camera at a printed photo or another screen and watch the LIVE / SPOOF verdict flip in seconds."
+      content="Am I spoof? amispoof answers the question in the browser. Open face anti-spoof + liveness tester — 23 analyzers (20 active by default; hand & voice/audio opt-in — MiniFASNet, blink, rPPG, gaze, blendshapes, 3D pose, audio-mouth sync, ...) + 18-axis passive liveness-proof scorer running entirely client-side. No server, no upload. Point your camera at a printed photo or another screen and watch the LIVE / SPOOF verdict flip in seconds."
     />
     <meta
       name="keywords"
@@ -27,21 +27,21 @@
     <meta property="og:title" content="Am I Spoof? — Live browser face anti-spoof + liveness tester" />
     <meta
       property="og:description"
-      content="Am I spoof? amispoof answers it in the browser. 19 analyzers, 3 gates, and a 15-axis passive liveness-proof scorer via onnxruntime-web + MediaPipe. Test printed-photo, phone-screen replay, deepfake, occlusion and dark-room attacks against a live LIVE/SPOOF verdict in seconds. No server, no upload."
+      content="Am I spoof? amispoof answers it in the browser. 23 analyzers (20 active by default; hand & voice/audio opt-in), 3 gates, and an 18-axis passive liveness-proof scorer via onnxruntime-web + MediaPipe. Test printed-photo, phone-screen replay, deepfake, occlusion and dark-room attacks against a live LIVE/SPOOF verdict in seconds. No server, no upload."
     />
     <meta property="og:locale" content="en_US" />
     <meta property="og:image" content="https://amispoof.fivucsas.com/og-image.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:type" content="image/png" />
-    <meta property="og:image:alt" content="amispoof — browser face anti-spoof + liveness proof. LIVE verdict at 97% confidence with per-analyzer scores and a 15-axis passive liveness-proof scorer." />
+    <meta property="og:image:alt" content="amispoof — browser face anti-spoof + liveness proof. LIVE verdict at 97% confidence with per-analyzer scores and an 18-axis passive liveness-proof scorer." />
 
     <!-- Twitter / X card -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Am I Spoof? — Browser face anti-spoof + liveness tester" />
     <meta
       name="twitter:description"
-      content="19-analyzer face anti-spoof + 15-axis liveness-proof pipeline running entirely in the browser. No server, no GPU, no upload. Open the page, point your camera at a photo, watch the verdict flip."
+      content="23-analyzer face anti-spoof + 18-axis liveness-proof pipeline running entirely in the browser. No server, no GPU, no upload. Open the page, point your camera at a photo, watch the verdict flip."
     />
     <meta name="twitter:image" content="https://amispoof.fivucsas.com/og-image.png" />
     <meta name="twitter:image:alt" content="amispoof verdict panel showing LIVE at 97% confidence, with the per-analyzer scores for MiniFASNet, blink symmetry, gaze, eyebrow motion, 3D pose, and behavioural pattern." />
@@ -91,7 +91,7 @@
             "name": "Am I spoof?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "amispoof answers the question in your browser in a few seconds — open https://amispoof.fivucsas.com/, grant camera access, and the page runs 19 anti-spoof analyzers + a 15-axis passive liveness-proof scorer on your face. The verdict (LIVE or SPOOF) appears in real time with per-axis evidence. Nothing is uploaded — all inference happens client-side in WebAssembly."
+              "text": "amispoof answers the question in your browser in a few seconds — open https://amispoof.fivucsas.com/, grant camera access, and the page runs 23 anti-spoof analyzers (20 active by default) + an 18-axis passive liveness-proof scorer on your face. The verdict (LIVE or SPOOF) appears in real time with per-axis evidence. Nothing is uploaded — all inference happens client-side in WebAssembly."
             }
           },
           {

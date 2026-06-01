@@ -61,7 +61,7 @@ quality gate, not LIVE/SPOOF); doc + paper audit; PR + production deploy
 
 | Surface | State |
 |---|---|
-| **Browser bundle** (`@rollingcat/spoof-detector` on npm, live at amispoof.fivucsas.com) | **Production** — 19 analyzers, 15-axis proof scorer, 185-pt ceiling; 6.7–9.5 fps Pixel-class Android, 25–30 fps desktop Chrome WebGPU; 217 vitest green |
+| **Browser bundle** (`@rollingcat/spoof-detector` on npm, live at amispoof.fivucsas.com) | **Production** — 23 analyzers, 18-axis proof scorer, 185-pt ceiling; 6.7–9.5 fps Pixel-class Android, 25–30 fps desktop Chrome WebGPU; 217 vitest green |
 | **Python reference** (`src/`) | **Production** — calibration source-of-truth + ISO/IEC 30107-3 benchmark harness for §6–§8 of the paper; 138 pytest green |
 | **Paper** (`paper/sections/`) | **Browser-first reframe** complete (PR #45); §0/§1/§10 lead with the client-side bundle, Python framed as starting-point + evaluation reference; §7.6 updated with measured browser-port perf numbers |
 | **iBeta PAD-Level-1 submission package** | Scoped to the Python pipeline; re-scope to the browser bundle is a planned next iteration |
