@@ -104,6 +104,46 @@ function buildFrame(opts: FrameOpts): FrameAnalysis {
   };
 }
 
+/**
+ * A spoof frame (pReal=0.05) where `dominant` is the strict-max non-real
+ * category, so checkSpoofIncident categorizes the incident as `dominant`.
+ */
+function buildSpoofFrame(
+  frameId: number,
+  dominant: SpoofCategory,
+  blinks: number,
+): FrameAnalysis {
+  const face_id = 0;
+  const face: FaceROI = {
+    face_id,
+    bbox: new BBox(100, 100, 540, 540),
+    confidence: 0.99,
+    landmarks: makeUniformLandmarks(),
+  };
+  const analyzers: Record<string, AnalyzerResult> = {
+    blink: makeAnalyzerResult("blink", 80, { blinks }),
+    minifasnet: makeAnalyzerResult("minifasnet", 5, {}),
+  };
+  const probs: Record<SpoofCategory, number> = {
+    [SpoofCategory.REAL]: 0.05,
+    [SpoofCategory.STATIC_IMAGE]: 0.05,
+    [SpoofCategory.VIDEO_REPLAY]: 0.05,
+    [SpoofCategory.MASK_3D]: 0.05,
+    [SpoofCategory.HEAVY_MAKEUP]: 0.05,
+    [SpoofCategory.AR_FILTER]: 0.05,
+    [SpoofCategory.DEEPFAKE_INJECT]: 0.05,
+  };
+  probs[dominant] = 0.65;
+  const cls = classificationFromProbabilities(face_id, probs, analyzers);
+  return {
+    frame_id: frameId,
+    faces: [face],
+    classifications: { [face_id]: cls },
+    frame_signals: {},
+    total_ms: 5,
+  };
+}
+
 /** A frame where face detection found nothing (camera dark / occluded). */
 function buildMissingFrame(frameId: number): FrameAnalysis {
   return {
@@ -246,6 +286,58 @@ describe("SessionEngine", () => {
     const v = engine.getVerdict();
     expect(v.incidents.length).toBeGreaterThanOrEqual(3);
     expect(v.is_live).toBe(false);
+  });
+
+  it("dominant_threat follows the incident category, not the fooled fusion", () => {
+    // 2026-06-01 bug: a phone replay read real≈0.82 in the fuser with the
+    // residual ranking static_image > video_replay, yet 30 texture-collapse
+    // VIDEO_REPLAY incidents fired. The threat label must follow the incidents
+    // that actually flip the verdict, not the fusion's fooled residual.
+    const engine = new SessionEngine();
+    engine.start();
+    for (let i = 1; i <= 200; i++) {
+      tick(33);
+      const isSpike = i === 60 || i === 130 || i === 195;
+      engine.ingest(
+        isSpike
+          ? buildSpoofFrame(i, SpoofCategory.VIDEO_REPLAY, Math.floor(i / 30))
+          : buildFrame({
+              frameId: i,
+              pReal: 0.9,
+              blinks: Math.floor(i / 30),
+              miniFasNetScore: 95,
+              drift: (i % 10) * 0.5,
+            }),
+      );
+    }
+    const v = engine.getVerdict();
+    expect(v.is_live).toBe(false);
+    expect(v.incidents.length).toBeGreaterThanOrEqual(3);
+    expect(v.dominant_threat).toBe(SpoofCategory.VIDEO_REPLAY);
+  });
+
+  it("static_image threat is re-labelled when the subject blinks (a photo can't blink)", () => {
+    // Even when the fusion's top spoof category ties on static_image, observed
+    // blinks mean the presentation MOVES → a dynamic spoof, never a still photo.
+    const engine = new SessionEngine();
+    engine.start();
+    for (let i = 1; i <= 200; i++) {
+      tick(33);
+      const isSpike = i === 60 || i === 130 || i === 195;
+      engine.ingest(
+        buildFrame({
+          frameId: i,
+          pReal: isSpike ? 0.05 : 0.9,
+          blinks: Math.floor(i / 30),
+          miniFasNetScore: isSpike ? 5 : 95,
+          drift: (i % 10) * 0.5,
+        }),
+      );
+    }
+    const v = engine.getVerdict();
+    expect(v.is_live).toBe(false);
+    expect(v.blink_count).toBeGreaterThanOrEqual(1);
+    expect(v.dominant_threat).not.toBe(SpoofCategory.STATIC_IMAGE);
   });
 
   it("requireProverLive is opt-in: default false leaves verdict to fusion only", () => {

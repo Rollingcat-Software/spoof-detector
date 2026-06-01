@@ -752,15 +752,67 @@ export class SessionEngine {
       }
     }
 
-    let dominantThreat: SpoofCategory | null = null;
+    // --- Dominant threat TYPE (not the live/spoof verdict — that's below) ---
+    // The per-frame fusion is easily fooled on screen replays: a phone replay
+    // can read real=0.82 in the fuser, with the residual split so that
+    // static_image (0.08) edges out video_replay (0.06) — yet that same
+    // session trips 30 texture-collapse VIDEO_REPLAY incidents. Reporting
+    // "static_image" there is wrong and was user-flagged (2026-06-01): the
+    // attack visibly MOVES (12 blinks, landmark motion), so it cannot be a
+    // still photo. Two corrections:
+    //
+    //   1. Incident evidence names the threat. The analyzers that actually
+    //      flip the verdict (incident_override) are a stronger threat-type
+    //      signal than the fusion's fooled residual. When incidents exist,
+    //      their most-frequent non-real category wins.
+    //   2. Physical sanity on static_image. A STATIC_IMAGE presents a frozen
+    //      photo and cannot blink. If we still land on static_image but >=1
+    //      blink was observed, re-label to the strongest *dynamic* spoof
+    //      category (video_replay / deepfake / mask) — motion rules out a still.
+    let threatFromFusion: SpoofCategory | null = null;
     let dominantP = -Infinity;
     for (const cat of ALL_SPOOF_CATEGORIES) {
       if (cat === SpoofCategory.REAL) continue;
       const p = categoryScores[cat];
       if (p > dominantP) {
         dominantP = p;
-        dominantThreat = cat;
+        threatFromFusion = cat;
       }
+    }
+
+    let threatFromIncidents: SpoofCategory | null = null;
+    if (this.incidents.length > 0) {
+      const counts = new Map<SpoofCategory, number>();
+      for (const inc of this.incidents) {
+        if (inc.category === SpoofCategory.REAL) continue;
+        counts.set(inc.category, (counts.get(inc.category) ?? 0) + 1);
+      }
+      let best = 0;
+      for (const [cat, n] of counts) {
+        if (n > best) {
+          best = n;
+          threatFromIncidents = cat;
+        }
+      }
+    }
+
+    let dominantThreat: SpoofCategory | null =
+      threatFromIncidents ?? threatFromFusion;
+
+    if (dominantThreat === SpoofCategory.STATIC_IMAGE && this.lastBlinkCount >= 1) {
+      let dynBest = -Infinity;
+      let dynCat: SpoofCategory | null = null;
+      for (const cat of ALL_SPOOF_CATEGORIES) {
+        if (cat === SpoofCategory.REAL || cat === SpoofCategory.STATIC_IMAGE) {
+          continue;
+        }
+        const p = categoryScores[cat];
+        if (p > dynBest) {
+          dynBest = p;
+          dynCat = cat;
+        }
+      }
+      if (dynCat) dominantThreat = dynCat;
     }
 
     // dataConfidence ramps from 0 → 1 as we accumulate evidence. Was
