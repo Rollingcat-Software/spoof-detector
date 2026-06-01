@@ -154,6 +154,21 @@ export class SessionEngine {
   // from low-light camera-noise overlap; the co-signal AND-gate is the
   // anti-false-positive primitive.
   static readonly TEXTURE_COSIGNAL_SKIN_MIN = 30;
+  // PHOTO path (2026-06-01). A static image — paper photo or a still photo
+  // shown on a screen — has flat texture like a video replay, but its
+  // skin_score sits at ~0 (no through-a-screen live-skin reflectance AND no
+  // real 3-D skin), BELOW even a real face's range. Flat texture + windowed
+  // skin_score median < 5 is an unambiguous STATIC_IMAGE: it can't be a real
+  // face (skin too low) and isn't a video replay (skin too low for the >=30
+  // video co-signal). This is what the >=30 video gate was BLIND to — photos
+  // read skin~0 and slipped through as LIVE.
+  // Threshold 5 (not 8) chosen by sweeping all 34 current-build sessions: at 8
+  // a genuine face's transient windowed-skin dips fired (median-19.5 LIVE); 5
+  // sits below any real face's SUSTAINED skin (next LIVE session up is 13.4),
+  // so only true photos trip it. (The lone LIVE-labelled session that still
+  // fires reads skin~0 AND texture 12 — a mislabel; real faces read skin>=13,
+  // texture>=40.)
+  static readonly TEXTURE_PHOTO_SKIN_MAX = 5;
   // Capture-quality floor (2026-05-24). A would-be-LIVE session whose capture
   // quality is too poor (dark / occluded / no-face frames) is downgraded to
   // UNCERTAIN (prompt a re-capture) rather than confidently classified LIVE.
@@ -478,12 +493,33 @@ export class SessionEngine {
       const sorted = skinSamples.slice().sort((a, b) => a - b);
       skinMedian = sorted[Math.floor(sorted.length / 2)];
     }
-    if (
-      Number.isNaN(skinMedian) ||
-      skinMedian < SessionEngine.TEXTURE_COSIGNAL_SKIN_MIN
-    ) {
-      // Texture collapsed but skin_score is LIVE-like — likely camera
-      // noise in low light, not a screen. Suppress the incident.
+    if (Number.isNaN(skinMedian)) {
+      // No skin co-signal in the window — can't safely type the collapse.
+      return;
+    }
+
+    // Type the collapse by skin mode (skin_score is tri-modal: photo ~0 <
+    // live 13-34 < video 30-68). Motion/blink are NOT used — they're too noisy
+    // (a moved photo logs false blinks + huge landmark variance).
+    let category: SpoofCategory;
+    let detail: string;
+    if (skinMedian >= SessionEngine.TEXTURE_COSIGNAL_SKIN_MIN) {
+      // Low texture + REPLAY-like high skin → face rendered through a screen.
+      category = SpoofCategory.VIDEO_REPLAY;
+      detail =
+        `skin_score median ${Math.round(skinMedian)} (>= ${SessionEngine.TEXTURE_COSIGNAL_SKIN_MIN}) — ` +
+        `face rendered through a screen (replay / video-call) suspected.`;
+    } else if (skinMedian < SessionEngine.TEXTURE_PHOTO_SKIN_MAX) {
+      // Low texture + near-zero skin → a static image (paper / on-screen
+      // photo). Below even a real face's skin range, so it cannot be live.
+      category = SpoofCategory.STATIC_IMAGE;
+      detail =
+        `skin_score median ${Math.round(skinMedian)} (< ${SessionEngine.TEXTURE_PHOTO_SKIN_MAX}) — ` +
+        `static image (printed / on-screen photo) suspected.`;
+    } else {
+      // skin in [8, 30): the real-face-at-distance / low-light band where a
+      // genuine face's texture can collapse from camera noise. Ambiguous →
+      // SUPPRESS. This is the anti-false-positive primitive.
       return;
     }
 
@@ -491,11 +527,9 @@ export class SessionEngine {
     this.addIncident(
       frame_id,
       Severity.HIGH,
-      SpoofCategory.VIDEO_REPLAY,
-      `Texture collapse + skin co-signal — ${Math.round(lowFraction * 100)}% of last ` +
-        `${samples.length} frames below texture threshold (${SessionEngine.TEXTURE_SCORE_SPOOF_THRESHOLD}), ` +
-        `skin_score median ${Math.round(skinMedian)} (>= ${SessionEngine.TEXTURE_COSIGNAL_SKIN_MIN}). ` +
-        `Face rendered through a screen (replay / video-call) suspected.`,
+      category,
+      `Texture collapse — ${Math.round(lowFraction * 100)}% of last ${samples.length} ` +
+        `frames below texture threshold (${SessionEngine.TEXTURE_SCORE_SPOOF_THRESHOLD}); ${detail}`,
       {
         low_fraction: round(lowFraction, 3),
         low_count: lowCount,
@@ -503,7 +537,6 @@ export class SessionEngine {
         threshold: SessionEngine.TEXTURE_SCORE_SPOOF_THRESHOLD,
         last_texture_score: round(textureScore, 1),
         skin_score_median: round(skinMedian, 1),
-        skin_cosignal_min: SessionEngine.TEXTURE_COSIGNAL_SKIN_MIN,
       },
     );
   }
@@ -765,10 +798,14 @@ export class SessionEngine {
     //      flip the verdict (incident_override) are a stronger threat-type
     //      signal than the fusion's fooled residual. When incidents exist,
     //      their most-frequent non-real category wins.
-    //   2. Physical sanity on static_image. A STATIC_IMAGE presents a frozen
-    //      photo and cannot blink. If we still land on static_image but >=1
-    //      blink was observed, re-label to the strongest *dynamic* spoof
-    //      category (video_replay / deepfake / mask) — motion rules out a still.
+    //   2. Typing comes from the texture-veto incident's SKIN mode, not from
+    //      motion. 2026-06-01 ultrathink: blink/landmark signals are too noisy
+    //      to type with — a hand-held photo logged 5 false blinks + the highest
+    //      landmark-variance in the set (moving the photo = rigid motion that
+    //      MediaPipe can't tell from facial motion). The old "blinks>=1 => not
+    //      static" re-label therefore MISLABELED moved photos as video_replay.
+    //      checkTextureCollapseReplay now tags STATIC_IMAGE when skin<8 (photo,
+    //      skin~0) and VIDEO_REPLAY when skin>=30 (through-a-screen video).
     let threatFromFusion: SpoofCategory | null = null;
     let dominantP = -Infinity;
     for (const cat of ALL_SPOOF_CATEGORIES) {
@@ -796,24 +833,8 @@ export class SessionEngine {
       }
     }
 
-    let dominantThreat: SpoofCategory | null =
+    const dominantThreat: SpoofCategory | null =
       threatFromIncidents ?? threatFromFusion;
-
-    if (dominantThreat === SpoofCategory.STATIC_IMAGE && this.lastBlinkCount >= 1) {
-      let dynBest = -Infinity;
-      let dynCat: SpoofCategory | null = null;
-      for (const cat of ALL_SPOOF_CATEGORIES) {
-        if (cat === SpoofCategory.REAL || cat === SpoofCategory.STATIC_IMAGE) {
-          continue;
-        }
-        const p = categoryScores[cat];
-        if (p > dynBest) {
-          dynBest = p;
-          dynCat = cat;
-        }
-      }
-      if (dynCat) dominantThreat = dynCat;
-    }
 
     // dataConfidence ramps from 0 → 1 as we accumulate evidence. Was
     // frameCount / 150 (5 s at 30 fps). On a 5-7 fps capture that worked
