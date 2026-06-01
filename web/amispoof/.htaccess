@@ -11,7 +11,7 @@
   # X-Robots-Tag intentionally NOT set — /amispoof/ is now publicly
   # indexable per the SEO update (2026-05-16). The page-level meta robots
   # + JSON-LD SoftwareApplication + Open Graph tags are in index.html.
-  Header always set Permissions-Policy 'camera=(self), microphone=()'
+  Header always set Permissions-Policy 'camera=(self), microphone=(self)'
 
   # Cross-origin isolation → SharedArrayBuffer → multi-threaded ORT WASM.
   # Without these, the live domain runs single-threaded (the local server.mjs

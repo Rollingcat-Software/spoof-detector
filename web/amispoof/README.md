@@ -74,7 +74,7 @@ Both are aggressively cacheable via jsdelivr's `Cache-Control: public, max-age=3
 
 - **Verdict** (LIVE / SPOOF) with confidence percentage and peak-sensitive
   session memory — one sustained spoof burst flips and keeps the verdict.
-- **Twelve analyzers** with live score 0–100, grouped image-track vs
+- **23 analyzers** with live score 0–100, grouped image-track vs
   video-track per the paper's hybrid architecture:
   - **Image** — MiniFASNet (w 5.0), Device boundary (0.5),
     Background grid (1.5), Texture (0.0 by default), Moire (0.0), Screen
