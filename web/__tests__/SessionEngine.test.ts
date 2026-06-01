@@ -144,6 +144,52 @@ function buildSpoofFrame(
   };
 }
 
+/**
+ * A frame carrying texture + screen_replay analyzer results so the
+ * texture-collapse veto can be exercised. pReal stays high so the veto is the
+ * ONLY spoof signal (isolates its typing). `textureScore` < 25 collapses;
+ * `skinScore` selects the mode (≈0 photo / ≥30 video / 8-30 ambiguous).
+ */
+function buildScreenFrame(
+  frameId: number,
+  textureScore: number,
+  skinScore: number,
+  blinks: number,
+): FrameAnalysis {
+  const face_id = 0;
+  const face: FaceROI = {
+    face_id,
+    bbox: new BBox(100, 100, 540, 540),
+    confidence: 0.99,
+    landmarks: makeUniformLandmarks(),
+  };
+  const analyzers: Record<string, AnalyzerResult> = {
+    texture: makeAnalyzerResult("texture", 60, { texture_score: textureScore }),
+    screen_replay: makeAnalyzerResult("screen_replay", 50, { skin_score: skinScore }),
+    blink: makeAnalyzerResult("blink", 80, { blinks }),
+    minifasnet: makeAnalyzerResult("minifasnet", 95, {}),
+  };
+  const pReal = 0.9;
+  const pSpoof = (1 - pReal) / 6;
+  const probs: Record<SpoofCategory, number> = {
+    [SpoofCategory.REAL]: pReal,
+    [SpoofCategory.STATIC_IMAGE]: pSpoof,
+    [SpoofCategory.VIDEO_REPLAY]: pSpoof,
+    [SpoofCategory.MASK_3D]: pSpoof,
+    [SpoofCategory.HEAVY_MAKEUP]: pSpoof,
+    [SpoofCategory.AR_FILTER]: pSpoof,
+    [SpoofCategory.DEEPFAKE_INJECT]: pSpoof,
+  };
+  const cls = classificationFromProbabilities(face_id, probs, analyzers);
+  return {
+    frame_id: frameId,
+    faces: [face],
+    classifications: { [face_id]: cls },
+    frame_signals: {},
+    total_ms: 5,
+  };
+}
+
 /** A frame where face detection found nothing (camera dark / occluded). */
 function buildMissingFrame(frameId: number): FrameAnalysis {
   return {
@@ -316,28 +362,58 @@ describe("SessionEngine", () => {
     expect(v.dominant_threat).toBe(SpoofCategory.VIDEO_REPLAY);
   });
 
-  it("static_image threat is re-labelled when the subject blinks (a photo can't blink)", () => {
-    // Even when the fusion's top spoof category ties on static_image, observed
-    // blinks mean the presentation MOVES → a dynamic spoof, never a still photo.
+  it("texture-collapse types a static photo (skin~0) as STATIC_IMAGE", () => {
+    // Photo path: flat texture + skin below a real face's range = a photo.
     const engine = new SessionEngine();
     engine.start();
-    for (let i = 1; i <= 200; i++) {
+    for (let i = 1; i <= 400; i++) {
       tick(33);
-      const isSpike = i === 60 || i === 130 || i === 195;
-      engine.ingest(
-        buildFrame({
-          frameId: i,
-          pReal: isSpike ? 0.05 : 0.9,
-          blinks: Math.floor(i / 30),
-          miniFasNetScore: isSpike ? 5 : 95,
-          drift: (i % 10) * 0.5,
-        }),
-      );
+      engine.ingest(buildScreenFrame(i, 8, 2, 0));
+    }
+    const v = engine.getVerdict();
+    expect(v.is_live).toBe(false);
+    expect(v.dominant_threat).toBe(SpoofCategory.STATIC_IMAGE);
+  });
+
+  it("texture-collapse types a screen replay (high skin) as VIDEO_REPLAY", () => {
+    const engine = new SessionEngine();
+    engine.start();
+    for (let i = 1; i <= 400; i++) {
+      tick(33);
+      engine.ingest(buildScreenFrame(i, 8, 60, 5));
+    }
+    const v = engine.getVerdict();
+    expect(v.is_live).toBe(false);
+    expect(v.dominant_threat).toBe(SpoofCategory.VIDEO_REPLAY);
+  });
+
+  it("a moved photo with false blinks stays STATIC_IMAGE (motion never retypes)", () => {
+    // 2026-06-01 regression: a hand-held photo logs false blinks + large
+    // landmark motion. Typing is by skin mode (≈0 → photo), NEVER by blinks,
+    // so it must not flip to video_replay.
+    const engine = new SessionEngine();
+    engine.start();
+    for (let i = 1; i <= 400; i++) {
+      tick(33);
+      engine.ingest(buildScreenFrame(i, 8, 2, Math.floor(i / 20)));
     }
     const v = engine.getVerdict();
     expect(v.is_live).toBe(false);
     expect(v.blink_count).toBeGreaterThanOrEqual(1);
-    expect(v.dominant_threat).not.toBe(SpoofCategory.STATIC_IMAGE);
+    expect(v.dominant_threat).toBe(SpoofCategory.STATIC_IMAGE);
+  });
+
+  it("texture-collapse in the ambiguous skin band [8,30) does NOT fire (spares real face at distance)", () => {
+    const engine = new SessionEngine();
+    engine.start();
+    for (let i = 1; i <= 400; i++) {
+      tick(33);
+      engine.ingest(buildScreenFrame(i, 8, 20, 5));
+    }
+    const texInc = engine
+      .getVerdict()
+      .incidents.filter((inc) => /Texture collapse/.test(inc.description));
+    expect(texInc.length).toBe(0);
   });
 
   it("requireProverLive is opt-in: default false leaves verdict to fusion only", () => {
