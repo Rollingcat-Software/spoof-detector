@@ -12,6 +12,18 @@
   # indexable per the SEO update (2026-05-16). The page-level meta robots
   # + JSON-LD SoftwareApplication + Open Graph tags are in index.html.
   Header always set Permissions-Policy 'camera=(self), microphone=()'
+
+  # Cross-origin isolation → SharedArrayBuffer → multi-threaded ORT WASM.
+  # Without these, the live domain runs single-threaded (the local server.mjs
+  # already sets them, which is why local fps was higher). Verified safe:
+  # every cross-origin subresource is jsdelivr, which replies with both
+  # `access-control-allow-origin: *` and `cross-origin-resource-policy:
+  # cross-origin`, so COEP: require-corp does not block the ORT/MediaPipe
+  # bundles. (The old app.fivucsas.com/launcher.js — the one non-compliant
+  # resource — was removed from index.html in the same change.)
+  # ROLLBACK: delete these two lines; Hostinger Apache picks it up instantly.
+  Header always set Cross-Origin-Opener-Policy 'same-origin'
+  Header always set Cross-Origin-Embedder-Policy 'require-corp'
 </IfModule>
 
 <IfModule mod_mime.c>
