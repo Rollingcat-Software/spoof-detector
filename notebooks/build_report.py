@@ -59,16 +59,24 @@ def collapse_label(label: str | None) -> str:
     return "UNLABELED"
 
 
-def load_folder(folder: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
+CURRENT_BUILDS = ("threat-coop", "prod-cdn-restore", "skin-typing")
+
+
+def load_folder(folder: Path, build_filter: list[str] | None = None) -> tuple[pd.DataFrame, pd.DataFrame]:
     paths = sorted(folder.glob("amispoof-session-*.json"))
     if not paths:
         sys.exit(f"No amispoof-session-*.json in {folder.resolve()}")
     rows: list[dict] = []
     summary: list[dict] = []
+    skipped = 0
     for path in paths:
         sess = json.loads(path.read_text(encoding="utf-8"))
         env = sess.get("environment") or {}
         verdict = sess.get("verdict") or {}
+        version = sess.get("amispoof_version") or "unknown"
+        if build_filter and not any(b in version for b in build_filter):
+            skipped += 1
+            continue
         raw_label = env.get("capture_label")
         binary = collapse_label(raw_label)
         frame_log = sess.get("frame_log") or []
@@ -84,6 +92,7 @@ def load_folder(folder: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
                 "session": path.stem,
                 "class": binary,
                 "class_fine": raw_label or "UNLABELED",
+                "build": version,
                 "ambient": env.get("ambient_label"),
                 "replay_device": env.get("replay_device"),
                 "notes": env.get("notes"),
@@ -96,9 +105,11 @@ def load_folder(folder: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
         # Per-session row for the verdict-outcomes table.
         summary.append({
             "session": path.stem,
+            "build": version,
             "label_truth": binary,
             "label_fine": raw_label or "UNLABELED",
             "ambient": env.get("ambient_label"),
+            "notes": env.get("notes") or "",
             "verdict_engine": "LIVE" if verdict.get("is_live") else (
                 "UNCERTAIN" if verdict.get("quality_uncertain") else "SPOOF"
             ),
@@ -145,7 +156,7 @@ def rank_features(frames: pd.DataFrame) -> pd.DataFrame:
     y = (labelled["class"] == "SPOOF").astype(int).values
     n_live = (labelled["class"] == "LIVE").sum()
     n_spoof = (labelled["class"] == "SPOOF").sum()
-    skip = {"session", "class", "class_fine", "ambient", "replay_device", "notes", "t_sec", "frame_id"}
+    skip = {"session", "class", "class_fine", "build", "ambient", "replay_device", "notes", "t_sec", "frame_id"}
     rows = []
     for col in labelled.columns:
         if col in skip:
@@ -229,6 +240,61 @@ def plot_correlation(frames: pd.DataFrame, ranking: pd.DataFrame, top: int = 20)
     ax.set_yticklabels(cols, fontsize=7)
     ax.set_title(f"Pearson correlation — top {top} features by AUC")
     fig.colorbar(im, ax=ax, shrink=0.7)
+    fig.tight_layout()
+    return fig_to_b64(fig)
+
+
+def plot_session_map(frames: pd.DataFrame, summary: pd.DataFrame) -> str:
+    """The key chart: one point per session at (texture median, skin median),
+    coloured by label, with false-positives / false-negatives ringed. Bands
+    show the photo (skin<8) and video (skin>=30) skin modes + the texture
+    collapse threshold (25)."""
+    tcol, scol = "texture.texture_score", "screen_replay.skin_score"
+    if tcol not in frames.columns or scol not in frames.columns:
+        return ""
+    med = frames.groupby("session")[[tcol, scol]].median().reset_index()
+    m = med.merge(summary[["session", "label_truth", "verdict_engine", "notes"]], on="session", how="left")
+    fig, ax = plt.subplots(figsize=(11, 8))
+    ax.axhspan(0, 8, color="#f0883e", alpha=0.08)
+    ax.axhspan(30, max(70, m[scol].max() + 5), color="#a371f7", alpha=0.08)
+    ax.axvline(25, color="#8b949e", ls=":", lw=1)
+    ax.text(2, 4, "PHOTO band\n(skin<8)", fontsize=8, color="#f0883e")
+    ax.text(2, 33, "VIDEO band (skin≥30)", fontsize=8, color="#a371f7")
+    for cls, color in [("LIVE", "#2ea043"), ("SPOOF", "#f85149"), ("UNLABELED", "#8b949e")]:
+        sub = m[m["label_truth"] == cls]
+        if len(sub):
+            ax.scatter(sub[tcol], sub[scol], c=color, s=90, alpha=0.85,
+                       edgecolors="white", linewidths=0.6, label=f"{cls} (n={len(sub)})", zorder=3)
+    fp = m[(m["label_truth"] == "LIVE") & (m["verdict_engine"] == "SPOOF")]
+    fn = m[(m["label_truth"] == "SPOOF") & (m["verdict_engine"] == "LIVE")]
+    ax.scatter(fp[tcol], fp[scol], s=320, facecolors="none", edgecolors="#f85149",
+               linewidths=2.4, label=f"FALSE-POSITIVE (n={len(fp)})", zorder=4)
+    ax.scatter(fn[tcol], fn[scol], s=320, facecolors="none", edgecolors="#58a6ff",
+               linewidths=2.4, marker="s", label=f"FALSE-NEGATIVE (n={len(fn)})", zorder=4)
+    ax.set_xlabel("texture_score median   (← flatter / screen ·········· sharper / real face →)")
+    ax.set_ylabel("skin_score median   (← photo ····· live ····· video →)")
+    ax.set_title("Per-session map: texture × skin — where every session lands, and what's misclassified")
+    ax.legend(loc="upper right", fontsize=9)
+    ax.grid(alpha=0.15)
+    fig.tight_layout()
+    return fig_to_b64(fig)
+
+
+def plot_skin_modes(frames: pd.DataFrame) -> str:
+    scol = "screen_replay.skin_score"
+    if scol not in frames.columns:
+        return ""
+    lab = frames[frames["class"].isin(["LIVE", "SPOOF"])]
+    live = lab.loc[lab["class"] == "LIVE", scol].dropna()
+    spoof = lab.loc[lab["class"] == "SPOOF", scol].dropna()
+    fig, ax = plt.subplots(figsize=(11, 4))
+    ax.hist(live, bins=60, alpha=0.6, color="#2ea043", density=True, label=f"LIVE (n={len(live):,})")
+    ax.hist(spoof, bins=60, alpha=0.6, color="#f85149", density=True, label=f"SPOOF (n={len(spoof):,})")
+    ax.axvspan(0, 8, color="#f0883e", alpha=0.12)
+    ax.axvline(30, color="#a371f7", ls="--", lw=1)
+    ax.set_xlabel("skin_score")
+    ax.set_title("skin_score is tri-modal: photo (~0, orange) · live (13-34) · video (≥30, purple line)")
+    ax.legend()
     fig.tight_layout()
     return fig_to_b64(fig)
 
@@ -327,7 +393,25 @@ def build_html(folder: Path, frames: pd.DataFrame, summary: pd.DataFrame, rankin
     }))
     parts.append("</div>")
 
-    # 3. Per-feature AUC table
+    # 2b. The session map + skin modes (most useful eyeball view)
+    fp_n = ((summary["label_truth"] == "LIVE") & (summary["verdict_engine"] == "SPOOF")).sum()
+    fn_n = ((summary["label_truth"] == "SPOOF") & (summary["verdict_engine"] == "LIVE")).sum()
+    parts.append("<h2>3. Session map — texture × skin (read this first)</h2><div class='panel'>")
+    parts.append(f"<p class='muted'>One dot per session at its median texture &amp; skin. "
+                 f"Red rings = real face called SPOOF (<b>{fp_n}</b> false-positives); "
+                 f"blue squares = spoof called LIVE (<b>{fn_n}</b> false-negatives). "
+                 f"A clean detector would have green (LIVE) and red (SPOOF) dots in separate regions — "
+                 f"the overlap is the whole problem.</p>")
+    smap = plot_session_map(frames, summary)
+    if smap:
+        parts.append(f"<img src='data:image/png;base64,{smap}'>")
+    skin_modes = plot_skin_modes(frames)
+    if skin_modes:
+        parts.append("<h3>skin_score distribution (frame-level) — the tri-modal signal</h3>")
+        parts.append(f"<img src='data:image/png;base64,{skin_modes}'>")
+    parts.append("</div>")
+
+    # 4. Per-feature AUC table
     if not ranking.empty:
         parts.append("<h2>3. Per-feature separability ranking (top 30)</h2><div class='panel'>")
         parts.append("<p class='muted'>Green ≥ 0.90 · Yellow 0.70–0.90 · Grey < 0.70. "
@@ -373,18 +457,31 @@ def build_html(folder: Path, frames: pd.DataFrame, summary: pd.DataFrame, rankin
 
 
 def main() -> None:
-    folder = Path(sys.argv[1]) if len(sys.argv) >= 2 else Path("notebooks/data")
+    import argparse
+    ap = argparse.ArgumentParser(description="amispoof separability + visual report (build-aware)")
+    ap.add_argument("folder", nargs="?", default="notebooks/data")
+    ap.add_argument("--build", action="append", default=None, metavar="SUBSTR",
+                    help="keep only sessions whose amispoof_version contains SUBSTR (repeatable)")
+    ap.add_argument("--current", action="store_true",
+                    help=f"shortcut: only current builds {CURRENT_BUILDS}")
+    args = ap.parse_args()
+    folder = Path(args.folder)
     if not folder.exists():
         sys.exit(f"Folder does not exist: {folder.resolve()}")
-    print(f"Loading sessions from {folder.resolve()}...")
-    frames, summary = load_folder(folder)
+    bf = list(args.build) if args.build else []
+    if args.current:
+        bf += list(CURRENT_BUILDS)
+    print(f"Loading sessions from {folder.resolve()}..." + (f" [build filter: {bf}]" if bf else ""))
+    frames, summary = load_folder(folder, bf or None)
     print(f"  loaded {len(frames)} frames across {len(summary)} sessions")
+    print("  builds:", summary["build"].value_counts().to_dict())
     print("Computing per-feature AUC...")
     ranking = rank_features(frames)
     print(f"  ranked {len(ranking)} features")
     print("Rendering HTML...")
     html = build_html(folder, frames, summary, ranking)
-    out_path = Path("notebooks") / "separability_report.html"
+    suffix = "_current" if bf else ""
+    out_path = Path("notebooks") / f"separability_report{suffix}.html"
     out_path.write_text(html, encoding="utf-8")
     print(f"\nReport written: {out_path.resolve()}")
     print(f"Size: {out_path.stat().st_size / 1024:.0f} KB")
