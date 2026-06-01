@@ -24,12 +24,19 @@
 // Zero npm dependencies — uses only Node's built-in `http` and `fs`.
 
 import http from "node:http";
-import { readFile, stat } from "node:fs/promises";
-import { resolve, join, extname } from "node:path";
+import { readFile, stat, writeFile, mkdir } from "node:fs/promises";
+import { resolve, join, extname, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const PORT = Number(process.argv[2] ?? 8791);
 const ROOT = resolve(fileURLToPath(import.meta.url), "..");
+// Dataset capture dir (spoof-detector/notebooks/data). DEV-ONLY: the production
+// amispoof.fivucsas.com is the static Hostinger site with no Node server, so
+// the POST /__save endpoint below simply doesn't exist there. Local-dev only,
+// it lets captured session JSONs land straight in the labelled dataset instead
+// of relying on the browser's download dialog (which Brave blocks behind an
+// "ask where to save" prompt the automation can't dismiss).
+const DATA_DIR = resolve(ROOT, "..", "..", "notebooks", "data");
 
 const MIME = {
   ".html": "text/html; charset=utf-8",
@@ -65,6 +72,33 @@ const server = http.createServer(async (req, res) => {
 
   try {
     const url = new URL(req.url ?? "/", `http://localhost:${PORT}`);
+
+    // --- DEV-ONLY capture sink -------------------------------------------
+    // POST /__save?name=<file>.json  body=<session JSON>  → notebooks/data/.
+    // Filename is sanitised to a bare basename so it cannot escape DATA_DIR.
+    if (req.method === "POST" && url.pathname === "/__save") {
+      const chunks = [];
+      for await (const c of req) chunks.push(c);
+      const body = Buffer.concat(chunks).toString("utf8");
+      const raw = url.searchParams.get("name") || `capture-${Date.now()}.json`;
+      let name = basename(raw).replace(/[^A-Za-z0-9._-]/g, "-");
+      if (!name.endsWith(".json")) name += ".json";
+      try {
+        JSON.parse(body); // reject non-JSON so the dataset stays clean
+      } catch {
+        res.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" });
+        res.end("Body is not valid JSON");
+        return;
+      }
+      await mkdir(DATA_DIR, { recursive: true });
+      const dest = join(DATA_DIR, name);
+      await writeFile(dest, body);
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+      res.end(JSON.stringify({ saved: name, bytes: body.length }));
+      console.log(`  [save] ${name} (${body.length} bytes) → notebooks/data/`);
+      return;
+    }
+
     let path = decodeURIComponent(url.pathname);
     if (path.endsWith("/")) path += "index.html";
 

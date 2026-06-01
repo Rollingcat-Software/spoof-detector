@@ -54,7 +54,11 @@ def collapse_label(label: str | None) -> str:
     label = (label or "UNLABELED").upper()
     if label == "LIVE":
         return "LIVE"
-    if label.startswith("REPLAY") or label in ("PRINT", "MASK", "DEEPFAKE"):
+    if (
+        label.startswith("REPLAY")
+        or label.startswith("SCREEN")
+        or label in ("PRINT", "MASK", "DEEPFAKE")
+    ):
         return "SPOOF"
     return "UNLABELED"
 
