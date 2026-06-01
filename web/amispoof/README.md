@@ -74,13 +74,20 @@ Both are aggressively cacheable via jsdelivr's `Cache-Control: public, max-age=3
 
 - **Verdict** (LIVE / SPOOF) with confidence percentage and peak-sensitive
   session memory — one sustained spoof burst flips and keeps the verdict.
-- **Twelve analyzers** with live score 0–100, grouped image-track vs
-  video-track per the paper's hybrid architecture:
-  - **Image** — MiniFASNet (w 5.0), Device boundary (0.5),
-    Background grid (1.5), Texture (0.0 by default), Moire (0.0), Screen
-    replay (0.5).
-  - **Video** — Screen flicker (3.0), Micro-tremor (0.5), Landmark
-    variance (2.0), rPPG pulse (0.5), Blink/EAR (0.5), Temporal motion (0.3).
+- **23 analyzers** with live score 0–100 (20 active by default; hand
+  tracking + voice-activity + audio-mouth-sync are opt-in), grouped
+  image-track (5) vs video-track (18) per the paper's hybrid architecture.
+  The canonical list with per-analyzer weights and descriptions is
+  `ANALYZER_ORDER` in `app.js`; the badge weights are overwritten at load
+  time from the lib's exported `DEFAULT_ANALYZER_WEIGHTS` so the UI always
+  reflects the weights the running fuser actually uses. Key signals:
+  - **Image** — MiniFASNet (w 5.0), Device boundary, Background grid,
+    Texture, Moire, Screen replay.
+  - **Video** — Screen flicker (3.0), Micro-tremor, Landmark variance,
+    rPPG pulse, Blink/EAR, Temporal motion, plus the Phase A blendshape /
+    3D-pose unlocks (eyebrow motion, blink symmetry, gaze, expression
+    dynamics, 3D pose consistency, planarity, behavioural pattern) and the
+    Phase D background-motion / hand-tracking / voice analyzers.
   Texture + moire default to weight 0.0 per the paper's §5.3
   anti-correlation finding; consumers can re-enable via constructor
   `analyzerWeights` override.

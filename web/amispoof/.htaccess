@@ -11,7 +11,11 @@
   # X-Robots-Tag intentionally NOT set — /amispoof/ is now publicly
   # indexable per the SEO update (2026-05-16). The page-level meta robots
   # + JSON-LD SoftwareApplication + Open Graph tags are in index.html.
-  Header always set Permissions-Policy 'camera=(self), microphone=()'
+  # microphone=(self) so the opt-in voice / audio-mouth-sync analyzers
+  # (🎤 button / ?audio=1) can request mic permission. Was microphone=()
+  # which hard-disabled the mic at the HTTP layer and silently killed the
+  # opt-in audio feature in prod.
+  Header always set Permissions-Policy 'camera=(self), microphone=(self)'
 </IfModule>
 
 <IfModule mod_mime.c>
