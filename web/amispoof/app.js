@@ -18,12 +18,12 @@ import {
   FlashTemporalAnalyzer,
   ReadinessGate,
   DEFAULT_ANALYZER_WEIGHTS,
-} from "./lib/spoof-detector.js?v=2026-05-31-launcher-cors";
+} from "./lib/spoof-detector.js?v=2026-06-01-prod-cdn-restore";
 
 // Version handshake — checked by the inline script in index.html.
 // If the user is running a stale cached app.js (no AMISPOOF_VERSION),
 // the HTML triggers a one-shot reload after 4 s.
-window.AMISPOOF_VERSION = "2026-05-31-launcher-cors";
+window.AMISPOOF_VERSION = "2026-06-01-prod-cdn-restore";
 
 // SessionEngine.getVerdict() returns a confidence in [0, 0.88] when the
 // LivenessProver is wired (structural ceiling — see SessionEngine.ts
@@ -220,18 +220,18 @@ function renderProofPanel(proof) {
   }
 }
 
-// MediaPipe WASM lives in our local vendor dir (the import map already routes
-// the JS bundle to vendor/mediapipe-tasks-vision/vision_bundle.mjs).
-const MEDIAPIPE_WASM_BASE = "./vendor/mediapipe-tasks-vision/wasm";
+// MediaPipe WASM base — must match the importmap above. Production uses the
+// jsdelivr CDN (vendor folder is gitignored, not shipped to amispoof.fivucsas.com);
+// local-dev users can override to "./vendor/mediapipe-tasks-vision/wasm" in
+// their working copy if they want fully offline operation.
+const MEDIAPIPE_WASM_BASE =
+  "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/wasm";
 
-// ORT auto-resolves its WASM sidecar files (ort-wasm-simd-threaded.* etc.)
-// RELATIVE TO ITS OWN BUNDLE URL via import.meta.url — since the importmap
-// points "onnxruntime-web" at "./vendor/onnxruntime-web/ort.all.bundle.min.mjs",
-// ORT looks for siblings in that same directory automatically. Setting
-// `ort.env.wasm.wasmPaths` here would DOUBLE the path (e.g.
-// "vendor/onnxruntime-web/vendor/onnxruntime-web/ort-wasm-...") — that's
-// the 404 the user saw after the local-vendor switch. Leaving wasmPaths
-// unset is correct for any layout where the WASM lives next to the JS.
+// ORT WASM base — matches the CDN importmap. The all-in-one bundle is loaded
+// from jsdelivr; its WASM sidecar files (ort-wasm-simd-threaded.*) live at
+// the dist/ path of the same versioned npm package.
+ort.env.wasm.wasmPaths =
+  "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/";
 ort.env.wasm.numThreads = 2;
 
 // Grouped by what the analyzer measures over time.

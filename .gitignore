@@ -61,3 +61,11 @@ notebooks/data/*.json
 # from node_modules at build time (`npm run amispoof:bundle`). 80+ MB binary
 # WASM blobs; not source code. Regenerate locally; do not commit.
 web/amispoof/vendor/
+
+# Silent-FAS PyTorch model artefacts (downloaded, 78+ MB). The extracted dir is
+# already ignored above; also ignore the zip. Convert to ONNX before wiring in.
+models/l_version_1_300.zip
+
+# Generated separability report — derived from notebooks/data/ (personal
+# telemetry). Regenerate with `python notebooks/build_report.py`; do not commit.
+notebooks/separability_report.html
