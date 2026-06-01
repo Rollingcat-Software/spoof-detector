@@ -52,7 +52,8 @@ def load_model(model_path):
     return YOLO(model_path)
 
 
-IMGSZ = 640  # set by --imgsz; lower = faster on CPU (the only real lever here)
+IMGSZ = 640  # set by --imgsz; lower = faster on CPU
+DEVICE = None  # set by --device: "0" = first GPU, "cpu", or None = auto-detect
 
 
 def best_detection(result, conf_thresh):
@@ -84,7 +85,7 @@ def run_webcam(model, cam, conf_thresh, show, seconds, writer, summary):
             ok, img = cap.read()
             if not ok:
                 break
-            results = model(img, stream=True, verbose=False, imgsz=IMGSZ)
+            results = model(img, stream=True, verbose=False, imgsz=IMGSZ, device=DEVICE)
             label, conf = None, 0.0
             for r in results:
                 label, conf = best_detection(r, conf_thresh)
@@ -131,7 +132,7 @@ def run_images(model, folder, conf_thresh, writer, summary):
     if not paths:
         sys.exit(f"no images found in {folder}")
     for i, p in enumerate(paths):
-        results = model(p, verbose=False, imgsz=IMGSZ)
+        results = model(p, verbose=False, imgsz=IMGSZ, device=DEVICE)
         label, conf = None, 0.0
         for r in results:
             label, conf = best_detection(r, conf_thresh)
@@ -159,13 +160,15 @@ def main():
     ap.add_argument("--images", help="run on a folder of images instead of the webcam")
     ap.add_argument("--conf", type=float, default=0.6, help="confidence threshold")
     ap.add_argument("--imgsz", type=int, default=640, help="inference size (320/416 = faster on CPU)")
+    ap.add_argument("--device", default=None, help='"0" = first GPU, "cpu", or omit for auto-detect')
     ap.add_argument("--no-show", dest="show", action="store_false", help="headless (no window)")
     ap.add_argument("--seconds", type=float, default=0, help="auto-stop webcam after N seconds (0 = until q)")
     ap.add_argument("--csv", help="write per-frame log here")
     args = ap.parse_args()
 
-    global IMGSZ
+    global IMGSZ, DEVICE
     IMGSZ = args.imgsz
+    DEVICE = args.device
     model = load_model(args.model)
     summary = {"frames": 0, "fake": 0, "real": 0, "none": 0, "fps_sum": 0.0}
 

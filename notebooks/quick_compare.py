@@ -48,16 +48,28 @@ def collapse_label(label: str) -> str:
     return "UNLABELED"
 
 
-def load_folder(folder: Path) -> pd.DataFrame:
+# Post-V3-veto builds. Verdict-level results from older builds came from
+# obsolete veto logic and must not be mixed in. Signal-level AUC is
+# build-independent, but we still filter so the dataset is consistent.
+CURRENT_BUILDS = ("threat-coop", "prod-cdn-restore")
+
+
+def load_folder(folder: Path, build_filter: list[str] | None = None) -> pd.DataFrame:
     paths = sorted(folder.glob("amispoof-session-*.json"))
     if not paths:
         sys.exit(f"No amispoof-session-*.json files in {folder}")
     rows: list[dict] = []
+    skipped: dict[str, int] = {}
     for path in paths:
         sess = json.loads(path.read_text(encoding="utf-8"))
         env = sess.get("environment") or {}
+        version = sess.get("amispoof_version") or "unknown"
+        if build_filter and not any(b in version for b in build_filter):
+            skipped[version] = skipped.get(version, 0) + 1
+            continue
         raw_label = env.get("capture_label") or _infer_from_filename(path)
         binary = collapse_label(raw_label)
+        subject = (env.get("notes") or "").strip() or "(unlabelled)"
         frame_log = sess.get("frame_log") or []
         if not frame_log:
             frame_log = [{
@@ -71,11 +83,18 @@ def load_folder(folder: Path) -> pd.DataFrame:
                 "session": path.stem,
                 "class": binary,
                 "class_fine": raw_label,
+                "build": version,
+                "subject": subject,
                 "t_sec": f.get("t_sec"),
             }
             for analyzer_name, payload in (f.get("analyzer_scores") or {}).items():
                 flat.update(flatten_frame(analyzer_name, payload))
             rows.append(flat)
+    if build_filter:
+        kept = len({r["session"] for r in rows})
+        n_sk = sum(skipped.values())
+        print(f"[build filter {build_filter}] kept {kept} session(s), "
+              f"excluded {n_sk} on other builds: {skipped or '{}'}")
     return pd.DataFrame(rows)
 
 
@@ -129,7 +148,7 @@ def rank_features(frames: pd.DataFrame) -> pd.DataFrame:
     y = (labelled["class"] == "SPOOF").astype(int).values
     n_live = (labelled["class"] == "LIVE").sum()
     n_spoof = (labelled["class"] == "SPOOF").sum()
-    skip_cols = {"session", "class", "class_fine", "t_sec"}
+    skip_cols = {"session", "class", "class_fine", "build", "subject", "t_sec"}
     rows = []
     for col in labelled.columns:
         if col in skip_cols:
@@ -156,16 +175,32 @@ def rank_features(frames: pd.DataFrame) -> pd.DataFrame:
 
 
 def main() -> None:
-    folder = Path(sys.argv[1]) if len(sys.argv) >= 2 else Path("notebooks/data")
+    import argparse
+    ap = argparse.ArgumentParser(description="LIVE vs SPOOF per-feature separability (build-aware)")
+    ap.add_argument("folder", nargs="?", default="notebooks/data")
+    ap.add_argument("--build", action="append", default=None, metavar="SUBSTR",
+                    help="keep only sessions whose amispoof_version contains SUBSTR "
+                         "(repeatable). e.g. --build 2026-06-01")
+    ap.add_argument("--current", action="store_true",
+                    help=f"shortcut: only current post-V3 builds {CURRENT_BUILDS}")
+    args = ap.parse_args()
+    folder = Path(args.folder)
     if not folder.exists():
         sys.exit(f"Folder does not exist: {folder.resolve()}")
-    frames = load_folder(folder)
+    build_filter = list(args.build) if args.build else []
+    if args.current:
+        build_filter += list(CURRENT_BUILDS)
+    frames = load_folder(folder, build_filter or None)
     print(f"Loaded {len(frames)} frames from {folder.resolve()}")
     print("Class breakdown:")
     print(frames["class"].value_counts().to_string())
-    print()
-    print(f"Per-session frame counts (first 10):")
-    print(frames.groupby(["session", "class"]).size().head(10).to_string())
+    print("\nBuild distribution (sessions):")
+    print(frames.groupby("build")["session"].nunique().to_string())
+    print("\nSubject distribution (sessions) — needed for GroupKFold:")
+    print(frames.groupby("subject")["session"].nunique().to_string())
+    if not build_filter:
+        print("\n** WARNING: no --build filter; results MIX verdict logic across builds. "
+              "Use --current for trustworthy numbers. **")
     print()
     ranking = rank_features(frames)
     if ranking.empty:
