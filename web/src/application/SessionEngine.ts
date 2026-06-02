@@ -538,6 +538,43 @@ export class SessionEngine {
     const lowFraction = lowCount / samples.length;
     if (lowFraction < SessionEngine.TEXTURE_LOW_FRACTION_SPOOF) return;
 
+    // 2026-06-02 motion-blur SUPPRESSOR (fixes a live false reject: a real face
+    // at 50 cm MOVING was verdicted SPOOF static_image). A real moving face's
+    // texture collapses from MOTION BLUR — validated: in collapse frames median
+    // landmark_var was 102 vs 5 when texture was OK, and 85% of collapse frames
+    // were moving — but its texture is FINE when still; a photo/screen is
+    // low-texture even when still. So if we have ENOUGH rigid-still frames AND
+    // their texture is mostly fine, the collapse is motion-only → suppress.
+    // We only suppress on POSITIVE evidence: a violently-waved photo leaves too
+    // few still frames to clear this gate, so it falls through and still FIRES
+    // (no false-accept regression — the hard-waved test rigidVar=120 → 0 still
+    // frames → not suppressed). Measured: SPOOF still frac<25 ~40% (won't clear,
+    // fires); LIVE ~17% / this session ~1-2% (clears → suppressed).
+    // Align from the most-recent end: recentRigidMotion (window 150) is larger
+    // than recentTextureScores (texture window), so a start-indexed pair would
+    // mismatch frames. Both buffers are appended once per frame, so the k-th
+    // from the end of each is the same frame.
+    const rigidSamples = this.recentRigidMotion.toArray();
+    const n = Math.min(samples.length, rigidSamples.length);
+    let stillLow = 0;
+    let stillTotal = 0;
+    for (let k = 1; k <= n; k++) {
+      const rigid = rigidSamples[rigidSamples.length - k];
+      if (Number.isNaN(rigid) || rigid >= SessionEngine.TYPING_RIGID_STILL_MAX) {
+        continue;
+      }
+      stillTotal += 1;
+      if (samples[samples.length - k] < SessionEngine.TEXTURE_SCORE_SPOOF_THRESHOLD) {
+        stillLow += 1;
+      }
+    }
+    if (
+      stillTotal >= SessionEngine.TYPING_MIN_STILL_FRAMES &&
+      stillLow / stillTotal < SessionEngine.TEXTURE_LOW_FRACTION_SPOOF
+    ) {
+      return; // collapse is motion-coincident on a real moving face → suppress
+    }
+
     // V3 co-signal gate. Compute the median skin_score over the same
     // window. A genuine REPLAY has both signals collaborating (low texture
     // + high skin_score); a twilight LIVE has only the texture symptom
@@ -564,7 +601,28 @@ export class SessionEngine {
     //                           genuine face's texture collapses from camera
     //                           noise. Ambiguous → SUPPRESS (no false-reject).
     const isScreenLike = skinMedian >= SessionEngine.TEXTURE_COSIGNAL_SKIN_MIN;
-    const isPhotoLike = skinMedian < SessionEngine.TEXTURE_PHOTO_SKIN_MAX;
+    let isPhotoLike = skinMedian < SessionEngine.TEXTURE_PHOTO_SKIN_MAX;
+    // 2026-06-02 — a printed photo (skin<5, low texture) is held STILL. A real
+    // face moving at distance also momentarily reads skin<5 + low texture from
+    // MOTION BLUR: the live false reject fired this photo path at 6s/11s with
+    // recent-motion median ~65. So only accept the photo path under LOW recent
+    // motion; under high motion skin<5 is a blurred real face, not a still photo.
+    // A genuinely waved photo is rigid+planar → still caught by the planarity
+    // veto. Validated by offline replay on the labelled set: clears the false
+    // reject (2 tex incidents → 0 → LIVE) with ZERO loss of spoof catches
+    // (SPOOF sessions firing ≥3 incidents unchanged at 14/20).
+    if (isPhotoLike) {
+      const rig = this.recentRigidMotion
+        .toArray()
+        .filter((x) => !Number.isNaN(x));
+      if (rig.length > 0) {
+        const sortedRig = rig.slice().sort((a, b) => a - b);
+        const motionMedian = sortedRig[Math.floor(sortedRig.length / 2)];
+        if (motionMedian >= SessionEngine.TYPING_RIGID_STILL_MAX) {
+          isPhotoLike = false; // high motion → blurred real face, not a still photo
+        }
+      }
+    }
     if (!isScreenLike && !isPhotoLike) return;
 
     // TYPE the confirmed spoof as VIDEO_REPLAY vs STATIC_IMAGE by NON-rigid
@@ -626,6 +684,7 @@ export class SessionEngine {
       {
         low_fraction: round(lowFraction, 3),
         low_count: lowCount,
+        still_frames: stillTotal,
         window_frames: samples.length,
         threshold: SessionEngine.TEXTURE_SCORE_SPOOF_THRESHOLD,
         last_texture_score: round(textureScore, 1),
@@ -992,19 +1051,36 @@ export class SessionEngine {
     const qualityUncertain = baseLive && !qualityOk && !proofTrumpsQuality;
     const isLive = baseLive && (qualityOk || proofTrumpsQuality);
 
+    // 2026-06-02 — confidence = CERTAINTY of the verdict (how far the evidence
+    // sits from the 0.45 live/spoof boundary), NOT a floor+activity blend.
+    //
+    // The old formula `0.3*activity + 0.3 + 0.4*(adjustedReal-0.3)` had two
+    // structural flaws the user reported: (a) a constant +0.3 floor → confidence
+    // never read low, and (b) a 0.3*proverConfidence ACTIVITY term — but the
+    // prover measures activity, which an animated replay also has. The result:
+    // on the labelled set it separated CORRECT from WRONG verdicts by only +0.04
+    // (a 78%-spoof and a 79%-live looked identical). It also capped at exactly
+    // 0.88, which the UI then divided back out — a cosmetic ceiling.
+    //
+    // The certainty form separates correct vs wrong by +0.22 (5.5×): a wrong
+    // verdict now reads LOW confidence so the surface can flag "uncertain — retry"
+    // instead of showing a confident wrong answer. For SPOOF, certainty rises
+    // with low live-evidence OR incident count; for LIVE it's the margin above
+    // the boundary, with proof as a MILD corroborator only. dataConfidence still
+    // ramps it in over the first 5 s; a poor-quality capture is still pinned low.
     const proverConfidence = proverScore ? proverScore.total / 100.0 : 0;
-    let confidence = this.prover
-      ? Math.min(
-          1.0,
-          dataConfidence *
-            (0.3 * proverConfidence +
-              0.3 +
-              0.4 * Math.max(0, adjustedReal - 0.3)),
-        )
-      : Math.min(
-          1.0,
-          dataConfidence * (0.5 + 0.4 * Math.max(0, adjustedReal - 0.3)),
-        );
+    let certainty: number;
+    if (!isLive) {
+      const evidenceCertainty =
+        adjustedReal < 0.45 ? (0.45 - adjustedReal) / 0.45 : 0;
+      const incidentCertainty = Math.min(1, this.incidents.length / 6);
+      certainty = Math.max(evidenceCertainty, incidentCertainty);
+    } else {
+      certainty =
+        ((adjustedReal - 0.45) / (0.85 - 0.45)) *
+        (0.6 + 0.4 * proverConfidence);
+    }
+    let confidence = Math.min(1.0, dataConfidence * Math.max(0, certainty));
 
     // An uncertain (poor-quality) verdict must read as low-confidence so the
     // surface prompts a re-capture rather than showing a strong number.

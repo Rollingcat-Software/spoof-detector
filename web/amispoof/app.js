@@ -18,20 +18,19 @@ import {
   FlashTemporalAnalyzer,
   ReadinessGate,
   DEFAULT_ANALYZER_WEIGHTS,
-} from "./lib/spoof-detector.js?v=2026-06-01-motion-typing";
+} from "./lib/spoof-detector.js?v=2026-06-02-honest-confidence";
 
 // Version handshake — checked by the inline script in index.html.
 // If the user is running a stale cached app.js (no AMISPOOF_VERSION),
 // the HTML triggers a one-shot reload after 4 s.
-window.AMISPOOF_VERSION = "2026-06-01-motion-typing";
+window.AMISPOOF_VERSION = "2026-06-02-honest-confidence";
 
-// SessionEngine.getVerdict() returns a confidence in [0, 0.88] when the
-// LivenessProver is wired (structural ceiling — see SessionEngine.ts
-// confidence formula: 0.3 floor + 0.3 prover-max + 0.28 fusion-max).
-// Human-facing surfaces (the verdict badge and copy-to-clipboard text)
-// normalize to [0, 100] so users don't read 81% as "still uncertain".
-// Machine surfaces (downloaded JSON, bench rows) keep the raw value.
-const RAW_CONFIDENCE_CEILING = 0.88;
+// SessionEngine.getVerdict() confidence is now a CERTAINTY in [0, 1] (2026-06-02
+// boundary-margin formula): distance of the evidence from the live/spoof
+// decision boundary, so a WRONG verdict reads low. No rescale needed — show the
+// raw value as a percent. (Was [0, 0.88] under the old floor+activity formula
+// which the UI divided back out; that cosmetic ceiling is gone.)
+const RAW_CONFIDENCE_CEILING = 1.0;
 function displayConfPct(rawConfidence) {
   const normalized = (rawConfidence ?? 0) / RAW_CONFIDENCE_CEILING;
   const clamped = Math.max(0, Math.min(1, normalized));
@@ -232,7 +231,20 @@ const MEDIAPIPE_WASM_BASE =
 // the dist/ path of the same versioned npm package.
 ort.env.wasm.wasmPaths =
   "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/";
-ort.env.wasm.numThreads = 2;
+// Multi-threaded WASM needs SharedArrayBuffer, which only exists when the page
+// is cross-origin isolated (COOP/COEP — set by prod .htaccess and the dev
+// server.mjs). When isolated, scale to the machine instead of hardcoding 2:
+// an 8-core desktop was using 2 cores. Cap at 8 to avoid oversubscription and
+// mobile thermal throttling; pin to 1 when not isolated so it degrades cleanly
+// rather than silently no-opping. Logged so we stop guessing why fps varies.
+ort.env.wasm.numThreads = self.crossOriginIsolated
+  ? Math.min(navigator.hardwareConcurrency || 4, 8)
+  : 1;
+console.info(
+  `[amispoof] ORT WASM threads=${ort.env.wasm.numThreads} ` +
+    `(crossOriginIsolated=${self.crossOriginIsolated}, ` +
+    `cores=${navigator.hardwareConcurrency || "?"})`,
+);
 
 // Grouped by what the analyzer measures over time.
 // "image" = single-frame signal (works on any static input).
@@ -544,6 +556,10 @@ const els = {
   countLive: $("countLive"),
   countSpoof: $("countSpoof"),
   countOther: $("countOther"),
+  // DEV-ONLY face-crop dataset capture (hidden unless localhost).
+  cropCaptureWrap: $("cropCaptureWrap"),
+  cropCapture: $("cropCapture"),
+  cropStatus: $("cropStatus"),
   // Inline analysis modal — opens the in-page analysis panel without
   // needing to download the JSON and run the Python notebook.
   analysisBtn: $("analysisBtn"),
@@ -1007,6 +1023,52 @@ async function ensureDetector() {
     enableMicroTremor: false,
     enableExpressionDynamics: false,
     enableBackgroundGrid: false,
+    // ===== Reliability-grounded fuser weights (2026-06-02) =====
+    // Problem (user-reported + measured): confidence was unreliable because the
+    // fuser's REAL probability is the weight-normalized MEAN of analyzer scores,
+    // and the weights were inverted vs measured reliability. On 41 current-build
+    // sessions (notebooks/reweight_sim.py, faithful to the fuser incl. its
+    // `?? 0.5` fallback), per-analyzer top-line d' (discrimination) is:
+    //   gaze 1.01, blink_symmetry 0.93, blink 0.92, behavioral_pattern 0.91,
+    //   device_boundary 0.53  (RELIABLE) ............. were 0.5 each
+    //   minifasnet 0.28, planarity 0.18, texture 0.18, landmark_variance 0.12,
+    //   eyebrow 0.12, rppg -0.05 (NOISE) ............. held 8.5 of ~10 weight
+    //   background_motion -0.59, screen_replay -0.36, pose_3d -0.32,
+    //   moire -0.25 (ANTI-CORRELATED) ................ silently 0.5 via fallback
+    // Three reliable signals (gaze/blink_symmetry/behavioral) and all four
+    // anti-correlated ones were never in DEFAULT_ANALYZER_WEIGHTS, so the fuser's
+    // `?? 0.5` fallback weighted them 0.5 — uncalibrated, anti-correlated ones
+    // pushing confidence the WRONG way. This COMPLETE dict (every analyzer
+    // explicit → no fallback) grades weights by measured d'. Measured effect:
+    // LIVE-vs-SPOOF separation AUC 0.71 -> 0.81, gap 0.06 -> 0.16.
+    // CAVEATS: (1) PROVISIONAL — single-subject; re-derive on multi-subject crops
+    // (the FoundationModelAnalyzer path). (2) The reliable signals are motion-
+    // based; a WAVED-photo attack fakes them (SESSION_2026-06-01) — this helps on
+    // passive/static spoofs, NOT motion attacks; the appearance-based foundation
+    // head is the real fix. (3) Scoped to amispoof; library DEFAULT unchanged.
+    analyzerWeights: {
+      minifasnet: 2.0,          // anchor (cross-dataset valid; saturated here, d'0.28)
+      gaze: 2.0,                // d'1.01  (was silent 0.5)
+      blink_symmetry: 2.0,      // d'0.93  (was silent 0.5)
+      blink: 2.0,               // d'0.92  (was 0.5)
+      behavioral_pattern: 1.5,  // d'0.91  (was silent 0.5)
+      device_boundary: 1.5,     // d'0.53  (was 0.5)
+      planarity: 0.5,           // d'0.18 noise (own session veto backs it)
+      texture: 0.5,             // d'0.18 noise (veto sub-feature backs it)
+      landmark_variance: 0.5,   // d'0.12 noise (keep low for frozen-photo case)
+      eyebrow_motion: 0.3,      // d'0.12 noise
+      ar_filter: 0.3,           // heuristic
+      rppg: 0.0,                // d'-0.05 noise
+      screen_replay: 0.0,       // d'-0.36 ANTI-CORR (skin_score sub-feature still feeds the veto)
+      pose_3d_consistency: 0.0, // d'-0.32 ANTI-CORR (distance-confounded)
+      moire: 0.0,               // d'-0.25 ANTI-CORR
+      background_motion: 0.0,   // d'-0.59 ANTI-CORR — worst offender; was silent 0.5
+      // disabled via enable*:false above — explicit 0 kills the ?? 0.5 fallback:
+      screen_flicker: 0.0, micro_tremor: 0.0, temporal: 0.0,
+      background_grid: 0.0, expression_dynamics: 0.0,
+      // opt-in audio/hand — uncalibrated; explicit 0 (no silent 0.5):
+      hand_tracking: 0.0, voice_activity: 0.0, audio_mouth_sync: 0.0,
+    },
     // Proctoring profile — passive observation only, no mid-session
     // challenge prompts. The new passive axes (eye_motion, mouth_motion,
     // face_motion) plus the looser gates below let a natural live face
@@ -1235,6 +1297,7 @@ async function loop() {
     }
     drawOverlay(analysis, v);
     updateUI(analysis, v);
+    maybeSaveCrop(); // DEV-ONLY dataset crop capture (no-op unless toggle on)
   } catch (err) {
     console.error("frame error", err);
     setStatus(`frame error: ${err.message || err}`, "error");
@@ -1792,6 +1855,15 @@ els.stop.addEventListener("click", stop);
 els.reset.addEventListener("click", reset);
 els.download.addEventListener("click", download);
 
+// Reveal the DEV-ONLY crop-capture toggle only on localhost — the static prod
+// site has no /__save-crop endpoint, so it stays hidden there.
+(function initCropCaptureToggle() {
+  const host = (typeof location !== "undefined" && location.hostname) || "";
+  const isLocal = host === "localhost" || host === "127.0.0.1" || host === "[::1]";
+  if (isLocal && els.cropCaptureWrap) els.cropCaptureWrap.style.display = "flex";
+  if (els.cropCapture) els.cropCapture.addEventListener("change", updateCropStatus);
+})();
+
 // ===== Inline 📊 Analysis panel =====
 // Renders the current session's analysis directly in the page — verdict
 // trajectory sparkline, top-firing analyzers, incident timeline, environment
@@ -1812,7 +1884,7 @@ function renderAnalysis() {
 
   const verdictWord = v.is_live ? "LIVE" : v.quality_uncertain ? "UNCERTAIN" : "SPOOF";
   const pillClass = v.is_live ? "live" : v.quality_uncertain ? "uncertain" : "spoof";
-  const confPct = Math.round((v.confidence ?? 0) * 100 / 0.88);
+  const confPct = displayConfPct(v.confidence);
 
   // === Trajectory sparkline (is_live + confidence) ===
   const sparkW = 700, sparkH = 90, padX = 4, padY = 6;
@@ -2037,6 +2109,90 @@ function captureFaceCrop() {
   }
   if (bw <= 4 || bh <= 4) return null;
   return cx.getImageData(bx0, by0, bw, bh);
+}
+
+// ===== DEV-ONLY face-crop dataset capture =====
+// When the "📸 Save crops" toggle is on (shown on localhost only), periodically
+// POST the padded-square 224px face crop to the dev server's /__save-crop,
+// tagged with the capture Class + Notes(subject). Builds the IMAGE dataset for
+// tools/train_fas_adapter.py — the session JSONs are score telemetry, not
+// pixels. Crop geometry (pad 0.3, square, 224) matches FoundationModelAnalyzer
+// so training crops equal inference crops. Reads only els.video + lastFaceBbox
+// and fires a fire-and-forget fetch → zero effect on detection/verdict, and a
+// no-op on the static prod site (no endpoint, toggle hidden).
+const CROP_SAVE_INTERVAL_MS = 1000;
+const CROP_OUT_SIZE = 224; // FoundationModelAnalyzer input side
+const CROP_PAD = 0.3; // FoundationModelAnalyzer cropPad
+let lastCropSaveAt = 0;
+let cropSaveCount = 0;
+let cropSaveError = false;
+
+function buildFaceCropCanvas() {
+  const w = els.video?.videoWidth || 0;
+  const h = els.video?.videoHeight || 0;
+  if (!w || !h || !lastFaceBbox) return null;
+  const b = lastFaceBbox;
+  const bw = Math.max(1, b.x2 - b.x1);
+  const bh = Math.max(1, b.y2 - b.y1);
+  const cx = b.x1 + bw / 2;
+  const cy = b.y1 + bh / 2;
+  let side = Math.floor(Math.max(bw, bh) * (1 + 2 * CROP_PAD));
+  side = Math.min(side, w, h);
+  if (side <= 8) return null;
+  const x = Math.max(0, Math.min(Math.floor(cx - side / 2), w - side));
+  const y = Math.max(0, Math.min(Math.floor(cy - side / 2), h - side));
+  const out = document.createElement("canvas");
+  out.width = CROP_OUT_SIZE;
+  out.height = CROP_OUT_SIZE;
+  const octx = out.getContext("2d");
+  if (!octx) return null;
+  octx.imageSmoothingEnabled = true;
+  octx.imageSmoothingQuality = "high";
+  octx.drawImage(els.video, x, y, side, side, 0, 0, CROP_OUT_SIZE, CROP_OUT_SIZE);
+  return out;
+}
+
+function updateCropStatus() {
+  if (!els.cropStatus) return;
+  els.cropStatus.textContent = cropSaveError
+    ? "(needs dev server)"
+    : cropSaveCount > 0
+      ? `${cropSaveCount} saved`
+      : "";
+}
+
+function maybeSaveCrop() {
+  if (!els.cropCapture || !els.cropCapture.checked) return;
+  const now = performance.now();
+  if (now - lastCropSaveAt < CROP_SAVE_INTERVAL_MS) return;
+  const crop = buildFaceCropCanvas();
+  if (!crop) return; // no face detected this frame — skip
+  lastCropSaveAt = now;
+  const cls = els.captureLabel?.value || "UNLABELED";
+  const subject = (els.captureNotes?.value || "").trim() || "unknown";
+  crop.toBlob(
+    (blob) => {
+      if (!blob) return;
+      const qs = new URLSearchParams({
+        class: cls,
+        subject,
+        ts: String(Date.now()),
+        build: window.AMISPOOF_VERSION || "unknown",
+      });
+      fetch(`/__save-crop?${qs.toString()}`, { method: "POST", body: blob })
+        .then((r) => {
+          cropSaveError = !r.ok;
+          if (r.ok) cropSaveCount += 1;
+          updateCropStatus();
+        })
+        .catch(() => {
+          cropSaveError = true;
+          updateCropStatus();
+        });
+    },
+    "image/jpeg",
+    0.92,
+  );
 }
 
 /** Mean per-pixel brightness (max of R,G,B) over the current face crop, 0-255. */

@@ -71,6 +71,13 @@ export * from "./domain/session";
 export * from "./domain/taxonomy";
 export { MultiClassFuser, DEFAULT_ANALYZER_WEIGHTS } from "./infrastructure/fusion/MultiClassFuser";
 export { MiniFASNetAnalyzer } from "./infrastructure/analyzers/MiniFASNetAnalyzer";
+// WebGPU vision-foundation FAS head (DINOv2/CLIP) — see tools/train_fas_adapter.py.
+// Exported so consumers can opt in; NOT instantiated by SpoofDetector and NOT in
+// the fuser weights, so the deployed detector's behavior is unchanged.
+export {
+  FoundationModelAnalyzer,
+  foundationScoreFromLogits,
+} from "./infrastructure/analyzers/FoundationModelAnalyzer";
 export { LandmarkVarianceAnalyzer } from "./infrastructure/analyzers/LandmarkVarianceAnalyzer";
 export { BlinkAnalyzer } from "./infrastructure/analyzers/BlinkAnalyzer";
 export { DeviceBoundaryAnalyzer } from "./infrastructure/analyzers/DeviceBoundaryAnalyzer";

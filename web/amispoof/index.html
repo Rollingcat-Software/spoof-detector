@@ -875,6 +875,17 @@
           <span style="color:#8b949e;">Notes</span>
           <input id="captureNotes" type="text" placeholder="anything special about this take" style="flex:1;" />
         </label>
+        <!-- DEV-ONLY face-crop dataset capture. Hidden on the static prod site
+             (app.js reveals it only on localhost). When on, periodically saves
+             224px face crops to notebooks/crops/<real|spoof>/<subject>/ via the
+             node dev server's /__save-crop endpoint — builds the IMAGE training
+             set for tools/train_fas_adapter.py (session JSONs are score
+             telemetry, not pixels). Set Class + Notes (subject initials) first. -->
+        <label id="cropCaptureWrap" for="cropCapture" title="DEV-ONLY: save 224px face crops for tools/train_fas_adapter.py. Needs the node dev server; hidden on prod. Set Class + Notes (subject initials) first." style="display:none;align-items:center;gap:4px;">
+          <input id="cropCapture" type="checkbox" />
+          <span style="color:#8b949e;">📸 Save crops</span>
+          <span id="cropStatus" style="color:#6e7681;"></span>
+        </label>
         <!-- Session counter — persists per-browser via localStorage so the
              operator can see at a glance how many of each class they've saved
              into the current dataset campaign. Each ↓ Report bumps the
@@ -1124,7 +1135,7 @@
       // older cached copy (no AMISPOOF_VERSION export at all), force a
       // one-shot hard reload so the user doesn't get stuck on a broken
       // bundle. Guarded by sessionStorage to avoid infinite loops.
-      window.AMISPOOF_HTML_VERSION = "2026-06-01-motion-typing";
+      window.AMISPOOF_HTML_VERSION = "2026-06-02-honest-confidence";
       setTimeout(function () {
         if (
           window.AMISPOOF_VERSION !== window.AMISPOOF_HTML_VERSION &&
@@ -1135,6 +1146,6 @@
         }
       }, 4000);
     </script>
-    <script type="module" src="./app.js?v=2026-06-01-corrob-dev"></script>
+    <script type="module" src="./app.js?v=2026-06-02-honest-confidence"></script>
   </body>
 </html>
