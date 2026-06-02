@@ -1024,6 +1024,52 @@ async function ensureDetector() {
     enableMicroTremor: false,
     enableExpressionDynamics: false,
     enableBackgroundGrid: false,
+    // ===== Reliability-grounded fuser weights (2026-06-02) =====
+    // Problem (user-reported + measured): confidence was unreliable because the
+    // fuser's REAL probability is the weight-normalized MEAN of analyzer scores,
+    // and the weights were inverted vs measured reliability. On 41 current-build
+    // sessions (notebooks/reweight_sim.py, faithful to the fuser incl. its
+    // `?? 0.5` fallback), per-analyzer top-line d' (discrimination) is:
+    //   gaze 1.01, blink_symmetry 0.93, blink 0.92, behavioral_pattern 0.91,
+    //   device_boundary 0.53  (RELIABLE) ............. were 0.5 each
+    //   minifasnet 0.28, planarity 0.18, texture 0.18, landmark_variance 0.12,
+    //   eyebrow 0.12, rppg -0.05 (NOISE) ............. held 8.5 of ~10 weight
+    //   background_motion -0.59, screen_replay -0.36, pose_3d -0.32,
+    //   moire -0.25 (ANTI-CORRELATED) ................ silently 0.5 via fallback
+    // Three reliable signals (gaze/blink_symmetry/behavioral) and all four
+    // anti-correlated ones were never in DEFAULT_ANALYZER_WEIGHTS, so the fuser's
+    // `?? 0.5` fallback weighted them 0.5 — uncalibrated, anti-correlated ones
+    // pushing confidence the WRONG way. This COMPLETE dict (every analyzer
+    // explicit → no fallback) grades weights by measured d'. Measured effect:
+    // LIVE-vs-SPOOF separation AUC 0.71 -> 0.81, gap 0.06 -> 0.16.
+    // CAVEATS: (1) PROVISIONAL — single-subject; re-derive on multi-subject crops
+    // (the FoundationModelAnalyzer path). (2) The reliable signals are motion-
+    // based; a WAVED-photo attack fakes them (SESSION_2026-06-01) — this helps on
+    // passive/static spoofs, NOT motion attacks; the appearance-based foundation
+    // head is the real fix. (3) Scoped to amispoof; library DEFAULT unchanged.
+    analyzerWeights: {
+      minifasnet: 2.0,          // anchor (cross-dataset valid; saturated here, d'0.28)
+      gaze: 2.0,                // d'1.01  (was silent 0.5)
+      blink_symmetry: 2.0,      // d'0.93  (was silent 0.5)
+      blink: 2.0,               // d'0.92  (was 0.5)
+      behavioral_pattern: 1.5,  // d'0.91  (was silent 0.5)
+      device_boundary: 1.5,     // d'0.53  (was 0.5)
+      planarity: 0.5,           // d'0.18 noise (own session veto backs it)
+      texture: 0.5,             // d'0.18 noise (veto sub-feature backs it)
+      landmark_variance: 0.5,   // d'0.12 noise (keep low for frozen-photo case)
+      eyebrow_motion: 0.3,      // d'0.12 noise
+      ar_filter: 0.3,           // heuristic
+      rppg: 0.0,                // d'-0.05 noise
+      screen_replay: 0.0,       // d'-0.36 ANTI-CORR (skin_score sub-feature still feeds the veto)
+      pose_3d_consistency: 0.0, // d'-0.32 ANTI-CORR (distance-confounded)
+      moire: 0.0,               // d'-0.25 ANTI-CORR
+      background_motion: 0.0,   // d'-0.59 ANTI-CORR — worst offender; was silent 0.5
+      // disabled via enable*:false above — explicit 0 kills the ?? 0.5 fallback:
+      screen_flicker: 0.0, micro_tremor: 0.0, temporal: 0.0,
+      background_grid: 0.0, expression_dynamics: 0.0,
+      // opt-in audio/hand — uncalibrated; explicit 0 (no silent 0.5):
+      hand_tracking: 0.0, voice_activity: 0.0, audio_mouth_sync: 0.0,
+    },
     // Proctoring profile — passive observation only, no mid-session
     // challenge prompts. The new passive axes (eye_motion, mouth_motion,
     // face_motion) plus the looser gates below let a natural live face
