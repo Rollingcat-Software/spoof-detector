@@ -3,7 +3,37 @@
 **Project**: FIVUCSAS Session-Based Face Presentation Attack Detection
 **Paper Target**: BIOSIG 2026 / IJCB 2026
 **Demo**: https://amispoof.fivucsas.com/ — browser-side reference implementation (migrated 2026-05-17 from fivucsas.com/amispoof/; old URL 301s)
-**Last Updated**: 2026-05-25 (active-illumination video-replay probe + anti-print planarity veto + camera-restore safeguards — see "Latest" below)
+**Last Updated**: 2026-06-01 (motion-gated VIDEO-vs-STATIC typing + reverted corroboration gate — see "Latest" below)
+
+## Latest (2026-06-01) — Motion-gated VIDEO-vs-STATIC typing
+
+Build `2026-06-01-motion-typing`. Full write-up: `docs/SESSION_2026-06-01.md`.
+
+The spoof **subtype** (`VIDEO_REPLAY` vs `STATIC_IMAGE`) was being decided by
+`screen_replay.skin_score`, which only senses *"is this a glowing screen?"* — so
+a still photo on a phone screen (skin ≈ 70) was mistyped `video_replay`. Fixed by
+typing on **motion**, the way the user framed it: *video vs image = facial motion*.
+
+| Change | What it does | Status |
+|---|---|---|
+| **Motion-gated typing** (`SessionEngine.checkTextureCollapseReplay`) | types a confirmed texture-collapse spoof by **non-rigid eyelid-blendshape variance on rigid-still frames only** (`landmark_var < 30`): median ≥ 0.2 over ≥ 5 still frames → VIDEO_REPLAY, else STATIC_IMAGE | shipped + tests (260 green) |
+| **Reverted liveness-corroboration gate** | it trusted `gaze.std_x ≥ 0.15`, but live data proved `gaze.std_x` is a **rigid-motion artifact** (a waved photo scored 0.21 vs a still video's 0.07) and the gate turned a caught replay into a false-accept | reverted |
+| **`SCREEN_STATIC` capture class** + `SCREEN_*`→SPOOF in analysis tooling | clean ground-truth for photo-on-screen attacks | shipped |
+| **`POST /__save` dev-server endpoint** | persist captures into `notebooks/data/` (Brave blocks the download dialog) | shipped (dev-only) |
+
+**Why motion, gated on stillness.** Live adversarial testing (clean captures,
+`identity_changes=0`): a **hard-waved photo faked 9 blinks, gaze.std_x 0.19, and
+eye-blendshape variance 0.30** — every ungated motion signal is foolable by
+shaking the photo. But on **rigid-still frames only**, eye-blendshape variance
+separates ~7× (static ≤ 0.06, video 0.41), because a photo's eyes are frozen open
+however it's waved — and violent waving leaves only ~1% still frames, so the
+attack **self-defeats** (no measurable signal → defaults STATIC). Fire/suppress is
+unchanged (skin co-signal still spares real faces at distance in the `[5,30)` band).
+
+**PROVISIONAL** thresholds (n=1/class). Validate as multi-subject data grows; see
+the open follow-ups in the session doc (multi-subject lock, pose-normalized
+deformation signal, offensive low-gaze veto for the 4 known false-accepts, and the
+3 always-zero LivenessProof axes from disabled analyzers).
 
 ## Latest (2026-05-25) — Active-illumination video-replay probe (PC-first)
 

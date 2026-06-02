@@ -169,6 +169,33 @@ export class SessionEngine {
   // fires reads skin~0 AND texture 12 — a mislabel; real faces read skin>=13,
   // texture>=40.)
   static readonly TEXTURE_PHOTO_SKIN_MAX = 5;
+  // ---- Motion-gated VIDEO-vs-STATIC typing (2026-06-01) --------------------
+  // skin_score decides WHETHER a texture-collapse fires (it separates a screen
+  // / photo from a real distant face), but it CANNOT type video-vs-static: a
+  // glowing screen reads skin ~70 whether it plays a video or shows a photo.
+  // The only true difference is FACIAL motion — but raw landmark-variance,
+  // blink COUNT, and gaze.std_x are all corrupted by *rigid* motion (waving a
+  // photo manufactures fake "movement"; a hard-waved photo logged 9 false
+  // blinks + gaze.std_x 0.21, higher than a still video). The signal that
+  // survives is NON-RIGID eyelid deformation (blink-symmetry blendshape
+  // variance) measured ONLY on rigid-still frames. Empirical (clean captures,
+  // 2026-06-01, SESSION doc):
+  //   still photo  eyeMotion@still 0.026 | moved photo 0.058 | hard-waved ~0
+  //   still video  eyeMotion@still 0.405   ← ~7x separation
+  // A waved photo also self-defeats: violent motion leaves ~1% rigid-still
+  // frames, so it can't even produce a measurable signal → defaults STATIC.
+  // PROVISIONAL thresholds (n=1/class, validate as multi-subject data grows).
+  // A frame is "rigid-still" when landmark_variance.overall_var < this.
+  static readonly TYPING_RIGID_STILL_MAX = 30;
+  // Median eyelid-blendshape variance on rigid-still frames >= this => the face
+  // content is genuinely moving (video replay); below => frozen (static image).
+  static readonly TYPING_VIDEO_EYE_MOTION_MIN = 0.2;
+  // Need at least this many rigid-still frames to *confirm* a video; fewer
+  // (a violently-waved photo) cannot confirm motion and defaults to STATIC.
+  static readonly TYPING_MIN_STILL_FRAMES = 5;
+  // Rolling window (frames) over which eyelid + rigid motion are tracked for
+  // typing. Larger than the 30-frame texture window so sparse blinks are seen.
+  static readonly TYPING_MOTION_WINDOW = 150;
   // Capture-quality floor (2026-05-24). A would-be-LIVE session whose capture
   // quality is too poor (dark / occluded / no-face frames) is downgraded to
   // UNCERTAIN (prompt a re-capture) rather than confidently classified LIVE.
@@ -222,6 +249,18 @@ export class SessionEngine {
   // texture veto checks both before firing.
   private recentSkinScores = new RingBuffer<number>(
     SessionEngine.TEXTURE_WINDOW_FRAMES,
+  );
+  // Motion-gated typing (2026-06-01): per-frame eyelid-blendshape variance
+  // (blink_symmetry std_left+std_right) and a rigid-motion proxy
+  // (landmark_variance.overall_var). Used to type a confirmed texture-collapse
+  // spoof as VIDEO_REPLAY vs STATIC_IMAGE by NON-rigid eyelid motion measured
+  // on rigid-still frames only. Window larger than the texture window so the
+  // sparse blink signal is captured.
+  private recentEyeMotion = new RingBuffer<number>(
+    SessionEngine.TYPING_MOTION_WINDOW,
+  );
+  private recentRigidMotion = new RingBuffer<number>(
+    SessionEngine.TYPING_MOTION_WINDOW,
   );
   private qualitySamples = new RingBuffer<{ usable: boolean; illum: number }>(90);
 
@@ -283,6 +322,8 @@ export class SessionEngine {
     this.lastFaceMissingIncidentAt = -Infinity;
     this.recentTextureScores.clear();
     this.recentSkinScores.clear();
+    this.recentEyeMotion.clear();
+    this.recentRigidMotion.clear();
     this.qualitySamples.clear();
     this.prover?.reset();
   }
@@ -460,6 +501,24 @@ export class SessionEngine {
       typeof skinScore === "number" ? skinScore : Number.NaN,
     );
 
+    // Motion-gated typing samples (2026-06-01). Eyelid-blendshape variance is
+    // the sum of the left/right blink-blendshape std-devs (pose-normalised by
+    // MediaPipe, so rigid motion can't fake it). The rigid-motion proxy is the
+    // raw landmark-variance (which DOES rise under rigid waving) — used only to
+    // GATE which frames the eyelid signal is read on, never to type directly.
+    const blinkSym = cls.analyzer_results["blink_symmetry"];
+    const stdL = blinkSym?.details["std_left"];
+    const stdR = blinkSym?.details["std_right"];
+    this.recentEyeMotion.append(
+      (typeof stdL === "number" ? stdL : 0) +
+        (typeof stdR === "number" ? stdR : 0),
+    );
+    const landmarkVar = cls.analyzer_results["landmark_variance"];
+    const overallVar = landmarkVar?.details["overall_var"];
+    this.recentRigidMotion.append(
+      typeof overallVar === "number" ? overallVar : Number.NaN,
+    );
+
     if (elapsed < SessionEngine.TEXTURE_MIN_ELAPSED_SEC) return;
     if (this.recentTextureScores.length < SessionEngine.TEXTURE_WINDOW_MIN_FRAMES) {
       return;
@@ -498,29 +557,63 @@ export class SessionEngine {
       return;
     }
 
-    // Type the collapse by skin mode (skin_score is tri-modal: photo ~0 <
-    // live 13-34 < video 30-68). Motion/blink are NOT used — they're too noisy
-    // (a moved photo logs false blinks + huge landmark variance).
+    // FIRE-OR-SUPPRESS by skin mode (unchanged anti-false-positive primitive).
+    // skin_score is tri-modal: photo ~0 < real-face 5-30 < screen 30-68.
+    //   skin >= 30 (screen)  OR  skin < 5 (photo/print)  → it's a spoof, FIRE.
+    //   skin in [5, 30)       → real-face-at-distance / low-light band where a
+    //                           genuine face's texture collapses from camera
+    //                           noise. Ambiguous → SUPPRESS (no false-reject).
+    const isScreenLike = skinMedian >= SessionEngine.TEXTURE_COSIGNAL_SKIN_MIN;
+    const isPhotoLike = skinMedian < SessionEngine.TEXTURE_PHOTO_SKIN_MAX;
+    if (!isScreenLike && !isPhotoLike) return;
+
+    // TYPE the confirmed spoof as VIDEO_REPLAY vs STATIC_IMAGE by NON-rigid
+    // eyelid motion measured ONLY on rigid-still frames (2026-06-01). This is
+    // the one signal a waved photo can't fake: its eyes stay frozen open, and
+    // violent waving leaves too few still frames to even measure (→ STATIC).
+    const eyeArr = this.recentEyeMotion.toArray();
+    const rigidArr = this.recentRigidMotion.toArray();
+    const stillEye: number[] = [];
+    const pairCount = Math.min(eyeArr.length, rigidArr.length);
+    for (let i = 0; i < pairCount; i++) {
+      const rigid = rigidArr[i];
+      if (
+        !Number.isNaN(rigid) &&
+        rigid < SessionEngine.TYPING_RIGID_STILL_MAX &&
+        eyeArr[i] > 0
+      ) {
+        stillEye.push(eyeArr[i]);
+      }
+    }
     let category: SpoofCategory;
     let detail: string;
-    if (skinMedian >= SessionEngine.TEXTURE_COSIGNAL_SKIN_MIN) {
-      // Low texture + REPLAY-like high skin → face rendered through a screen.
-      category = SpoofCategory.VIDEO_REPLAY;
-      detail =
-        `skin_score median ${Math.round(skinMedian)} (>= ${SessionEngine.TEXTURE_COSIGNAL_SKIN_MIN}) — ` +
-        `face rendered through a screen (replay / video-call) suspected.`;
-    } else if (skinMedian < SessionEngine.TEXTURE_PHOTO_SKIN_MAX) {
-      // Low texture + near-zero skin → a static image (paper / on-screen
-      // photo). Below even a real face's skin range, so it cannot be live.
+    let stillEyeMedian: number | null = null;
+    if (stillEye.length >= SessionEngine.TYPING_MIN_STILL_FRAMES) {
+      const sortedEye = stillEye.slice().sort((a, b) => a - b);
+      stillEyeMedian = sortedEye[Math.floor(sortedEye.length / 2)];
+      if (stillEyeMedian >= SessionEngine.TYPING_VIDEO_EYE_MOTION_MIN) {
+        category = SpoofCategory.VIDEO_REPLAY;
+        detail =
+          `non-rigid eyelid motion ${stillEyeMedian.toFixed(2)} over ${stillEye.length} ` +
+          `rigid-still frames (>= ${SessionEngine.TYPING_VIDEO_EYE_MOTION_MIN}) — ` +
+          `moving face content (video replay / video-call) suspected. ` +
+          `skin median ${Math.round(skinMedian)}.`;
+      } else {
+        category = SpoofCategory.STATIC_IMAGE;
+        detail =
+          `eyelid motion only ${stillEyeMedian.toFixed(2)} over ${stillEye.length} ` +
+          `rigid-still frames (< ${SessionEngine.TYPING_VIDEO_EYE_MOTION_MIN}) — ` +
+          `frozen face (static image: printed / on-screen photo) suspected. ` +
+          `skin median ${Math.round(skinMedian)}.`;
+      }
+    } else {
+      // Too few rigid-still frames — e.g. a photo being waved to fake motion.
+      // Can't confirm genuine facial motion → default to STATIC_IMAGE.
       category = SpoofCategory.STATIC_IMAGE;
       detail =
-        `skin_score median ${Math.round(skinMedian)} (< ${SessionEngine.TEXTURE_PHOTO_SKIN_MAX}) — ` +
-        `static image (printed / on-screen photo) suspected.`;
-    } else {
-      // skin in [8, 30): the real-face-at-distance / low-light band where a
-      // genuine face's texture can collapse from camera noise. Ambiguous →
-      // SUPPRESS. This is the anti-false-positive primitive.
-      return;
+        `only ${stillEye.length} rigid-still frames (< ${SessionEngine.TYPING_MIN_STILL_FRAMES}) — ` +
+        `motion too unstable to confirm a video (waved photo?); static image suspected. ` +
+        `skin median ${Math.round(skinMedian)}.`;
     }
 
     this.lastTextureIncidentAt = elapsed;
@@ -537,6 +630,9 @@ export class SessionEngine {
         threshold: SessionEngine.TEXTURE_SCORE_SPOOF_THRESHOLD,
         last_texture_score: round(textureScore, 1),
         skin_score_median: round(skinMedian, 1),
+        still_eye_motion_median:
+          stillEyeMedian === null ? null : round(stillEyeMedian, 3),
+        still_frame_count: stillEye.length,
       },
     );
   }

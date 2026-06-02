@@ -155,6 +155,12 @@ function buildScreenFrame(
   textureScore: number,
   skinScore: number,
   blinks: number,
+  // Motion-gated typing inputs (2026-06-01). `eyeMotion` is the eyelid-
+  // blendshape variance (split across left/right blink-symmetry std); `rigidVar`
+  // is the raw landmark-variance (rigid-motion proxy). Defaults model a frozen,
+  // rigid-still face (no eyelid motion, no rigid motion).
+  eyeMotion = 0,
+  rigidVar = 0,
 ): FrameAnalysis {
   const face_id = 0;
   const face: FaceROI = {
@@ -167,6 +173,13 @@ function buildScreenFrame(
     texture: makeAnalyzerResult("texture", 60, { texture_score: textureScore }),
     screen_replay: makeAnalyzerResult("screen_replay", 50, { skin_score: skinScore }),
     blink: makeAnalyzerResult("blink", 80, { blinks }),
+    blink_symmetry: makeAnalyzerResult("blink_symmetry", 80, {
+      std_left: eyeMotion / 2,
+      std_right: eyeMotion / 2,
+    }),
+    landmark_variance: makeAnalyzerResult("landmark_variance", 50, {
+      overall_var: rigidVar,
+    }),
     minifasnet: makeAnalyzerResult("minifasnet", 95, {}),
   };
   const pReal = 0.9;
@@ -375,31 +388,51 @@ describe("SessionEngine", () => {
     expect(v.dominant_threat).toBe(SpoofCategory.STATIC_IMAGE);
   });
 
-  it("texture-collapse types a screen replay (high skin) as VIDEO_REPLAY", () => {
+  it("texture-collapse types a screen replay (real eyelid motion, still) as VIDEO_REPLAY", () => {
+    // 2026-06-01: typing is by NON-rigid eyelid motion on rigid-still frames,
+    // not by skin. A video replay held steady shows genuine eyelid-blendshape
+    // variance (0.4 > 0.2 threshold) on still frames (rigidVar 5 < 30) → video.
     const engine = new SessionEngine();
     engine.start();
     for (let i = 1; i <= 400; i++) {
       tick(33);
-      engine.ingest(buildScreenFrame(i, 8, 60, 5));
+      engine.ingest(buildScreenFrame(i, 8, 60, 5, /*eyeMotion*/ 0.4, /*rigidVar*/ 5));
     }
     const v = engine.getVerdict();
     expect(v.is_live).toBe(false);
     expect(v.dominant_threat).toBe(SpoofCategory.VIDEO_REPLAY);
   });
 
-  it("a moved photo with false blinks stays STATIC_IMAGE (motion never retypes)", () => {
-    // 2026-06-01 regression: a hand-held photo logs false blinks + large
-    // landmark motion. Typing is by skin mode (≈0 → photo), NEVER by blinks,
-    // so it must not flip to video_replay.
+  it("a screen photo held still (high skin, frozen eyes) types STATIC_IMAGE not VIDEO", () => {
+    // 2026-06-01: a still photo ON A SCREEN reads high skin (~60, screen glow)
+    // — the old skin-mode logic mistyped it video_replay. With motion-gated
+    // typing it has no eyelid motion on still frames → correctly STATIC_IMAGE.
     const engine = new SessionEngine();
     engine.start();
     for (let i = 1; i <= 400; i++) {
       tick(33);
-      engine.ingest(buildScreenFrame(i, 8, 2, Math.floor(i / 20)));
+      engine.ingest(buildScreenFrame(i, 8, 60, 0, /*eyeMotion*/ 0, /*rigidVar*/ 3));
     }
     const v = engine.getVerdict();
     expect(v.is_live).toBe(false);
-    expect(v.blink_count).toBeGreaterThanOrEqual(1);
+    expect(v.dominant_threat).toBe(SpoofCategory.STATIC_IMAGE);
+  });
+
+  it("a hard-waved photo (jitter fakes eye-motion) stays STATIC_IMAGE (rigid frames gated out)", () => {
+    // 2026-06-01: violent waving manufactures fake eyelid-blendshape variance
+    // (0.4) AND huge rigid motion (rigidVar 120 > 30). Because the eyelid signal
+    // is read ONLY on rigid-still frames, every frame is gated out → too few
+    // still frames → defaults STATIC_IMAGE. The attack self-defeats.
+    const engine = new SessionEngine();
+    engine.start();
+    for (let i = 1; i <= 400; i++) {
+      tick(33);
+      engine.ingest(
+        buildScreenFrame(i, 8, 60, Math.floor(i / 20), /*eyeMotion*/ 0.4, /*rigidVar*/ 120),
+      );
+    }
+    const v = engine.getVerdict();
+    expect(v.is_live).toBe(false);
     expect(v.dominant_threat).toBe(SpoofCategory.STATIC_IMAGE);
   });
 

@@ -12,8 +12,9 @@ results match cell-by-cell once the notebook is runnable.
 
 Class collapse:
     LIVE                -> LIVE
-    REPLAY_* / PRINT /
-    MASK / DEEPFAKE     -> SPOOF
+    REPLAY_* / SCREEN_* /
+    PRINT / MASK /
+    DEEPFAKE            -> SPOOF
     everything else     -> excluded
 """
 from __future__ import annotations
@@ -43,7 +44,11 @@ def collapse_label(label: str) -> str:
     label = (label or "UNLABELED").upper()
     if label == "LIVE":
         return "LIVE"
-    if label.startswith("REPLAY") or label in ("PRINT", "MASK", "DEEPFAKE"):
+    if (
+        label.startswith("REPLAY")
+        or label.startswith("SCREEN")
+        or label in ("PRINT", "MASK", "DEEPFAKE")
+    ):
         return "SPOOF"
     return "UNLABELED"
 
