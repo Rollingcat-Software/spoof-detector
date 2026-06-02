@@ -232,7 +232,20 @@ const MEDIAPIPE_WASM_BASE =
 // the dist/ path of the same versioned npm package.
 ort.env.wasm.wasmPaths =
   "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/";
-ort.env.wasm.numThreads = 2;
+// Multi-threaded WASM needs SharedArrayBuffer, which only exists when the page
+// is cross-origin isolated (COOP/COEP — set by prod .htaccess and the dev
+// server.mjs). When isolated, scale to the machine instead of hardcoding 2:
+// an 8-core desktop was using 2 cores. Cap at 8 to avoid oversubscription and
+// mobile thermal throttling; pin to 1 when not isolated so it degrades cleanly
+// rather than silently no-opping. Logged so we stop guessing why fps varies.
+ort.env.wasm.numThreads = self.crossOriginIsolated
+  ? Math.min(navigator.hardwareConcurrency || 4, 8)
+  : 1;
+console.info(
+  `[amispoof] ORT WASM threads=${ort.env.wasm.numThreads} ` +
+    `(crossOriginIsolated=${self.crossOriginIsolated}, ` +
+    `cores=${navigator.hardwareConcurrency || "?"})`,
+);
 
 // Grouped by what the analyzer measures over time.
 // "image" = single-frame signal (works on any static input).

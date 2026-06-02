@@ -133,6 +133,51 @@ export function toBgrNchwFloat32(canvas: OffscreenCanvas): Float32Array {
   return out;
 }
 
+/** Default ImageNet normalization stats — the input contract shared with
+ *  tools/train_fas_adapter.py for vision-foundation backbones (DINOv2 / CLIP). */
+export const IMAGENET_MEAN: readonly [number, number, number] = [0.485, 0.456, 0.406];
+export const IMAGENET_STD: readonly [number, number, number] = [0.229, 0.224, 0.225];
+
+/**
+ * Convert a raw RGBA buffer (W*H*4) to a planar **RGB** Float32 NCHW tensor,
+ * per-channel mean/std normalized:
+ *
+ *   out[c*plane + i] = (rgba_c[i] / 255 - mean[c]) / std[c]
+ *
+ * Unlike MiniFASNet's `toBgrNchwFloat32` (raw BGR, no normalize), foundation
+ * backbones want RGB + ImageNet normalization. Kept as a pure function on the
+ * raw buffer so it is unit-testable without a canvas (OffscreenCanvas/getContext
+ * don't exist under vitest/node).
+ */
+export function rgbaToRgbNchwFloat32Normalized(
+  rgba: Uint8ClampedArray | Uint8Array,
+  width: number,
+  height: number,
+  mean: readonly [number, number, number] = IMAGENET_MEAN,
+  std: readonly [number, number, number] = IMAGENET_STD,
+): Float32Array {
+  const planeSize = width * height;
+  const out = new Float32Array(3 * planeSize);
+  for (let i = 0, p = 0; i < planeSize; i++, p += 4) {
+    out[i] = (rgba[p] / 255 - mean[0]) / std[0]; // R plane
+    out[planeSize + i] = (rgba[p + 1] / 255 - mean[1]) / std[1]; // G plane
+    out[2 * planeSize + i] = (rgba[p + 2] / 255 - mean[2]) / std[2]; // B plane
+  }
+  return out;
+}
+
+/** Canvas convenience wrapper around {@link rgbaToRgbNchwFloat32Normalized}. */
+export function toRgbNchwFloat32Normalized(
+  canvas: OffscreenCanvas,
+  mean: readonly [number, number, number] = IMAGENET_MEAN,
+  std: readonly [number, number, number] = IMAGENET_STD,
+): Float32Array {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("toRgbNchwFloat32Normalized: 2D ctx unavailable");
+  const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  return rgbaToRgbNchwFloat32Normalized(data, canvas.width, canvas.height, mean, std);
+}
+
 /**
  * 2-class softmax, mirrors `uniface.common.softmax` for a (1, 2) logits tensor.
  * Returns [p0, p1].
