@@ -155,24 +155,64 @@ def synthetic_loader(n: int, batch: int, device: torch.device):
         yield x[i:i + batch].to(device), y[i:i + batch].to(device)
 
 
-def hf_loader(hf_id: str, split: str, batch: int, device: torch.device):
-    """Stream a HuggingFace FAS dataset, crop/resize/normalize on the fly.
+def _pil_to_norm_tensor(img, mean, std):
+    """PIL.Image -> normalized CHW float tensor. PIL + numpy only (no
+    torchvision), so the folder loader needs just `pip install pillow`."""
+    img = img.convert("RGB").resize((INPUT_SIZE, INPUT_SIZE))
+    arr = np.asarray(img, dtype=np.float32) / 255.0  # HWC in [0,1]
+    arr = (arr - np.asarray(mean, dtype=np.float32)) / np.asarray(std, dtype=np.float32)
+    return torch.from_numpy(arr).permute(2, 0, 1).contiguous()  # CHW
 
-    Expects an image column + a binary label column (spoof=0/real=1). Different
-    mirrors name these differently; adjust IMAGE_KEY / LABEL_KEY below if needed.
-    """
+
+def folder_loader(root: str, batch: int, device: torch.device):
+    """Stream a local image folder laid out as <root>/{real,spoof}/**/*.jpg —
+    exactly what amispoof's '📸 Save crops' writes (real=1, spoof=0). An
+    `unlabeled/` dir, if present, is ignored."""
+    try:
+        from PIL import Image
+    except ImportError as exc:  # pragma: no cover
+        raise SystemExit("Folder datasets need `pip install pillow`.") from exc
+    from pathlib import Path as _P
+
+    base = _P(root)
+    exts = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
+    items: list[tuple[Path, int]] = []
+    for label, sub in ((1, "real"), (0, "spoof")):
+        d = base / sub
+        if not d.exists():
+            continue
+        for p in d.rglob("*"):
+            if p.suffix.lower() in exts:
+                items.append((p, label))
+    if not items:
+        raise SystemExit(f"No images under {base}/real or {base}/spoof.")
+    n_real = sum(1 for _, l in items if l == 1)
+    print(f"  folder dataset: {n_real} real / {len(items) - n_real} spoof "
+          f"({len(items)} crops)")
+
+    buf_x, buf_y = [], []
+    for p, label in items:
+        with Image.open(p) as img:
+            buf_x.append(_pil_to_norm_tensor(img, IMAGENET_MEAN, IMAGENET_STD))
+        buf_y.append(label)
+        if len(buf_x) == batch:
+            yield torch.stack(buf_x).to(device), torch.tensor(buf_y, device=device)
+            buf_x, buf_y = [], []
+    if buf_x:
+        yield torch.stack(buf_x).to(device), torch.tensor(buf_y, device=device)
+
+
+def hf_loader(hf_id: str, split: str, batch: int, device: torch.device):
+    """Stream a HuggingFace FAS dataset (image col + binary label col),
+    PIL-normalized (no torchvision)."""
     try:
         from datasets import load_dataset
         from PIL import Image  # noqa: F401
-        import torchvision.transforms as T
     except ImportError as exc:  # pragma: no cover
-        raise SystemExit(
-            "Real datasets need `pip install datasets pillow torchvision`."
-        ) from exc
+        raise SystemExit("HF datasets need `pip install datasets pillow`.") from exc
 
     IMAGE_KEY_CANDIDATES = ("image", "img", "jpg")
     LABEL_KEY_CANDIDATES = ("label", "labels", "spoof_label", "cls")
-
     ds = load_dataset(hf_id, split=split)
     image_key = next((k for k in IMAGE_KEY_CANDIDATES if k in ds.features), None)
     label_key = next((k for k in LABEL_KEY_CANDIDATES if k in ds.features), None)
@@ -182,16 +222,9 @@ def hf_loader(hf_id: str, split: str, batch: int, device: torch.device):
             f"Columns: {list(ds.features)}. Edit *_KEY_CANDIDATES."
         )
 
-    tf = T.Compose([
-        T.Resize((INPUT_SIZE, INPUT_SIZE)),
-        T.ToTensor(),  # [0,1], CHW, RGB
-        T.Normalize(IMAGENET_MEAN, IMAGENET_STD),
-    ])
-
     buf_x, buf_y = [], []
     for row in ds:
-        img = row[image_key].convert("RGB")
-        buf_x.append(tf(img))
+        buf_x.append(_pil_to_norm_tensor(row[image_key], IMAGENET_MEAN, IMAGENET_STD))
         # Normalize label semantics to [spoof=0, real=1]. Many FAS mirrors use
         # 1=spoof/attack — flip with --flip-labels if your AUC comes out < 0.5.
         buf_y.append(int(row[label_key]))
@@ -213,11 +246,16 @@ def train(model: FasModel, args, device: torch.device) -> None:
     for epoch in range(args.epochs):
         t0 = time.time()
         seen, correct, loss_sum = 0, 0, 0.0
-        if args.dataset == "synthetic" or args.smoke:
+        if args.dataset.startswith("folder:"):
+            batches = folder_loader(
+                args.dataset.split("folder:", 1)[1], args.batch_size, device
+            )
+        elif args.dataset.startswith("hf:"):
+            batches = hf_loader(
+                args.dataset.split("hf:", 1)[1], args.split, args.batch_size, device
+            )
+        else:  # 'synthetic' default — also what --smoke uses (smoke only swaps backbone)
             batches = synthetic_loader(args.smoke_n, args.batch_size, device)
-        else:
-            hf_id = args.dataset.split("hf:", 1)[-1]
-            batches = hf_loader(hf_id, args.split, args.batch_size, device)
         for xb, yb in batches:
             if args.flip_labels:
                 yb = 1 - yb

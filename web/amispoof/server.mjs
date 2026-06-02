@@ -37,6 +37,12 @@ const ROOT = resolve(fileURLToPath(import.meta.url), "..");
 // of relying on the browser's download dialog (which Brave blocks behind an
 // "ask where to save" prompt the automation can't dismiss).
 const DATA_DIR = resolve(ROOT, "..", "..", "notebooks", "data");
+// Face-crop dataset dir (spoof-detector/notebooks/crops). DEV-ONLY, same rationale
+// as DATA_DIR. Holds the IMAGE dataset for tools/train_fas_adapter.py — the
+// session JSONs in DATA_DIR are score telemetry, not pixels, so a vision model
+// can't train on them. Layout: crops/<real|spoof|unlabeled>/<subject>/<file>.jpg
+// (gitignored — face images are never committed).
+const CROPS_DIR = resolve(ROOT, "..", "..", "notebooks", "crops");
 
 const MIME = {
   ".html": "text/html; charset=utf-8",
@@ -96,6 +102,41 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
       res.end(JSON.stringify({ saved: name, bytes: body.length }));
       console.log(`  [save] ${name} (${body.length} bytes) → notebooks/data/`);
+      return;
+    }
+
+    // --- DEV-ONLY face-crop sink -----------------------------------------
+    // POST /__save-crop?class=LIVE&subject=AAG&ts=...  body=<jpeg bytes>
+    //   → notebooks/crops/<real|spoof|unlabeled>/<subject>/<class>-<ts>.jpg
+    // Builds the IMAGE training set for tools/train_fas_adapter.py. Class maps
+    // to the trainer's binary folder loader: LIVE→real, UNLABELED→unlabeled
+    // (trainer skips it), everything else→spoof. The fine class is kept in the
+    // filename so analysis can still split REPLAY vs SCREEN vs PRINT.
+    if (req.method === "POST" && url.pathname === "/__save-crop") {
+      const chunks = [];
+      for await (const c of req) chunks.push(c);
+      const buf = Buffer.concat(chunks);
+      if (buf.length === 0 || buf.length > 5_000_000) {
+        res.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" });
+        res.end("Empty or oversized crop");
+        return;
+      }
+      const rawClass = (url.searchParams.get("class") || "UNLABELED").toUpperCase();
+      const binary =
+        rawClass === "LIVE" ? "real" : rawClass === "UNLABELED" ? "unlabeled" : "spoof";
+      const subject =
+        (basename(url.searchParams.get("subject") || "unknown")
+          .replace(/[^A-Za-z0-9._-]/g, "-")
+          .slice(0, 40)) || "unknown";
+      const classSlug = rawClass.replace(/[^A-Za-z0-9._-]/g, "-").toLowerCase();
+      const ts = (url.searchParams.get("ts") || String(Date.now())).replace(/[^0-9]/g, "");
+      const dir = join(CROPS_DIR, binary, subject);
+      await mkdir(dir, { recursive: true });
+      const name = `${classSlug}-${ts || Date.now()}.jpg`;
+      await writeFile(join(dir, name), buf);
+      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+      res.end(JSON.stringify({ saved: `${binary}/${subject}/${name}`, bytes: buf.length }));
+      console.log(`  [crop] ${binary}/${subject}/${name} (${buf.length} bytes)`);
       return;
     }
 

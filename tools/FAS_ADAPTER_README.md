@@ -25,8 +25,10 @@ model** — they only validate the *session logic*. Training images come from:
    the paper already cites). Fastest path to a first model; generalizes far better
    than the YOLOv8 dead-end (`l_version_1_300`) because DINOv2 features transfer.
 2. **Your own face crops, captured going forward.** The only way to fit *your*
-   cameras + multiple subjects. Requires adding a local crop-save to amispoof
-   (see "Next steps") — keep crops local + gitignored; never commit face images.
+   cameras + multiple subjects. amispoof has a **DEV-ONLY "📸 Save crops" toggle**
+   (shown on localhost only) that writes 224px crops straight into the trainer's
+   folder layout — see "Capture your own crops" below. Crops are gitignored;
+   face images are never committed.
 
 ## Run it
 
@@ -34,9 +36,16 @@ model** — they only validate the *session logic*. Training images come from:
 # 1. Plumbing check — no downloads, ~5 s. Proves train→export→ORT-load works.
 python tools/train_fas_adapter.py --smoke --out models/fas_head_smoke.onnx
 
-# 2. Real training. Downloads DINOv2 (~85 MB, torch.hub) + the dataset.
-#    Backbone is FROZEN so this fits the GTX 1650 (4 GB) — only the head trains.
-pip install datasets pillow torchvision        # one-time, for real datasets
+# 2a. Train on your own captured crops (see "Capture your own crops"). Needs
+#     only pillow. With --smoke uses the no-download stub backbone (fast check);
+#     drop --smoke + add --backbone dinov2_vits14 for the real model.
+pip install pillow
+python tools/train_fas_adapter.py --dataset folder:notebooks/crops \
+    --backbone dinov2_vits14 --epochs 10 --out models/fas_head_dinov2.onnx --fp16
+
+# 2b. Or train on a public dataset. Downloads DINOv2 (~85 MB) + the dataset.
+#     Backbone is FROZEN so this fits the GTX 1650 (4 GB) — only the head trains.
+pip install datasets pillow        # one-time, for HF datasets
 python tools/train_fas_adapter.py \
     --backbone dinov2_vits14 \
     --dataset hf:nguyenkhoa/CASIA-FASD \
@@ -47,9 +56,24 @@ python tools/train_fas_adapter.py \
 ```
 
 Heavy/optional deps, NOT auto-installed (you're on metered data sometimes):
-`onnx` (export, ~17 MB — already installed), `datasets/pillow/torchvision`
-(real data), `onnxconverter-common` (`--fp16`), `open_clip_torch` (CLIP backbone),
-DINOv2 weights (~85 MB on first `--backbone dinov2_*` run).
+`onnx` (export, ~17 MB — already installed), `pillow` (folder mode, small),
+`datasets` (HF mode), `onnxconverter-common` (`--fp16`), `open_clip_torch` (CLIP
+backbone), DINOv2 weights (~85 MB on first `--backbone dinov2_*` run). No
+torchvision needed (PIL + numpy do the resize/normalize).
+
+## Capture your own crops (the multi-subject path)
+
+1. Run amispoof locally so the dev endpoint exists:
+   `cd web && npm run amispoof:serve` → open `http://localhost:8791`.
+2. In the capture bar, set **Class** (LIVE / REPLAY_* / SCREEN_STATIC / PRINT …)
+   and **Notes** = the subject's initials (e.g. `AAG`). Tick **📸 Save crops**
+   (only visible on localhost).
+3. Run a session per subject × condition. It saves ~1 crop/s to
+   `notebooks/crops/<real|spoof>/<subject>/<class>-<ts>.jpg` (LIVE→real,
+   others→spoof; fine class kept in the filename). Geometry matches the
+   analyzer's inference crop, so train ≈ inference.
+4. Capture **3–5 distinct people** (the one axis the 86 session JSONs lack), then
+   train with `--dataset folder:notebooks/crops`.
 
 ## Wire it into amispoof
 
@@ -76,7 +100,10 @@ DINOv2 weights (~85 MB on first `--backbone dinov2_*` run).
 
 ## Next steps (in priority order)
 
-1. **Multi-subject face-crop capture** in amispoof (local, gitignored) → the only
-   path to a model that fits your cameras + the 3-5 subjects the paper needs.
-2. Train on CASIA-FASD/CelebA-Spoof for a zero-shot baseline; measure AUC.
-3. Validate with GroupKFold, then (only then) add to the fuser with a small weight.
+1. ✅ **Crop capture shipped** (amispoof "📸 Save crops" + `folder:` loader).
+   → Now go collect **3-5 distinct people** (the one axis the 86 JSONs lack).
+2. Train on those crops (`--dataset folder:notebooks/crops`) and/or CASIA-FASD/
+   CelebA-Spoof for a zero-shot baseline; measure AUC.
+3. Validate with GroupKFold (group by subject), then (only then) add to the fuser
+   with a small weight — never decalibrate the shipped detector on unproven data.
+4. Wire the analyzer into amispoof's SpoofDetector behind a flag once it's trained.

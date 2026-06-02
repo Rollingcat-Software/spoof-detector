@@ -557,6 +557,10 @@ const els = {
   countLive: $("countLive"),
   countSpoof: $("countSpoof"),
   countOther: $("countOther"),
+  // DEV-ONLY face-crop dataset capture (hidden unless localhost).
+  cropCaptureWrap: $("cropCaptureWrap"),
+  cropCapture: $("cropCapture"),
+  cropStatus: $("cropStatus"),
   // Inline analysis modal — opens the in-page analysis panel without
   // needing to download the JSON and run the Python notebook.
   analysisBtn: $("analysisBtn"),
@@ -1248,6 +1252,7 @@ async function loop() {
     }
     drawOverlay(analysis, v);
     updateUI(analysis, v);
+    maybeSaveCrop(); // DEV-ONLY dataset crop capture (no-op unless toggle on)
   } catch (err) {
     console.error("frame error", err);
     setStatus(`frame error: ${err.message || err}`, "error");
@@ -1805,6 +1810,15 @@ els.stop.addEventListener("click", stop);
 els.reset.addEventListener("click", reset);
 els.download.addEventListener("click", download);
 
+// Reveal the DEV-ONLY crop-capture toggle only on localhost — the static prod
+// site has no /__save-crop endpoint, so it stays hidden there.
+(function initCropCaptureToggle() {
+  const host = (typeof location !== "undefined" && location.hostname) || "";
+  const isLocal = host === "localhost" || host === "127.0.0.1" || host === "[::1]";
+  if (isLocal && els.cropCaptureWrap) els.cropCaptureWrap.style.display = "flex";
+  if (els.cropCapture) els.cropCapture.addEventListener("change", updateCropStatus);
+})();
+
 // ===== Inline 📊 Analysis panel =====
 // Renders the current session's analysis directly in the page — verdict
 // trajectory sparkline, top-firing analyzers, incident timeline, environment
@@ -2050,6 +2064,90 @@ function captureFaceCrop() {
   }
   if (bw <= 4 || bh <= 4) return null;
   return cx.getImageData(bx0, by0, bw, bh);
+}
+
+// ===== DEV-ONLY face-crop dataset capture =====
+// When the "📸 Save crops" toggle is on (shown on localhost only), periodically
+// POST the padded-square 224px face crop to the dev server's /__save-crop,
+// tagged with the capture Class + Notes(subject). Builds the IMAGE dataset for
+// tools/train_fas_adapter.py — the session JSONs are score telemetry, not
+// pixels. Crop geometry (pad 0.3, square, 224) matches FoundationModelAnalyzer
+// so training crops equal inference crops. Reads only els.video + lastFaceBbox
+// and fires a fire-and-forget fetch → zero effect on detection/verdict, and a
+// no-op on the static prod site (no endpoint, toggle hidden).
+const CROP_SAVE_INTERVAL_MS = 1000;
+const CROP_OUT_SIZE = 224; // FoundationModelAnalyzer input side
+const CROP_PAD = 0.3; // FoundationModelAnalyzer cropPad
+let lastCropSaveAt = 0;
+let cropSaveCount = 0;
+let cropSaveError = false;
+
+function buildFaceCropCanvas() {
+  const w = els.video?.videoWidth || 0;
+  const h = els.video?.videoHeight || 0;
+  if (!w || !h || !lastFaceBbox) return null;
+  const b = lastFaceBbox;
+  const bw = Math.max(1, b.x2 - b.x1);
+  const bh = Math.max(1, b.y2 - b.y1);
+  const cx = b.x1 + bw / 2;
+  const cy = b.y1 + bh / 2;
+  let side = Math.floor(Math.max(bw, bh) * (1 + 2 * CROP_PAD));
+  side = Math.min(side, w, h);
+  if (side <= 8) return null;
+  const x = Math.max(0, Math.min(Math.floor(cx - side / 2), w - side));
+  const y = Math.max(0, Math.min(Math.floor(cy - side / 2), h - side));
+  const out = document.createElement("canvas");
+  out.width = CROP_OUT_SIZE;
+  out.height = CROP_OUT_SIZE;
+  const octx = out.getContext("2d");
+  if (!octx) return null;
+  octx.imageSmoothingEnabled = true;
+  octx.imageSmoothingQuality = "high";
+  octx.drawImage(els.video, x, y, side, side, 0, 0, CROP_OUT_SIZE, CROP_OUT_SIZE);
+  return out;
+}
+
+function updateCropStatus() {
+  if (!els.cropStatus) return;
+  els.cropStatus.textContent = cropSaveError
+    ? "(needs dev server)"
+    : cropSaveCount > 0
+      ? `${cropSaveCount} saved`
+      : "";
+}
+
+function maybeSaveCrop() {
+  if (!els.cropCapture || !els.cropCapture.checked) return;
+  const now = performance.now();
+  if (now - lastCropSaveAt < CROP_SAVE_INTERVAL_MS) return;
+  const crop = buildFaceCropCanvas();
+  if (!crop) return; // no face detected this frame — skip
+  lastCropSaveAt = now;
+  const cls = els.captureLabel?.value || "UNLABELED";
+  const subject = (els.captureNotes?.value || "").trim() || "unknown";
+  crop.toBlob(
+    (blob) => {
+      if (!blob) return;
+      const qs = new URLSearchParams({
+        class: cls,
+        subject,
+        ts: String(Date.now()),
+        build: window.AMISPOOF_VERSION || "unknown",
+      });
+      fetch(`/__save-crop?${qs.toString()}`, { method: "POST", body: blob })
+        .then((r) => {
+          cropSaveError = !r.ok;
+          if (r.ok) cropSaveCount += 1;
+          updateCropStatus();
+        })
+        .catch(() => {
+          cropSaveError = true;
+          updateCropStatus();
+        });
+    },
+    "image/jpeg",
+    0.92,
+  );
 }
 
 /** Mean per-pixel brightness (max of R,G,B) over the current face crop, 0-255. */

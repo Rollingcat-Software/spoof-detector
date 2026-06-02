@@ -57,6 +57,10 @@ data/in_house_clean/
 notebooks/data/*.json
 !notebooks/data/.gitkeep
 
+# Face-crop image dataset for tools/train_fas_adapter.py — written by amispoof's
+# DEV-ONLY '📸 Save crops' toggle. Face images are NEVER committed.
+notebooks/crops/
+
 # amispoof vendor bundle — onnxruntime-web + @mediapipe/tasks-vision copied
 # from node_modules at build time (`npm run amispoof:bundle`). 80+ MB binary
 # WASM blobs; not source code. Regenerate locally; do not commit.
