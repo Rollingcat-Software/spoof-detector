@@ -449,6 +449,58 @@ describe("SessionEngine", () => {
     expect(texInc.length).toBe(0);
   });
 
+  it("texture collapse only DURING MOTION (real moving face) is suppressed", () => {
+    // 2026-06-02 motion-blur suppressor. A real face MOVING blurs texture (low)
+    // during motion but is fine when still. All-frame low-fraction is high, but
+    // on rigid-still frames texture is fine → suppress. Reproduces the live
+    // false reject (real face at 50cm moving → was SPOOF static_image). Skin is
+    // screen-like (60) to prove the suppressor returns BEFORE the skin path.
+    const engine = new SessionEngine();
+    engine.start();
+    for (let i = 1; i <= 400; i++) {
+      tick(33);
+      const moving = i % 2 === 0;
+      engine.ingest(
+        buildScreenFrame(
+          i,
+          moving ? 10 : 60, // texture collapses ONLY while moving (blur)
+          60, // skin screen-like — must never be reached (suppressed first)
+          Math.floor(i / 30), // natural blinks
+          0,
+          moving ? 100 : 5, // rigidVar: moving vs rigid-still
+        ),
+      );
+    }
+    const v = engine.getVerdict();
+    // The texture-collapse veto must NOT fire: on rigid-still frames the texture
+    // is fine, so the collapse is motion-blur, not a photo/screen. (Other
+    // synthetic-frame incidents are irrelevant here; this guards the veto only.)
+    const texInc = v.incidents.filter((inc) =>
+      /Texture collapse/.test(inc.description),
+    );
+    expect(texInc.length).toBe(0);
+  });
+
+  it("skin<5 photo path under HIGH MOTION (blurred real face) does not fire", () => {
+    // 2026-06-02 photo-path stillness gate. A real face moving at distance blurs
+    // texture AND momentarily drops skin<5, looking photo-like — but a printed
+    // photo is held STILL. Under high rigid motion the photo path is rejected
+    // (a waved photo is instead caught by planarity). This was the live false
+    // reject (skin median 3 + motion median ~65 → fired photo path → SPOOF).
+    const engine = new SessionEngine();
+    engine.start();
+    for (let i = 1; i <= 400; i++) {
+      tick(33);
+      engine.ingest(
+        buildScreenFrame(i, 10, 2, Math.floor(i / 30), 0, /*rigidVar*/ 100),
+      );
+    }
+    const texInc = engine
+      .getVerdict()
+      .incidents.filter((inc) => /Texture collapse/.test(inc.description));
+    expect(texInc.length).toBe(0);
+  });
+
   it("requireProverLive is opt-in: default false leaves verdict to fusion only", () => {
     // With requireProverLive default (false), even a never-proved prover
     // (score 0) shouldn't block a clean live session.
