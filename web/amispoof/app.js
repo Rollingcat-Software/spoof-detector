@@ -23,15 +23,14 @@ import {
 // Version handshake — checked by the inline script in index.html.
 // If the user is running a stale cached app.js (no AMISPOOF_VERSION),
 // the HTML triggers a one-shot reload after 4 s.
-window.AMISPOOF_VERSION = "2026-06-01-motion-typing";
+window.AMISPOOF_VERSION = "2026-06-02-honest-confidence";
 
-// SessionEngine.getVerdict() returns a confidence in [0, 0.88] when the
-// LivenessProver is wired (structural ceiling — see SessionEngine.ts
-// confidence formula: 0.3 floor + 0.3 prover-max + 0.28 fusion-max).
-// Human-facing surfaces (the verdict badge and copy-to-clipboard text)
-// normalize to [0, 100] so users don't read 81% as "still uncertain".
-// Machine surfaces (downloaded JSON, bench rows) keep the raw value.
-const RAW_CONFIDENCE_CEILING = 0.88;
+// SessionEngine.getVerdict() confidence is now a CERTAINTY in [0, 1] (2026-06-02
+// boundary-margin formula): distance of the evidence from the live/spoof
+// decision boundary, so a WRONG verdict reads low. No rescale needed — show the
+// raw value as a percent. (Was [0, 0.88] under the old floor+activity formula
+// which the UI divided back out; that cosmetic ceiling is gone.)
+const RAW_CONFIDENCE_CEILING = 1.0;
 function displayConfPct(rawConfidence) {
   const normalized = (rawConfidence ?? 0) / RAW_CONFIDENCE_CEILING;
   const clamped = Math.max(0, Math.min(1, normalized));
@@ -1885,7 +1884,7 @@ function renderAnalysis() {
 
   const verdictWord = v.is_live ? "LIVE" : v.quality_uncertain ? "UNCERTAIN" : "SPOOF";
   const pillClass = v.is_live ? "live" : v.quality_uncertain ? "uncertain" : "spoof";
-  const confPct = Math.round((v.confidence ?? 0) * 100 / 0.88);
+  const confPct = displayConfPct(v.confidence);
 
   // === Trajectory sparkline (is_live + confidence) ===
   const sparkW = 700, sparkH = 90, padX = 4, padY = 6;

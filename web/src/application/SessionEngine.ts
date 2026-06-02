@@ -1051,19 +1051,36 @@ export class SessionEngine {
     const qualityUncertain = baseLive && !qualityOk && !proofTrumpsQuality;
     const isLive = baseLive && (qualityOk || proofTrumpsQuality);
 
+    // 2026-06-02 — confidence = CERTAINTY of the verdict (how far the evidence
+    // sits from the 0.45 live/spoof boundary), NOT a floor+activity blend.
+    //
+    // The old formula `0.3*activity + 0.3 + 0.4*(adjustedReal-0.3)` had two
+    // structural flaws the user reported: (a) a constant +0.3 floor → confidence
+    // never read low, and (b) a 0.3*proverConfidence ACTIVITY term — but the
+    // prover measures activity, which an animated replay also has. The result:
+    // on the labelled set it separated CORRECT from WRONG verdicts by only +0.04
+    // (a 78%-spoof and a 79%-live looked identical). It also capped at exactly
+    // 0.88, which the UI then divided back out — a cosmetic ceiling.
+    //
+    // The certainty form separates correct vs wrong by +0.22 (5.5×): a wrong
+    // verdict now reads LOW confidence so the surface can flag "uncertain — retry"
+    // instead of showing a confident wrong answer. For SPOOF, certainty rises
+    // with low live-evidence OR incident count; for LIVE it's the margin above
+    // the boundary, with proof as a MILD corroborator only. dataConfidence still
+    // ramps it in over the first 5 s; a poor-quality capture is still pinned low.
     const proverConfidence = proverScore ? proverScore.total / 100.0 : 0;
-    let confidence = this.prover
-      ? Math.min(
-          1.0,
-          dataConfidence *
-            (0.3 * proverConfidence +
-              0.3 +
-              0.4 * Math.max(0, adjustedReal - 0.3)),
-        )
-      : Math.min(
-          1.0,
-          dataConfidence * (0.5 + 0.4 * Math.max(0, adjustedReal - 0.3)),
-        );
+    let certainty: number;
+    if (!isLive) {
+      const evidenceCertainty =
+        adjustedReal < 0.45 ? (0.45 - adjustedReal) / 0.45 : 0;
+      const incidentCertainty = Math.min(1, this.incidents.length / 6);
+      certainty = Math.max(evidenceCertainty, incidentCertainty);
+    } else {
+      certainty =
+        ((adjustedReal - 0.45) / (0.85 - 0.45)) *
+        (0.6 + 0.4 * proverConfidence);
+    }
+    let confidence = Math.min(1.0, dataConfidence * Math.max(0, certainty));
 
     // An uncertain (poor-quality) verdict must read as low-confidence so the
     // surface prompts a re-capture rather than showing a strong number.

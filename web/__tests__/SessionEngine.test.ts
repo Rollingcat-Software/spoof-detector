@@ -282,6 +282,36 @@ describe("SessionEngine", () => {
     expect(v.dominant_threat).toBeNull();
   });
 
+  it("confidence reflects evidence margin, not a constant floor (2026-06-02)", () => {
+    // New boundary-margin confidence: stronger live evidence → higher confidence.
+    // The old formula's +0.3 floor + activity term made every live verdict look
+    // ~equally confident (correct-vs-wrong separation +0.04 — the user's
+    // "confidence is not reliable"). Here a strong-live session must read clearly
+    // MORE confident than a borderline one.
+    function run(pReal: number): { live: boolean; conf: number } {
+      const engine = new SessionEngine();
+      engine.start();
+      for (let i = 1; i <= 200; i++) {
+        tick(33);
+        engine.ingest(
+          buildFrame({
+            frameId: i,
+            pReal,
+            blinks: Math.floor(i / 30),
+            miniFasNetScore: 95,
+            drift: (i % 10) * 0.5,
+          }),
+        );
+      }
+      const v = engine.getVerdict();
+      return { live: v.is_live, conf: v.confidence };
+    }
+    const strong = run(0.95);
+    const borderline = run(0.62);
+    expect(strong.live).toBe(true);
+    expect(strong.conf).toBeGreaterThan(borderline.conf + 0.1);
+  });
+
   it("sustained spoof burst flags the session via worst-window even after recovery", () => {
     // Peak-sensitivity guard: a brief sustained spoof window should drag
     // worstWindowReal low enough that the session is flagged, even when
