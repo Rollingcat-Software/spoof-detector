@@ -38,7 +38,7 @@
     "browser"
   ],
   "author": "Rollingcat / FIVUCSAS",
-  "license": "Apache-2.0",
+  "license": "MIT",
   "peerDependencies": {
     "@mediapipe/tasks-vision": "^0.10.18",
     "onnxruntime-web": "^1.18.0"
