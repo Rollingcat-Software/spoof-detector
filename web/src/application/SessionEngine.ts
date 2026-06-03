@@ -154,6 +154,19 @@ export class SessionEngine {
   // from low-light camera-noise overlap; the co-signal AND-gate is the
   // anti-false-positive primitive.
   static readonly TEXTURE_COSIGNAL_SKIN_MIN = 30;
+  // CALIBRATION CORRECTION (2026-06-03): the "LIVE skin_score 0.1-27.8" claim
+  // above is FALSIFIED by a real mobile LIVE recording (skin_score 28-62,
+  // median ~49 — inside the "screen-like >=30" band). The skin co-signal does
+  // NOT protect real mobile faces; the dim-light gate below is what does.
+  //
+  // Dim-light gate. Sustained low Laplacian texture in DIM light is camera
+  // noise-reduction smoothing real skin, not a screen. The texture-collapse
+  // veto therefore only fires when mean illumination is at least this high;
+  // below it the texture reading is untrustworthy and the veto abstains. 0.5
+  // sits between the hard dim floor (QUALITY_ILLUM_FLOOR 0.35) and a normally
+  // lit face (~0.8). This is the fix for the camera-dependent false-reject
+  // (real person → 100% SPOOF on a warm / dim camera, LIVE on a bright one).
+  static readonly TEXTURE_REQUIRE_ILLUM = 0.5;
   // PHOTO path (2026-06-01). A static image — paper photo or a still photo
   // shown on a screen — has flat texture like a video replay, but its
   // skin_score sits at ~0 (no through-a-screen live-skin reflectance AND no
@@ -217,6 +230,15 @@ export class SessionEngine {
   // illumination floor below remains the hard gate against dim captures.
   static readonly QUALITY_USABLE_RATIO = 0.3;
   static readonly QUALITY_ILLUM_FLOOR = 0.35;
+  // Incident-override window (2026-06-03). The >=3-incident SPOOF override used
+  // to count ALL incidents ever raised in the session (append-only, never
+  // decayed). Over a multi-minute real session even a ~1 % stray-incident rate
+  // inevitably reaches 3 and latches to SPOOF forever (this is the same failure
+  // mode the texture-veto V1→V3 saga kept hitting). A genuine attack fires
+  // incidents DENSELY (every 2.5-5 s), so counting only incidents within this
+  // recent window still latches sustained attacks immediately, while sparse
+  // stray incidents from a long real session age out instead of accumulating.
+  static readonly INCIDENT_OVERRIDE_WINDOW_SEC = 30.0;
 
   private readonly sessionId: string;
   private state: SessionState = SessionState.WARMING_UP;
@@ -434,6 +456,14 @@ export class SessionEngine {
   ): void {
     const planarity = cls.analyzer_results["planarity"];
     if (!planarity) return;
+    // Liveness co-signal (2026-06-03). A printed photo NEVER blinks; a real
+    // person who has blinked is alive. The browser-port MediaPipe planarity fit
+    // dips below the spoof threshold during a normal head-turn for REAL faces
+    // too, so a bare `planarity < 45` flagged real people who turned their head
+    // as STATIC_IMAGE (then the >=3 latch locked SPOOF). Once a blink has been
+    // observed we stop raising planar incidents. A genuine print (no blink ever)
+    // still trips this veto, and the no-blink veto remains the backstop.
+    if (this.lastBlinkCount >= 1) return;
     // measured:false means there wasn't enough rotation to judge planarity —
     // never penalise those frames (keeps the false-reject rate untouched).
     if (planarity.details["measured"] !== true) return;
@@ -537,6 +567,23 @@ export class SessionEngine {
     }
     const lowFraction = lowCount / samples.length;
     if (lowFraction < SessionEngine.TEXTURE_LOW_FRACTION_SPOOF) return;
+
+    // 2026-06-03 DIM-LIGHT gate. Sustained low Laplacian texture in dim light
+    // is camera noise-reduction smoothing real skin, not a screen — and the
+    // skin co-signal below can't separate the two (real mobile skin_score ~49
+    // is inside the "screen-like" band). So a real person on a warm / dim
+    // camera read 100 % SPOOF. Only treat the collapse as a replay signal when
+    // the scene is well-lit enough to trust the texture reading; otherwise
+    // abstain. Gate-less consumers (no illumination samples) keep prior
+    // behaviour. See TEXTURE_REQUIRE_ILLUM.
+    const illumSamples = this.qualitySamples.toArray();
+    if (illumSamples.length >= SessionEngine.QUALITY_MIN_SAMPLES) {
+      let illumSum = 0;
+      for (const q of illumSamples) illumSum += q.illum;
+      if (illumSum / illumSamples.length < SessionEngine.TEXTURE_REQUIRE_ILLUM) {
+        return;
+      }
+    }
 
     // 2026-06-02 motion-blur SUPPRESSOR (fixes a live false reject: a real face
     // at 50 cm MOVING was verdicted SPOOF static_image). A real moving face's
@@ -1016,7 +1063,20 @@ export class SessionEngine {
       this.prover === null || !this.requireProverLive
         ? true
         : (proverScore?.total ?? 0) >= 60;
-    const incidentOverride = this.incidents.length >= 3;
+    // WINDOWED override (2026-06-03, was all-time `incidents.length >= 3`).
+    // Incidents are append-only and never decayed, so a multi-minute real
+    // session inevitably accrues 3 stray incidents and latches SPOOF forever.
+    // A genuine attack fires incidents DENSELY, so a recent-window count still
+    // latches sustained attacks immediately while sparse stray incidents age
+    // out. Consumers wanting strict "any spoof at any point latches" semantics
+    // (proctoring) additionally gate via requireProverLive.
+    let recentIncidentCount = 0;
+    for (const inc of this.incidents) {
+      if (elapsed - inc.timestamp <= SessionEngine.INCIDENT_OVERRIDE_WINDOW_SEC) {
+        recentIncidentCount += 1;
+      }
+    }
+    const incidentOverride = recentIncidentCount >= 3;
     const baseLive = adjustedReal > 0.45 && proverLive && !incidentOverride;
     // Capture-quality floor: a would-be-LIVE poor-quality capture is reported
     // UNCERTAIN (re-capture), never a confident LIVE. A genuine spoof

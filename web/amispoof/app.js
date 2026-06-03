@@ -18,12 +18,12 @@ import {
   FlashTemporalAnalyzer,
   ReadinessGate,
   DEFAULT_ANALYZER_WEIGHTS,
-} from "./lib/spoof-detector.js?v=2026-06-02-honest-confidence";
+} from "./lib/spoof-detector.js?v=2026-06-03-camera-falsereject";
 
 // Version handshake — checked by the inline script in index.html.
 // If the user is running a stale cached app.js (no AMISPOOF_VERSION),
 // the HTML triggers a one-shot reload after 4 s.
-window.AMISPOOF_VERSION = "2026-06-02-honest-confidence";
+window.AMISPOOF_VERSION = "2026-06-03-camera-falsereject";
 
 // SessionEngine.getVerdict() confidence is now a CERTAINTY in [0, 1] (2026-06-02
 // boundary-margin formula): distance of the evidence from the live/spoof
