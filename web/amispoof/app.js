@@ -568,13 +568,14 @@ const els = {
   analysisClose: $("analysisClose"),
 };
 
-// === Hard-coded per-analyzer cross-session AUC values =========================
+// === Hard-coded per-analyzer in-house sample scores (n=14) ====================
 // Derived 2026-05-31 from the in-house frame-log dataset (6 LIVE + 8 SPOOF
 // sessions, ~23k frames, captured across daylight / room / before-sunset /
-// home-sunset / video-call). These are TOP-LINE .score AUC values — the
-// signal each analyzer feeds into the MultiClassFuser at its top level.
-// (Some analyzers have much stronger SUB-feature AUCs e.g. texture.texture_score
-// 0.92 or screen_replay.skin_score 0.89, but those aren't fuser inputs.)
+// home-sunset / video-call). These are a thin in-house separability estimate
+// of each analyzer's TOP-LINE .score (the signal it feeds into the
+// MultiClassFuser) — NOT a benchmark AUC; 14 sessions is too small to badge
+// as one. (Some analyzers separate much better at the SUB-feature level e.g.
+// texture.texture_score or screen_replay.skin_score, but those aren't fuser inputs.)
 //
 // Update freely as the dataset grows — re-run `python notebooks/build_report.py`
 // to regenerate. These constants document what the operator should expect to
@@ -621,7 +622,7 @@ function buildAnalyzerGroup(title, group) {
     row.title = cfg.desc;
     const auc = ANALYZER_TOPLINE_AUC[cfg.name];
     const aucPill = auc != null
-      ? `<span class="auc ${aucClass(auc)}" title="In-house cross-session top-line AUC (2026-05-31 dataset, n=14 sessions)">AUC ${auc.toFixed(2)}</span>`
+      ? `<span class="auc ${aucClass(auc)}" title="In-house sample score (n=14 sessions, 2026-05-31 dataset) — a thin in-house separability estimate, NOT a benchmark AUC">sample ${auc.toFixed(2)}</span>`
       : "";
     row.innerHTML = `
       <span class="name">${cfg.label} <span class="weight">w ${cfg.weight}</span> ${aucPill}</span>
@@ -1913,7 +1914,7 @@ function renderAnalysis() {
     <tr>
       <td>${s.name}</td>
       <td><span class="ana-bar" style="width:${Math.max(2, s.score)}px"></span> ${s.score.toFixed(0)}</td>
-      <td>${s.auc != null ? `AUC ${s.auc.toFixed(2)}` : "—"}</td>
+      <td>${s.auc != null ? `sample ${s.auc.toFixed(2)}` : "—"}</td>
     </tr>`;
 
   // === Incidents (with veto-texture highlight) ===
@@ -1956,13 +1957,13 @@ function renderAnalysis() {
 
     <h3>Top 5 LIVE-side analyzers (lifting the verdict)</h3>
     <table>
-      <thead><tr><th>analyzer</th><th>score (0-100)</th><th>cross-session AUC</th></tr></thead>
+      <thead><tr><th>analyzer</th><th>score (0-100)</th><th>in-house sample score (n=14)</th></tr></thead>
       <tbody>${top.map(renderRow).join("")}</tbody>
     </table>
 
     <h3>Bottom 5 analyzers (dragging the verdict down)</h3>
     <table>
-      <thead><tr><th>analyzer</th><th>score (0-100)</th><th>cross-session AUC</th></tr></thead>
+      <thead><tr><th>analyzer</th><th>score (0-100)</th><th>in-house sample score (n=14)</th></tr></thead>
       <tbody>${bottom.map(renderRow).join("")}</tbody>
     </table>
 
