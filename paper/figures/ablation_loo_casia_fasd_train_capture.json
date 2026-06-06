@@ -1,0 +1,165 @@
+{
+  "dataset": "casia_fasd",
+  "protocol": "train_capture",
+  "n_samples": 2408,
+  "baseline": {
+    "threshold": 0.9989048972491777,
+    "apcer_max": 0.15134837644468904,
+    "apcer_per_type": {
+      "unknown": 0.15134837644468904
+    },
+    "bpcer": 0.15228426395939088,
+    "acer": 0.15181632020203994,
+    "hter": 0.15181632020203994,
+    "eer": 0.15097029651337668,
+    "eer_threshold": 0.9989048972491777,
+    "auc": 0.9107149342504098,
+    "n_bonafide": 591,
+    "n_attack": 1817
+  },
+  "leave_one_out": [
+    {
+      "analyzer_removed": "ar_filter",
+      "acer": 0.15209149906830305,
+      "delta_acer": 0.00027517886626310384,
+      "auc": 0.9107200560228784,
+      "delta_auc": 5.121772468585917e-06,
+      "eer": 0.1523666779345661,
+      "apcer_per_type": {
+        "unknown": 0.1518987341772152
+      }
+    },
+    {
+      "analyzer_removed": "background_grid",
+      "acer": 0.14874837849339803,
+      "delta_acer": -0.0030679417086419136,
+      "auc": 0.9088473497621169,
+      "delta_auc": -0.0018675844882929393,
+      "eer": 0.1490235573596611,
+      "apcer_per_type": {
+        "unknown": 0.14859658778205834
+      }
+    },
+    {
+      "analyzer_removed": "blink",
+      "acer": 0.15209149906830305,
+      "delta_acer": 0.00027517886626310384,
+      "auc": 0.9106618540630088,
+      "delta_auc": -5.308018740102227e-05,
+      "eer": 0.15124547537963973,
+      "apcer_per_type": {
+        "unknown": 0.1518987341772152
+      }
+    },
+    {
+      "analyzer_removed": "device_boundary",
+      "acer": 0.1334291570400625,
+      "delta_acer": -0.018387163161977443,
+      "auc": 0.9269300002700571,
+      "delta_auc": 0.016215066019647284,
+      "eer": 0.13370433590632558,
+      "apcer_per_type": {
+        "unknown": 0.13318657127132635
+      }
+    },
+    {
+      "analyzer_removed": "landmark_variance",
+      "acer": 0.15209149906830305,
+      "delta_acer": 0.00027517886626310384,
+      "auc": 0.9106413669731348,
+      "delta_auc": -7.356727727503287e-05,
+      "eer": 0.1523666779345661,
+      "apcer_per_type": {
+        "unknown": 0.1518987341772152
+      }
+    },
+    {
+      "analyzer_removed": "micro_tremor",
+      "acer": 0.14485490018596692,
+      "delta_acer": -0.006961420016073028,
+      "auc": 0.9121378557652997,
+      "delta_auc": 0.0014229215148898744,
+      "eer": 0.14400887649730362,
+      "apcer_per_type": {
+        "unknown": 0.1441937259218492
+      }
+    },
+    {
+      "analyzer_removed": "minifasnet",
+      "acer": 0.5091935815809887,
+      "delta_acer": 0.35737726137894876,
+      "auc": 0.4620658250197654,
+      "delta_auc": -0.44864910923064444,
+      "eer": 0.5094687604472519,
+      "apcer_per_type": {
+        "unknown": 0.5090809025866814
+      }
+    },
+    {
+      "analyzer_removed": "moire",
+      "acer": 0.1515411413357769,
+      "delta_acer": -0.00027517886626304833,
+      "auc": 0.9108285444760752,
+      "delta_auc": 0.0001136102256653615,
+      "eer": 0.1506951176471136,
+      "apcer_per_type": {
+        "unknown": 0.15079801871216292
+      }
+    },
+    {
+      "analyzer_removed": "rppg",
+      "acer": 0.15181632020203994,
+      "delta_acer": 0.0,
+      "auc": 0.9107149342504098,
+      "delta_auc": 0.0,
+      "eer": 0.15097029651337668,
+      "apcer_per_type": {
+        "unknown": 0.15134837644468904
+      }
+    },
+    {
+      "analyzer_removed": "screen_flicker",
+      "acer": 0.14540525791849304,
+      "delta_acer": -0.006411062283546903,
+      "auc": 0.9122659000770128,
+      "delta_auc": 0.001550965826602968,
+      "eer": 0.14568043678475612,
+      "apcer_per_type": {
+        "unknown": 0.14529444138690148
+      }
+    },
+    {
+      "analyzer_removed": "screen_replay",
+      "acer": 0.15181632020203994,
+      "delta_acer": 0.0,
+      "auc": 0.9107433368068262,
+      "delta_auc": 2.8402556416340374e-05,
+      "eer": 0.15097029651337668,
+      "apcer_per_type": {
+        "unknown": 0.15134837644468904
+      }
+    },
+    {
+      "analyzer_removed": "temporal",
+      "acer": 0.15209149906830305,
+      "delta_acer": 0.00027517886626310384,
+      "auc": 0.9107316964148523,
+      "delta_auc": 1.6762164442463146e-05,
+      "eer": 0.15124547537963973,
+      "apcer_per_type": {
+        "unknown": 0.1518987341772152
+      }
+    },
+    {
+      "analyzer_removed": "texture",
+      "acer": 0.15041993878085053,
+      "delta_acer": -0.0013963814211894188,
+      "auc": 0.9098139679116297,
+      "delta_auc": -0.0009009663387801181,
+      "eer": 0.1506951176471136,
+      "apcer_per_type": {
+        "unknown": 0.15024766097963677
+      }
+    }
+  ]
+}
