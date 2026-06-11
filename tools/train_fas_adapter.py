@@ -202,31 +202,39 @@ def folder_loader(root: str, batch: int, device: torch.device):
         yield torch.stack(buf_x).to(device), torch.tensor(buf_y, device=device)
 
 
-def hf_loader(hf_id: str, split: str, batch: int, device: torch.device):
-    """Stream a HuggingFace FAS dataset (image col + binary label col),
-    PIL-normalized (no torchvision)."""
+def hf_loader(hf_id, split, batch, device, max_samples=3000):
+    """STREAM a HuggingFace FAS dataset (image col + binary label col), capped at
+    max_samples so we don't pull the whole multi-GB set. Prefers a face-crop
+    column. PIL-normalized (no torchvision). NOTE: the raw label here is the
+    dataset's own convention (e.g. nguyenkhoa/antispoofing-3 = 0:live/1:spoof);
+    use --flip-labels to map to this head's [spoof=0, real=1]."""
     try:
         from datasets import load_dataset
         from PIL import Image  # noqa: F401
     except ImportError as exc:  # pragma: no cover
         raise SystemExit("HF datasets need `pip install datasets pillow`.") from exc
 
-    IMAGE_KEY_CANDIDATES = ("image", "img", "jpg")
+    IMAGE_KEY_CANDIDATES = ("cropped_image", "image", "img", "jpg")  # prefer the face crop
     LABEL_KEY_CANDIDATES = ("label", "labels", "spoof_label", "cls")
-    ds = load_dataset(hf_id, split=split)
-    image_key = next((k for k in IMAGE_KEY_CANDIDATES if k in ds.features), None)
-    label_key = next((k for k in LABEL_KEY_CANDIDATES if k in ds.features), None)
+    ds = load_dataset(hf_id, split=split, streaming=True)
+    feats = ds.features or {}
+    image_key = next((k for k in IMAGE_KEY_CANDIDATES if k in feats), None)
+    label_key = next((k for k in LABEL_KEY_CANDIDATES if k in feats), None)
     if image_key is None or label_key is None:
         raise SystemExit(
             f"Could not find image/label columns in {hf_id}. "
-            f"Columns: {list(ds.features)}. Edit *_KEY_CANDIDATES."
+            f"Columns: {list(feats)}. Edit *_KEY_CANDIDATES."
         )
+    print(f"  streaming {hf_id} [{split}] image='{image_key}' label='{label_key}' cap={max_samples}")
+    if max_samples:
+        ds = ds.take(max_samples)
 
     buf_x, buf_y = [], []
     for row in ds:
-        buf_x.append(_pil_to_norm_tensor(row[image_key], IMAGENET_MEAN, IMAGENET_STD))
-        # Normalize label semantics to [spoof=0, real=1]. Many FAS mirrors use
-        # 1=spoof/attack — flip with --flip-labels if your AUC comes out < 0.5.
+        img = row.get(image_key)
+        if img is None:
+            continue
+        buf_x.append(_pil_to_norm_tensor(img, IMAGENET_MEAN, IMAGENET_STD))
         buf_y.append(int(row[label_key]))
         if len(buf_x) == batch:
             yield torch.stack(buf_x).to(device), torch.tensor(buf_y, device=device)
@@ -235,31 +243,69 @@ def hf_loader(hf_id: str, split: str, batch: int, device: torch.device):
         yield torch.stack(buf_x).to(device), torch.tensor(buf_y, device=device)
 
 
+def _auc(scores, labels):
+    """P(real_score > spoof_score). labels: 1=real, 0=spoof."""
+    pos = [s for s, l in zip(scores, labels) if l == 1]
+    neg = [s for s, l in zip(scores, labels) if l == 0]
+    if not pos or not neg:
+        return float("nan")
+    wins = sum(1 for a in pos for b in neg if a > b)
+    ties = sum(1 for a in pos for b in neg if a == b)
+    return (wins + 0.5 * ties) / (len(pos) * len(neg))
+
+
 # --------------------------------------------------------------------------- #
 # Train + export
 # --------------------------------------------------------------------------- #
 def train(model: FasModel, args, device: torch.device) -> None:
-    model.head.train()
-    opt = torch.optim.AdamW(model.head.parameters(), lr=args.lr, weight_decay=1e-4)
-    loss_fn = nn.CrossEntropyLoss()
+    # Build the (streamed/capped) image-batch loader.
+    if args.dataset.startswith("folder:"):
+        gen = folder_loader(args.dataset.split("folder:", 1)[1], args.batch_size, device)
+    elif args.dataset.startswith("hf:"):
+        gen = hf_loader(args.dataset.split("hf:", 1)[1], args.split, args.batch_size,
+                        device, args.max_samples)
+    else:  # 'synthetic' default (also what --smoke uses)
+        gen = synthetic_loader(args.smoke_n, args.batch_size, device)
 
+    # Frozen backbone → extract features ONCE (one pass; only one image batch is
+    # on the GPU at a time, and we keep just the [N, D] feature matrix). The head
+    # then trains in milliseconds/epoch on the cached features.
+    print("extracting frozen-backbone features (one pass)...")
+    model.backbone.eval()
+    t0 = time.time()
+    Xs, Ys = [], []
+    with torch.no_grad():
+        for xb, yb in gen:
+            Xs.append(model.backbone(xb).detach().cpu())
+            Ys.append(yb.detach().cpu())
+    if not Xs:
+        raise SystemExit("No data materialized — check the dataset id / columns.")
+    X = torch.cat(Xs)
+    Y = torch.cat(Ys)
+    if args.flip_labels:
+        Y = 1 - Y
+    n = X.size(0)
+    perm = torch.randperm(n, generator=torch.Generator().manual_seed(42))
+    X, Y = X[perm], Y[perm]
+    nval = max(1, n // 5)
+    Xval, Yval, Xtr, Ytr = X[:nval], Y[:nval], X[nval:], Y[nval:]
+    print(f"  {n} samples (feat dim {X.size(1)}) in {time.time() - t0:.1f}s; "
+          f"{Xtr.size(0)} train / {nval} val; "
+          f"real={int((Y == 1).sum())} spoof={int((Y == 0).sum())}")
+
+    head = model.head.to(device)
+    opt = torch.optim.AdamW(head.parameters(), lr=args.lr, weight_decay=1e-4)
+    loss_fn = nn.CrossEntropyLoss()
+    bs = args.batch_size
     for epoch in range(args.epochs):
-        t0 = time.time()
-        seen, correct, loss_sum = 0, 0, 0.0
-        if args.dataset.startswith("folder:"):
-            batches = folder_loader(
-                args.dataset.split("folder:", 1)[1], args.batch_size, device
-            )
-        elif args.dataset.startswith("hf:"):
-            batches = hf_loader(
-                args.dataset.split("hf:", 1)[1], args.split, args.batch_size, device
-            )
-        else:  # 'synthetic' default — also what --smoke uses (smoke only swaps backbone)
-            batches = synthetic_loader(args.smoke_n, args.batch_size, device)
-        for xb, yb in batches:
-            if args.flip_labels:
-                yb = 1 - yb
-            logits = model(xb)
+        head.train()
+        ep = torch.randperm(Xtr.size(0))
+        loss_sum, correct, seen = 0.0, 0, 0
+        for i in range(0, Xtr.size(0), bs):
+            idx = ep[i:i + bs]
+            xb = Xtr[idx].to(device)
+            yb = Ytr[idx].to(device)
+            logits = head(xb)
             loss = loss_fn(logits, yb)
             opt.zero_grad()
             loss.backward()
@@ -267,9 +313,13 @@ def train(model: FasModel, args, device: torch.device) -> None:
             loss_sum += float(loss.detach()) * xb.size(0)
             correct += int((logits.argmax(1) == yb).sum())
             seen += xb.size(0)
-        acc = correct / max(1, seen)
+        head.eval()
+        with torch.no_grad():
+            preal = torch.softmax(head(Xval.to(device)), 1)[:, 1].cpu().tolist()
+        auc = _auc(preal, Yval.tolist())
         print(f"epoch {epoch + 1}/{args.epochs}  loss={loss_sum / max(1, seen):.4f}  "
-              f"acc={acc:.3f}  n={seen}  {time.time() - t0:.1f}s")
+              f"train_acc={correct / max(1, seen):.3f}  val_AUC={auc:.3f}")
+    model.head = head
 
 
 def export_onnx(model: FasModel, out_path: Path, fp16: bool, device: torch.device) -> None:
@@ -341,7 +391,15 @@ def main() -> None:
     ap.add_argument("--smoke", action="store_true",
                     help="no-download plumbing test on synthetic data")
     ap.add_argument("--smoke-n", type=int, default=256)
+    ap.add_argument("--max-samples", type=int, default=3000,
+                    help="cap on streamed HF samples (avoids pulling the full set)")
     args = ap.parse_args()
+
+    # Windows/pyarrow quirk: importing `datasets` (→ pyarrow) AFTER CUDA has been
+    # initialized throws WinError 6714 during importlib's directory scan. Force
+    # the import now, before any CUDA work, when we'll need it.
+    if args.dataset.startswith("hf:"):
+        import datasets  # noqa: F401
 
     device = torch.device(args.device)
     print(f"device={device}  backbone={'smoke-stub' if args.smoke else args.backbone}  "
