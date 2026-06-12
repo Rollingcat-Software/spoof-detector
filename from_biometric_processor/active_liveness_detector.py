@@ -1,11 +1,15 @@
 # This file is a copy from biometric-processor/app/infrastructure/ml/liveness/active_liveness_detector.py
-# Source SHA: 9d17359e18186abc317f4fe4b903ab8e82626297 (bio main as of 2026-05-09).
-# Synced: 2026-05-09. DO NOT edit here without syncing back to biometric-processor.
+# Source SHA: 40fab11bd07d6699dd04cdef45a70ef9232d9117 (bio main; FaceLandmarker Tasks-API port, PR #106).
+# Synced: 2026-06-12. DO NOT edit here without syncing back to biometric-processor.
 
 """Active liveness detector using facial landmark analysis.
 
-This detector uses MediaPipe Face Mesh to detect facial landmarks
-and analyze facial actions (smile, blink) for liveness verification.
+This detector uses MediaPipe Face Landmarker (Tasks API) to detect facial
+landmarks and analyze facial actions (smile, blink) for liveness verification.
+
+Ported 2026-05-12 from ``mp.solutions.face_mesh`` to
+``mp.tasks.vision.FaceLandmarker`` (the legacy API was removed in mediapipe
+0.10.35).
 """
 
 import logging
@@ -16,6 +20,10 @@ import numpy as np
 
 from app.domain.entities.liveness_result import LivenessResult
 from app.domain.interfaces.liveness_detector import ILivenessDetector
+from app.infrastructure.ml.landmarks.face_landmarker_loader import (
+    create_face_landmarker,
+    to_mp_image,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -67,31 +75,31 @@ class ActiveLivenessDetector(ILivenessDetector):
         self._liveness_threshold = liveness_threshold
         self._min_detection_confidence = min_detection_confidence
         self._min_tracking_confidence = min_tracking_confidence
-        self._face_mesh = None
+        self._face_landmarker = None
 
         logger.info(
-            f"ActiveLivenessDetector initialized: "
+            f"ActiveLivenessDetector initialized (Tasks API): "
             f"EAR threshold={ear_threshold}, MAR threshold={mar_threshold}, "
             f"liveness threshold={liveness_threshold}"
         )
 
-    def _get_face_mesh(self):
-        """Lazy initialization of MediaPipe Face Mesh."""
-        if self._face_mesh is None:
-            try:
-                import mediapipe as mp
-                self._face_mesh = mp.solutions.face_mesh.FaceMesh(
-                    static_image_mode=True,
-                    max_num_faces=1,
-                    refine_landmarks=True,
-                    min_detection_confidence=self._min_detection_confidence,
-                    min_tracking_confidence=self._min_tracking_confidence,
+    def _get_face_landmarker(self):
+        """Lazy initialization of MediaPipe Face Landmarker (Tasks API)."""
+        if self._face_landmarker is None:
+            self._face_landmarker = create_face_landmarker(
+                static_image_mode=True,
+                num_faces=1,
+                min_face_detection_confidence=self._min_detection_confidence,
+                min_face_presence_confidence=self._min_detection_confidence,
+                min_tracking_confidence=self._min_tracking_confidence,
+            )
+            if self._face_landmarker is None:
+                raise RuntimeError(
+                    "MediaPipe FaceLandmarker unavailable — model asset missing "
+                    "or Tasks API not importable. See logs for details."
                 )
-                logger.info("MediaPipe Face Mesh initialized")
-            except ImportError:
-                logger.error("MediaPipe not installed. Run: pip install mediapipe")
-                raise
-        return self._face_mesh
+            logger.info("MediaPipe Face Landmarker initialized for active liveness")
+        return self._face_landmarker
 
     async def check_liveness(self, image: np.ndarray) -> LivenessResult:
         """Check if image shows a live person using facial action analysis.
@@ -123,11 +131,13 @@ class ActiveLivenessDetector(ILivenessDetector):
         # Convert BGR to RGB for MediaPipe
         rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-        # Get facial landmarks
-        face_mesh = self._get_face_mesh()
-        results = face_mesh.process(rgb_image)
+        # Get facial landmarks via Tasks API
+        face_landmarker = self._get_face_landmarker()
+        mp_image = to_mp_image(rgb_image)
+        result = face_landmarker.detect(mp_image)
 
-        if not results.multi_face_landmarks:
+        face_landmarks_list = result.face_landmarks or []
+        if not face_landmarks_list:
             logger.warning("No face landmarks detected")
             return LivenessResult(
                 is_live=False,
@@ -142,7 +152,7 @@ class ActiveLivenessDetector(ILivenessDetector):
                 },
             )
 
-        landmarks = results.multi_face_landmarks[0].landmark
+        landmarks = face_landmarks_list[0]
         h, w = image.shape[:2]
 
         # Convert normalized landmarks to pixel coordinates

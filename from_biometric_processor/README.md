@@ -1,6 +1,8 @@
 # Algorithms also deployed in `biometric-processor`
 
-The Python modules in this directory are **verbatim copies** of files that already ship in `biometric-processor` production (`bio` main as of SHA `9d17359e18186abc317f4fe4b903ab8e82626297`, 2026-05-09). They are not imported by `src/`; they are mirrored here so that the spoof-detector repo is the single authoritative consumption point for every liveness/anti-spoof asset, regardless of which container actually runs them today.
+The Python modules in this directory are **verbatim copies** of files that already ship in `biometric-processor` production. Most were synced from `bio` main at SHA `9d17359e18186abc317f4fe4b903ab8e82626297` (2026-05-09); files that have since been re-synced carry their own (newer) `# Source SHA:` line in the header — always trust the per-file header over this paragraph. They are not imported by `src/`; they are mirrored here so that the spoof-detector repo is the single authoritative consumption point for every liveness/anti-spoof asset, regardless of which container actually runs them today.
+
+> **Re-sync log:** `active_liveness_detector.py` re-synced 2026-06-12 to bio SHA `40fab11` (PR #106 — `mp.solutions.face_mesh` → `mp.tasks.vision.FaceLandmarker` Tasks-API port; the legacy API was removed in mediapipe 0.10.35). The old mirror still referenced the removed `mp.solutions` API. No live bio code was changed; only this read-only mirror was brought back into line.
 
 This is the **complete** mirror — every production `app/**/*.py` that touches liveness, anti-spoof, gesture, flash, or proctoring is here.
 
