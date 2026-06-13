@@ -19,9 +19,9 @@
 > - **CASIA-FASD validation harness** (`runCasiaFasdMicroBench`)
 >
 > 126 vitest tests green. Main bundle 123 kB ESM. Performance: mobile
-> Brave 4→8–12 fps, PC Chrome 25–30 fps. See `ROADMAP.md` "Browser
-> Port v0.1.0" section and `web/amispoof/README.md` for the current
-> state. Sections below are preserved as a historical record of the
+> Brave 4→8–12 fps, PC Chrome 25–30 fps. See `web/amispoof/README.md` for
+> the current state and [GitHub issues](https://github.com/Rollingcat-Software/spoof-detector/issues)
+> for open work. Sections below are preserved as a historical record of the
 > pre-port analysis.
 
 ---
@@ -140,7 +140,7 @@ estimate (S = ≤1 day, M = 2–4 days, L = ≥1 week), and any non-obvious risk
 | 7 | **rPPG** | 0.0 (disabled) | TypedArray detrend + rfft on 150–300-sample buffer | **S** | Currently weight-0 in calibrated config because it false-pulses on screens. Port for completeness/research, but not a launch-blocker. |
 | 8 | **Blink (EAR)** | 0.5 | `@mediapipe/tasks-vision` FaceLandmarker + 6-point Euclidean distance | **S** | Already the canonical use-case for the JS FaceLandmarker. **Reference:** `web-app/src/features/auth/hooks/useFaceDetection.ts` and `useLivenessPuzzle.ts` use this exact pattern in production. The 12 landmark indices (`RIGHT_EYE`, `LEFT_EYE`) and `compute_ear()` are 1:1 portable. |
 | 9 | **Screen replay** (whole-frame) | 0.5 | OpenCV.js CLAHE + Laplacian + cvtColor (BGR→YCrCb, BGR→HSV) + a small FFT | **M** | The skin-mask bands (Cr 133–173, Cb 77–127) are direct integer comparisons — fast in TypedArrays. CLAHE is the most expensive op; OpenCV.js has it but a hand-roll is feasible. |
-| 10 | **AR filter** | 0.3 | Heuristic mode: OpenCV.js `cvtColor` + `Canny`. Model mode: a future `ar_filter.onnx` via `onnxruntime-web`. | **S** (heuristic) / **M** (when model lands) | The model isn't trained yet (Phase 5 in `ROADMAP.md`). Heuristic-only port is ~80 lines of TS. |
+| 10 | **AR filter** | 0.3 | Heuristic mode: OpenCV.js `cvtColor` + `Canny`. Model mode: a future `ar_filter.onnx` via `onnxruntime-web`. | **S** (heuristic) / **M** (when model lands) | The model isn't trained yet (tracked in GitHub issues). Heuristic-only port is ~80 lines of TS. |
 | 11 | **Temporal** | 0.3 | Pure NumPy (mean/std on 30-frame deque of bbox positions) | **S** | No image ops. ~60 lines of TS. |
 | 12 | **Texture** | 0.1 (suppressed, anti-correlated) | OpenCV.js Laplacian + cvtColor (BGR→HSV) + small FFT (192×108) | **S** | Currently anti-correlated — port for completeness, ship at weight 0.1. |
 | 13 | **Moire** | 0.1 (suppressed, anti-correlated) | OpenCV.js Gabor kernel bank (4 thetas) + CLAHE + FFT | **M** | This is the heaviest CPU per frame — `cv2.getGaborKernel` + 4× `filter2D` on a 160-px square. **WebGL alternative:** Gabor convolution is famously well-suited to fragment shaders; a ~50-line GLSL fragment shader gives ~10× speedup. Not on critical path (weight 0.1). |

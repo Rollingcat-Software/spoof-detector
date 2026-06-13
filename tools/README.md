@@ -30,5 +30,5 @@ Operator-facing scripts. Two cohorts live here:
 
 These ported tools currently import paths from the `app.*` namespace of
 biometric-processor's working_spoof_detection branch; running them against
-`spoof-detector/src/` requires path-rewrites — flagged as productization
-work in `../ROADMAP.md`.
+`spoof-detector/src/` requires path-rewrites — see the productization
+checklist in [`../research/README.md`](../research/README.md).

@@ -26,9 +26,9 @@ upstream; this repo is the consolidated read-only mirror.
 | [`from_biometric_processor/`](from_biometric_processor/) | Algorithms also deployed in `biometric-processor` prod (cutout / device-spoof / light-challenge / screen-replay). Mirror only. |
 | [`tools/`](tools/)                         | Now includes Aysenur's `live_liveness_preview.py` desktop tuner + `train_spoof_classifier.py` + `test_data_collector.py` + `export_training_data.py`. |
 
-See [`research/README.md`](research/README.md) and
-[`ROADMAP.md`](ROADMAP.md) ("Where things live" + "Productization checklist")
-for how the research tree is intended to feed back into `src/`.
+See [`research/README.md`](research/README.md) ("Where things live" +
+"Productization checklist") for how the research tree is intended to feed back
+into `src/`.
 
 ## What's new in v0.2.1 (2026-05-09)
 
@@ -237,7 +237,7 @@ Browser TypeScript port (`web/`, published as `@rollingcat/spoof-detector`):
 - [ ] amispoof.com domain (currently `/amispoof/` slug on fivucsas.com).
 - [ ] iBeta PAD-Level-1 browser-bundle submission package.
 
-Live tester: https://amispoof.fivucsas.com/ (the old https://fivucsas.com/amispoof/ now 301s) — **23 analyzers + 3 gates + 18-axis passive liveness-proof scorer** running entirely client-side. Default-on: 20 analyzers covering the original ten plus the blendshape/3D-pose unlocks (eyebrow motion, blink symmetry, gaze, expression dynamics, 3D pose consistency, behavioural pattern), temporal + background grid brought across from `src/`, and background motion (MediaPipe SelfieSegmenter). Opt-in extras: hand tracking (HandLandmarker), voice-activity + audio-mouth-sync (Web Audio API). Session recording + JSON replay shipped 2026-05-17. See `web/amispoof/README.md` for the deployment runbook and `ROADMAP.md` "Browser Port v0.1.0" for the full module inventory.
+Live tester: https://amispoof.fivucsas.com/ (the old https://fivucsas.com/amispoof/ now 301s) — **23 analyzers + 3 gates + 18-axis passive liveness-proof scorer** running entirely client-side. Default-on: 20 analyzers covering the original ten plus the blendshape/3D-pose unlocks (eyebrow motion, blink symmetry, gaze, expression dynamics, 3D pose consistency, behavioural pattern), temporal + background grid brought across from `src/`, and background motion (MediaPipe SelfieSegmenter). Opt-in extras: hand tracking (HandLandmarker), voice-activity + audio-mouth-sync (Web Audio API). Session recording + JSON replay shipped 2026-05-17. See `web/amispoof/README.md` for the deployment runbook and [`docs/SPOOF_DETECTOR_BROWSER_READINESS.md`](docs/SPOOF_DETECTOR_BROWSER_READINESS.md) for the full module inventory.
 
 ## Academic paper
 
@@ -245,7 +245,7 @@ Target venues: BIOSIG 2026 / IJCB 2026. Working title:
 
 > **AR-Spoofing: Session-Based Multi-Method Face Presentation Attack Detection**
 
-Outline lives in [`paper/README.md`](paper/README.md). The paper is **not** ready for submission yet — the current focus is shipping a stable, working detector. See [`ROADMAP.md`](ROADMAP.md) for the full plan.
+Outline lives in [`paper/README.md`](paper/README.md). The paper is **not** ready for submission yet — the current focus is shipping a stable, working detector. Open work is tracked in [GitHub issues](https://github.com/Rollingcat-Software/spoof-detector/issues).
 
 ## Authors
 
