@@ -42,7 +42,7 @@ Second, **the harness provides the tooling for operators to recalibrate locally.
 
 **α = 0.5 in the peak-sensitive verdict is a heuristic.** The 50/50 mean / worst-decile blend in §4.4 was selected for proctoring deployments where spoof-burst dilution is the dominant failure mode. Per-operator session-length distributions, attack-burst statistics, and BPCER tolerances should drive an automatically-tuned α; we have not yet built that tuner. A first-pass version would minimise mixed-session ACER on a held-out operator labelled set.
 
-**iBeta PAD-Level-2 is not certified in this paper.** The §1 contribution claim is the open-source release plus an iBeta PAD-Level-1 *submission package* (`iBeta_PAD_Level1_Submission_Package.md`). Level 2 — which our pipeline targets architecturally via the active-challenge layer (§4.5) and the rPPG / micro-tremor temporal channels — requires the operator to physically attend an iBeta test facility and pass under iBeta's confidential protocol. We report it as a forward-looking commitment rather than a measured result.
+**iBeta PAD-Level-2 is not certified in this paper.** The §1 contribution claim is the open-source release plus an iBeta PAD-Level-1 *submission package* (`docs/iBeta_PAD_Level1_Submission_Package.md`). Level 2 — which our pipeline targets architecturally via the active-challenge layer (§4.5) and the rPPG / micro-tremor temporal channels — requires the operator to physically attend an iBeta test facility and pass under iBeta's confidential protocol. We report it as a forward-looking commitment rather than a measured result.
 
 ## 9.5 Open problems and future work
 

@@ -206,7 +206,7 @@ Per-scenario session verdicts:
 - **APCER/BPCER/ACER per type** — §5.1 (cross-dataset), §5.2 (in-house
   replay), §5.3 (in-house full set transparency block), §5.4
   (per-analyzer leave-one-out ablation).
-- **How to reproduce every number** — §7 + `RUNBOOK_PAPER_PREP.md`
+- **How to reproduce every number** — §7 + `docs/RUNBOOK_PAPER_PREP.md`
   in-repo.
 - **Known limitations** — §9, plus paper §9.2/9.3.
 
@@ -1204,7 +1204,7 @@ report on once the EULA acquisition completes.
 ## 7. Reproducibility
 
 This section is the **one-command-per-dataset reproduction recipe**.
-The full operator runbook lives at `RUNBOOK_PAPER_PREP.md` in the
+The full operator runbook lives at `docs/RUNBOOK_PAPER_PREP.md` in the
 repo and is reproduced here in condensed form for the iBeta
 evaluator.
 
@@ -1895,7 +1895,7 @@ commit `cc73cf08`. Key empirical numbers:
 | Calibration μ_real / μ_spoof (§10.8) | `paper/sections/05_calibration.md` §5.2 |
 | Taxonomy and per-category coverage (§4) | `paper/sections/03_taxonomy.md` §3.2/§3.3/§3.4 |
 | Datasets table (§6) | `paper/sections/06_experimental_setup.md` §6.1 |
-| Reproduction recipe (§7) | `RUNBOOK_PAPER_PREP.md` |
+| Reproduction recipe (§7) | `docs/RUNBOOK_PAPER_PREP.md` |
 | ROADMAP items (§9) | §9 above (reproduced inline; open work now in GitHub issues) |
 | Authors (§10.1) | `AUTHORS.md` |
 | Architecture overview (§3) | `README.md` "Architecture" |
