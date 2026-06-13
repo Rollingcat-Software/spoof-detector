@@ -46,8 +46,7 @@ If you cite or evaluate against the browser port in a publication, the same attr
 
 In addition to the production-ported v0.2.0 modules above, the consolidation
 pass on 2026-05-09 brought the **complete body of FIVUCSAS liveness/anti-spoof
-work** under this repo as a read-only research tree. See `ROADMAP.md` and
-`research/README.md`.
+work** under this repo as a read-only research tree. See `research/README.md`.
 
 #### Aysenur — [@Aysenur15](https://github.com/Aysenur15)
 

@@ -1578,7 +1578,8 @@ mirrors paper §9 (Discussion) and the ROADMAP P0/P1 backlog.
 
 ### 9.1 ROADMAP P0 items (must fix before next test)
 
-From `ROADMAP.md` at the submission commit:
+From the `ROADMAP.md` backlog as it stood at the submission commit (the file
+has since been retired; live open work is tracked in GitHub issues):
 
 - [x] Fullscreen content scaling — closed.
 - [x] rPPG FPS measurement (actual FPS instead of assuming 30) —
@@ -1895,7 +1896,7 @@ commit `cc73cf08`. Key empirical numbers:
 | Taxonomy and per-category coverage (§4) | `paper/sections/03_taxonomy.md` §3.2/§3.3/§3.4 |
 | Datasets table (§6) | `paper/sections/06_experimental_setup.md` §6.1 |
 | Reproduction recipe (§7) | `RUNBOOK_PAPER_PREP.md` |
-| ROADMAP items (§9) | `ROADMAP.md` |
+| ROADMAP items (§9) | §9 above (reproduced inline; open work now in GitHub issues) |
 | Authors (§10.1) | `AUTHORS.md` |
 | Architecture overview (§3) | `README.md` "Architecture" |
 
