@@ -11,7 +11,7 @@ weight. The original 1-D sweep that motivated the texture/moire 0.1 value was ru
 on an in-house *synthetic same-source* set with the threshold chosen on the test
 set; that result is unreproducible and has been withdrawn (see paper §5.4 and
 paper/figures/WITHDRAWN_in_house_synthetic_results.md). Do not describe these as
-"optimised" or "swept". TODO: re-derive per-operator with a proper Dev/Test split.
+"optimised" or "swept". TODO(#127): re-derive per-operator with a proper Dev/Test split.
 
 Discrimination-gap signs that motivated the weights (indicative magnitudes only;
 from the in-house synthetic set, so trust the SIGN, not the absolute value):
