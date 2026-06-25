@@ -1,0 +1,41 @@
+name: Deploy amispoof to Hetzner
+
+# amispoof.fivucsas.com — static anti-spoof demo, now an nginx container on the
+# Hetzner box behind Traefik (auto Let's Encrypt TLS). Replaces Hostinger hosting
+# (plan cancelled 2026-06). No build step (pure static).
+#
+# Required secrets: VPS_HOST=116.203.222.213, VPS_USER=deploy, VPS_SSH_KEY.
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'web/amispoof/**'
+      - '.github/workflows/deploy-amispoof-hetzner.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-fivucsas-amispoof
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy amispoof.fivucsas.com
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        timeout-minutes: 8
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          command_timeout: 6m
+          script: |
+            set -e
+            cd /opt/projects/fivucsas/spoof-detector
+            git pull origin main
+            cd web/amispoof
+            docker compose -f docker-compose.prod.yml up -d --build
+            curl -skf -o /dev/null --resolve amispoof.fivucsas.com:443:127.0.0.1 \
+              https://amispoof.fivucsas.com/ && echo "amispoof.fivucsas.com healthy"

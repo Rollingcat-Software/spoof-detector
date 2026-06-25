@@ -1,0 +1,31 @@
+# amispoof.fivucsas.com — static anti-spoof demo on the Hetzner box behind
+# Traefik (automatic Let's Encrypt TLS). Replaces Hostinger hosting (plan
+# cancelled 2026-06). Point amispoof.fivucsas.com's A record to 116.203.222.213
+# at turkticaret; secure-headers permissions-policy allows camera on self.
+services:
+  fivucsas-amispoof:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: fivucsas-amispoof
+    container_name: fivucsas-amispoof
+    restart: unless-stopped
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.fivucsas-amispoof.rule=Host(`amispoof.fivucsas.com`)"
+      - "traefik.http.routers.fivucsas-amispoof.entrypoints=websecure"
+      - "traefik.http.routers.fivucsas-amispoof.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.fivucsas-amispoof.middlewares=secure-headers@file,rate-limit@file"
+      - "traefik.http.services.fivucsas-amispoof.loadbalancer.server.port=80"
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+          pids: 128
+
+networks:
+  proxy:
+    name: proxy
+    external: true
