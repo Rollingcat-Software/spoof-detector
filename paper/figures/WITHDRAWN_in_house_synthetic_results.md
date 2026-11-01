@@ -32,3 +32,14 @@ reproducible. None of these tables were cited by the current paper sections.
 See also `paper/sections/05_calibration.md` §5.4 (fuser weights are heuristic,
 not swept) and the metrics threshold policy in
 `src/metrics/standard.py::classification_report`.
+
+## Also withdrawn (2026-11-01)
+
+- `loso_cv.json`: the 20 leave-one-subject-out folds all report the identical AUC (0.98148) while
+  reporting EER and ACER of 0, which is internally inconsistent. Not cited anywhere; do not use.
+- `cnn_casia_fasd.json`, `cnn_casia_fasd_seed1.json`, `cnn_casia_fasd_seed7.json`,
+  `cnn_casia_fasd_seed99.json`: the operating threshold is chosen on the test split, the reported
+  best validation AUC is 1.0, and the source crops (`captures/*.npz`) are not in the repository, so
+  the result cannot be reproduced. Not cited anywhere; do not use.
+
+The files are kept for provenance only.

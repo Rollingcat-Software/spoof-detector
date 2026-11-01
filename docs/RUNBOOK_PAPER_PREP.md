@@ -65,7 +65,7 @@ See `tests/benchmark/datasets/DATASETS_AVAILABLE.md` for full provenance + licen
 
 ### 1b. In-house Marmara-University set (synthesised)
 
-The in-house validation set ships *with* the repo (KVKK-consented bona-fide sources, MIT-licensed). Regenerate:
+The in-house validation set is **no longer shipped with the repo** (removed 2026-11-01). Its bona-fide sources are photographs of identifiable people, so they are kept out of the public repository. Regenerate it locally from the fixture folders below (`data/in_house/` is git-ignored):
 
 ```bash
 # From bio fixtures + practice-and-test fixtures

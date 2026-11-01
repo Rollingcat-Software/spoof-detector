@@ -61,15 +61,13 @@ All sections in `sections/` are written and every published metric in §7–§8 
 
 ```bibtex
 @misc{gultekin2026spoof,
-  title  = {Beyond Single Frames: Session-Based Hybrid Image-and-Video Face Anti-Spoofing with Calibrated Multi-Class Fusion},
+  title  = {spoof-detector: an open-source browser face presentation-attack-detection engine (working draft, superseded)},
   author = {Gültekin, Ahmet Abdullah and Ar{\i}c{\i}, Ay{\c{s}}enur and Eren, Ay{\c{s}}e Gül{\c{s}}üm and A{\u{g}}ao{\u{g}}lu, Mustafa},
   year   = {2026},
   note   = {Marmara University Computer Engineering, CSE4297/CSE4298 Capstone Project. Advisor: Doç. Dr. Mustafa Ağaoğlu. Code at \url{https://github.com/Rollingcat-Software/spoof-detector}.}
 }
 ```
 
-## Target venues
+## Publication status
 
-1. BIOSIG 2026 (Sept, Darmstadt) — biometrics-focused
-2. IJCB 2026 — International Joint Conference on Biometrics
-3. IEEE FG 2027 — Face and Gesture Recognition
+This manuscript is a **working draft and is not being submitted as is** (2026-11-01). Its own results show that the fused pipeline does not beat the off-the-shelf MiniFASNet model (§7.1, §8.1), so the hybrid-fusion title no longer describes a supported contribution. The verified passive-PAD findings are being re-reported, re-run on officially licensed datasets, inside the FIVUCSAS Biometric Puzzle paper. Results that could not be reproduced are listed in `figures/WITHDRAWN_in_house_synthetic_results.md`.
