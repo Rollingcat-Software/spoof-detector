@@ -26,6 +26,8 @@ logs/*.log
 
 # Research data (sensitive — may contain face images)
 data/captures/*
+data/in_house/
+data/in_house_replay/
 data/annotations/*
 data/protocol/*.jpg
 data/protocol/*.png
